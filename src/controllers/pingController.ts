@@ -383,6 +383,12 @@ export const getAllPingsAsAdmin = async (req: Request, res: Response, next: Next
     if (limit > 100) limit = 100;
     const skip = (page - 1) * limit;
 
+    const { status } = req.query;
+    const whereClause: any = {};
+    if (status) {
+      whereClause.status = status as any;
+    }
+
     const [pings, totalPings] = await prisma.$transaction([
       prisma.ping.findMany({
         skip: skip,
