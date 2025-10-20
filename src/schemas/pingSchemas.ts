@@ -1,0 +1,51 @@
+// src/schemas/pingSchemas.ts
+import { z } from 'zod';
+
+export const createPingSchema = z.object({
+  body: z.object({
+    title: z.string({
+      message: 'Title is required',
+    }).min(1, 'Title cannot be empty').max(200),
+    content: z.string({
+      message: 'Content is required',
+    }).min(1, 'Content cannot be empty').max(5000),
+    category: z.enum([
+      'GENERAL',
+      'ACADEMICS',
+      'CHAPEL',
+      'COLLEGE',
+      'FINANCE',
+      'HALL',
+      'SPORT',
+      'WELFARE',
+    ], {
+      message: 'Invalid category',
+    }),
+    hashtag: z.string().max(50).optional().nullable(),
+  }),
+});
+
+export const updatePingSchema = z.object({
+  body: z.object({
+    title: z.string().min(1, 'Title cannot be empty').max(200).optional(),
+    content: z.string().min(1, 'Content cannot be empty').max(5000).optional(),
+    category: z.enum([
+      'GENERAL',
+      'ACADEMICS',
+      'CHAPEL',
+      'COLLEGE',
+      'FINANCE',
+      'HALL',
+      'SPORT',
+      'WELFARE',
+    ]).optional(),
+    hashtag: z.string().max(50).optional().nullable(),
+    status: z.enum(['POSTED', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED']).optional(),
+  }).strict(), // Prevents adding extra fields
+});
+
+export const pingIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'Ping ID must be a number'),
+  }),
+});

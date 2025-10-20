@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Compiled TypeScript files
+dist/
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+
+# Docker data
+postgres_data/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Prisma generated files
+/src/generated/prisma

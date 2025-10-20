@@ -1,0 +1,157 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  firstName String?
+  lastName  String?
+  password  String
+  role      Role    @default(USER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  pings     Ping[]
+  comments  Comment[]
+  surges    Surge[]
+  officialResponses OfficialResponse[]
+}
+
+model Ping {
+  id         Int          @id @default(autoincrement())
+  title      String
+  content    String
+  hashtag    String?
+  status     Status       @default(POSTED)
+  category   WaveCategory @default(GENERAL)
+  createdAt  DateTime     @default(now())
+  
+  author     User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId   Int
+  
+  comments   Comment[]
+  surges     Surge[]
+  waves      Wave[]
+  
+  surgeCount Int          @default(0)
+
+  officialResponse OfficialResponse?
+
+  // Database indexes for query performance
+  @@index([authorId])                      // Used in getMyPings and foreign key joins
+  @@index([category])                      // Used in filtering getAllPings
+  @@index([status])                        // Used in filtering getAllPings
+  @@index([hashtag])                       // Used in searchPings by hashtag
+  @@index([createdAt(sort: Desc)])         // Used for orderBy in most queries
+  @@index([status, category, createdAt])   // Composite index for common filter + sort pattern
+}
+
+model Wave {
+  id         Int      @id @default(autoincrement())
+  solution   String
+  viewCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  ping       Ping     @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId     Int
+
+  // Add relations for comments and surges on Waves
+  comments   Comment[]
+  surges     Surge[]
+  
+  surgeCount Int      @default(0)
+
+  // Database indexes for query performance
+  @@index([pingId])                  // Foreign key for getWavesForPing
+  @@index([viewCount(sort: Desc)])   // Sort by most viewed waves
+  @@index([createdAt(sort: Desc)])   // Sort by newest waves
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  Int
+
+  // A comment can belong to a Ping OR a Wave
+  ping      Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId    Int?
+  wave      Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId    Int?
+
+  // Database indexes for query performance
+  @@index([pingId])                  // Foreign key for getCommentsForPing
+  @@index([waveId])                  // Foreign key for getCommentsForWave
+  @@index([authorId])                // Find user's comments
+  @@index([createdAt(sort: Desc)])   // Sort by newest comments
+}
+
+model Surge {
+  id        Int      @id @default(autoincrement()) // Primary key
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+
+  ping      Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId    Int?
+
+  wave      Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId    Int?
+
+  createdAt DateTime @default(now())
+
+  // Database indexes for query performance
+  @@index([userId])            // Find user's surges
+  @@index([pingId, userId])    // Check if user surged a ping (toggle surge)
+  @@index([waveId, userId])    // Check if user surged a wave (toggle surge)
+
+  // We remove the invalid @@unique constraints because they use optional fields.
+  // The logic to prevent duplicate surges will be handled in our controller code,
+  // just like our current toggleSurge function already does.
+}
+
+model OfficialResponse {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId Int
+
+  ping     Ping   @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId   Int    @unique
+}
+
+// ... (Enums remain the same)
+enum WaveCategory {
+  GENERAL
+  ACADEMICS
+  CHAPEL
+  COLLEGE
+  FINANCE
+  HALL
+  SPORT
+  WELFARE
+}
+
+enum Status {
+  POSTED
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum Role {
+  ADMIN
+  REPRESENTATIVE
+  USER
+}
