@@ -47,3 +47,42 @@ export const deleteAnyPing = async (req: Request, res: Response, next: NextFunct
         return next(error);
     }
 };
+
+export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const users = await prisma.user.findMany({
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                createdAt: true
+            }
+        });
+        return res.status(200).json(users);
+    } catch (error) {
+        return next(error);
+    }  
+};
+
+export const updateUserRole = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.body;
+
+        if (!['USER', 'ADMIN', 'REPRESENTATIVE'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role specified' });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: { role }
+        });
+
+        const { password: _pw, ...safeUser } = updatedUser;
+        return res.status(200).json(safeUser);
+    } catch (error) {
+        return next(error);
+    }
+};
