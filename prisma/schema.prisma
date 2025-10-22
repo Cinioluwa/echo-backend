@@ -12,6 +12,7 @@ model User {
   email     String    @unique
   firstName String?
   lastName  String?
+  level     Int?
   password  String
   role      Role    @default(USER)
   createdAt DateTime  @default(now())

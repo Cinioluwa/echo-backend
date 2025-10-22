@@ -86,3 +86,96 @@ export const updateUserRole = async (req: Request, res: Response, next: NextFunc
         return next(error);
     }
 };
+
+export const getPingsByLevel = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const pings = await prisma.ping.findMany({
+            select: {
+                author: {
+                    select: {
+                        level: true
+                    },
+                },
+            },
+        });
+
+        const statsByLevel = pings.reduce((acc, ping) => {
+            const level = ping.author.level || 'Unknown';
+            acc[level] = (acc[level] || 0) + 1;
+            return acc;
+        }, {} as Record<string | number, number>);
+
+        const formattedStats = Object.entries(statsByLevel).map(([level, count]) => ({
+            name: `Level ${level}`,
+            value: count,
+        }));
+        
+        return res.status(200).json(formattedStats);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+
+export const getPingStatsByCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const stats = await prisma.ping.groupBy({
+      by: ['category'],
+      _count: {
+        id: true, 
+      },
+      orderBy: {
+        _count: {
+          id: 'desc',
+        },
+      },
+    });
+
+    const formattedStats = stats.map(item => ({
+      name: item.category,
+      count: item._count.id,
+    }));
+
+    return res.status(200).json(formattedStats);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getUserByIdAsAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const userId = parseInt(id);
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                level: true,
+                createdAt: true,
+
+                pings: {
+                    orderBy: { createdAt: 'desc' },
+                },
+
+                comments: {
+                    orderBy: { createdAt: 'desc' },
+                },
+                surges: {
+                    orderBy: { createdAt: 'desc' },
+                },
+            },
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        return res.status(200).json(user);
+    } catch (error) {
+        return next(error);
+    }
+};
