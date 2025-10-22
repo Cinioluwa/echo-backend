@@ -5,17 +5,13 @@ import { AuthRequest } from '../types/AuthRequest.js';
 export const createAnnouncement = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { title, content, targetCollege, targetHall, targetLevel, targetGender } = req.body;
-        const userId = req.user?.userId;
-
-        if (!title || !content) {
-            return res.status(400).json({ error: 'Title and content are required' });
-        }
+        const userId = req.user!.userId; // Non-null assertion since middleware validates this
 
         const newAnnouncement = await prisma.announcement.create({
             data: {
                 title,
                 content,
-                authorId: userId!,
+                authorId: userId,
                 targetCollege,
                 targetHall,
                 targetLevel,
@@ -34,10 +30,11 @@ export const getAnnouncements = async (req: AuthRequest, res: Response, next: Ne
         const { college, hall, level, gender } = req.query;
 
         const whereClause: any = {};
-        if (college) whereClause.targetCollege = {has: college as string};
-        if (hall) whereClause.targetHall = {has: hall as string};
-        if (level) whereClause.targetLevel = {has: parseInt(level as string)};
-        if (gender ) whereClause.targetGender = {has: gender as string};
+        // Use hasSome to match if array contains any of the filter values
+        if (college) whereClause.targetCollege = { hasSome: [college as string] };
+        if (hall) whereClause.targetHall = { hasSome: [hall as string] };
+        if (level) whereClause.targetLevel = { hasSome: [parseInt(level as string)] };
+        if (gender) whereClause.targetGender = { hasSome: [gender as string] };
 
         const announcements = await prisma.announcement.findMany({
             where: whereClause,

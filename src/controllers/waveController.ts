@@ -10,11 +10,8 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const { pingId } = req.params;
     const { solution } = req.body;
-    const userId = req.user?.userId;
+    const userId = req.user!.userId; // Non-null assertion since middleware validates this
     
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized: User ID not found' });
-    }
     if (!solution) {
       return res.status(400).json({ error: 'Solution is required' });
     }

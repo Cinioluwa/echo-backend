@@ -9,7 +9,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 // relative imports must include the .js extension to match the emitted JavaScript files.
 export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, level } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string' || email.trim() === '' || password.trim() === '') {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -35,6 +35,7 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
         password: hashedPassword,
         firstName: firstName,
         lastName: lastName,
+        level: level, // Include level if provided
       },
     });
 
@@ -104,7 +105,7 @@ export const deleteCurrentUser = async (req: AuthRequest, res: Response, next: N
 export const updateCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const { firstName, lastName } = req.body;
+    const { firstName, lastName, level } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized: User ID not found' });
@@ -112,7 +113,7 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { firstName, lastName },
+      data: { firstName, lastName, level },
     });
     const { password: _pw, ...safeUser } = updatedUser;
 
@@ -137,6 +138,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         email: true,
         firstName: true,
         lastName: true,
+        level: true,
         createdAt: true,
       },
     });

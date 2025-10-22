@@ -60,26 +60,49 @@ export const getCommentsForPing = async (req: Request, res: Response, next: Next
   try {
     const { pingId } = req.params;
 
-    const comments = await prisma.comment.findMany({
-      where: {
-        pingId: parseInt(pingId),
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+    // --- Pagination Logic ---
+    const page = parseInt(req.query.page as string) || 1;
+    let limit = parseInt(req.query.limit as string) || 50;
+    if (limit > 100) limit = 100; // Cap the limit to 100
+    const skip = (page - 1) * limit;
+
+    // Run two queries in parallel: one for the data, one for the total count
+    const [comments, totalComments] = await prisma.$transaction([
+      prisma.comment.findMany({
+        where: {
+          pingId: parseInt(pingId),
+        },
+        skip: skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'asc',
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
+      }),
+      prisma.comment.count({ where: { pingId: parseInt(pingId) } }),
+    ]);
+
+    // --- Metadata Calculation ---
+    const totalPages = Math.ceil(totalComments / limit);
+
+    return res.status(200).json({
+      data: comments,
+      pagination: {
+        totalComments,
+        totalPages,
+        currentPage: page,
+        limit,
       },
     });
-
-    return res.status(200).json(comments);
   } catch (error) {
     logger.error('Error fetching comments for ping', { error, pingId: req.params.pingId });
     return next(error);
@@ -143,26 +166,49 @@ export const getCommentsForWave = async (req: Request, res: Response, next: Next
   try {
     const { waveId } = req.params;
 
-    const comments = await prisma.comment.findMany({
-      where: {
-        waveId: parseInt(waveId),
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+    // --- Pagination Logic ---
+    const page = parseInt(req.query.page as string) || 1;
+    let limit = parseInt(req.query.limit as string) || 50;
+    if (limit > 100) limit = 100; // Cap the limit to 100
+    const skip = (page - 1) * limit;
+
+    // Run two queries in parallel: one for the data, one for the total count
+    const [comments, totalComments] = await prisma.$transaction([
+      prisma.comment.findMany({
+        where: {
+          waveId: parseInt(waveId),
+        },
+        skip: skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'asc',
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
+      }),
+      prisma.comment.count({ where: { waveId: parseInt(waveId) } }),
+    ]);
+
+    // --- Metadata Calculation ---
+    const totalPages = Math.ceil(totalComments / limit);
+
+    return res.status(200).json({
+      data: comments,
+      pagination: {
+        totalComments,
+        totalPages,
+        currentPage: page,
+        limit,
       },
     });
-
-    return res.status(200).json(comments);
   } catch (error) {
     logger.error('Error fetching comments for wave', { error, waveId: req.params.waveId });
     return next(error);

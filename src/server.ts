@@ -1,5 +1,6 @@
 // src/server.ts
 import 'dotenv/config';
+import { env } from './config/env.js'; // Validate env vars at startup
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -19,7 +20,7 @@ import helmet from 'helmet';
 import { connectDatabase } from './config/db.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 
 app.use(cors());  // Enable CORS for all routes
 //Will need to configure CORS more specifically in production

@@ -17,6 +17,11 @@ import {
  } from '../controllers/announcementController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
+import { validate } from '../middleware/validationMiddleware.js';
+import { 
+    createAnnouncementSchema, 
+    updateAnnouncementSchema 
+} from '../schemas/announcementSchemas.js';
 
 const router = Router();
 
@@ -25,8 +30,8 @@ router.get('/pings', authMiddleware, adminMiddleware, getAllPingsAsAdmin);
 router.delete('/pings/:id', authMiddleware, adminMiddleware, deleteAnyPing);
 router.get('/users', authMiddleware, adminMiddleware, getAllUsers);
 router.patch('/users/:id/role', authMiddleware, adminMiddleware, updateUserRole);
-router.post('/announcements', authMiddleware, adminMiddleware, createAnnouncement);
-router.patch('/announcements/:id', authMiddleware, adminMiddleware, updateAnnouncement);
+router.post('/announcements', authMiddleware, adminMiddleware, validate(createAnnouncementSchema), createAnnouncement);
+router.patch('/announcements/:id', authMiddleware, adminMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
 router.delete('/announcements/:id', authMiddleware, adminMiddleware, deleteAnnouncement);
 router.get('/analytics/by-level', authMiddleware, adminMiddleware, getPingsByLevel);
 router.get('/analytics/by-category', authMiddleware, adminMiddleware, getPingStatsByCategory);
