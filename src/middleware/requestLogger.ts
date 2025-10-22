@@ -23,13 +23,9 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
     userAgent: req.get('user-agent'),
     body: sanitizeForLog(req.body), // Don't log passwords, tokens, etc.
   });
-
-  // Capture the original res.json to log responses
-  const originalJson = res.json.bind(res);
-  res.json = function (body: any) {
+  // Log outgoing response when the response finishes so all response types are covered
+  res.on('finish', () => {
     const duration = Date.now() - startTime;
-    
-    // Log response
     logger.info('Outgoing response', {
       requestId,
       method: req.method,
@@ -37,9 +33,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
       statusCode: res.statusCode,
       duration: `${duration}ms`,
     });
-
-    return originalJson(body);
-  };
+  });
 
   next();
 };

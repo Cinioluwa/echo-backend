@@ -59,18 +59,35 @@ const logger = winston.createLogger({
 
 // Helper to sanitize sensitive data from logs
 export const sanitizeForLog = (data: any): any => {
-  if (!data) return data;
-  
+  if (data === undefined || data === null) return data;
+
   const sensitive = ['password', 'token', 'authorization', 'cookie', 'secret'];
-  const sanitized = { ...data };
-  
-  for (const key of Object.keys(sanitized)) {
-    if (sensitive.some(s => key.toLowerCase().includes(s))) {
-      sanitized[key] = '[REDACTED]';
+
+  const mask = (value: any): any => {
+    if (value === null || value === undefined) return value;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+    if (Array.isArray(value)) return value.map(mask);
+    if (typeof value === 'object') {
+      const out: any = {};
+      for (const key of Object.keys(value)) {
+        if (sensitive.some(s => key.toLowerCase().includes(s))) {
+          out[key] = '[REDACTED]';
+        } else {
+          out[key] = mask(value[key]);
+        }
+      }
+      return out;
     }
+    // For unexpected types, return as-is
+    return value;
+  };
+
+  try {
+    return mask(data);
+  } catch (err) {
+    // If sanitization fails for any reason, avoid leaking sensitive data
+    return '[REDACTED]';
   }
-  
-  return sanitized;
 };
 
 export default logger;

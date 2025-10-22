@@ -3,7 +3,7 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 
-export const createPing = async (req: AuthRequest, res: Response) => {
+export const createPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { title, content, category, hashtag } = req.body;
     const authorId = req.user?.userId;
@@ -28,11 +28,11 @@ export const createPing = async (req: AuthRequest, res: Response) => {
     return res.status(201).json(newPing);
   } catch (error) {
     logger.error('Error creating ping', { error, authorId: req.user?.userId });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
-export const getAllPings = async (_req: Request, res: Response) => {
+export const getAllPings = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     // --- Pagination Logic ---
     const page = parseInt(_req.query.page as string) || 1;
@@ -94,11 +94,11 @@ export const getAllPings = async (_req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Error fetching pings', { error });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
-export const getMyPings = async (req: AuthRequest, res: Response) => {
+export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
 
@@ -147,11 +147,11 @@ export const getMyPings = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('Error fetching user pings', { error, userId: req.user?.userId });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
-export const searchPings = async (req: Request, res: Response) => {
+export const searchPings = async (req: Request, res: Response, next: NextFunction) => {
   const { hashtag, q } = req.query;
   
   try {
@@ -218,11 +218,11 @@ export const searchPings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Error searching pings', { error, hashtag, query: q });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
-export const getPingById = async (req: Request, res: Response) => {
+export const getPingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const ping = await prisma.ping.findUnique({
@@ -253,6 +253,18 @@ export const getPingById = async (req: Request, res: Response) => {
             },
           },
         },
+        officialResponse: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -262,11 +274,11 @@ export const getPingById = async (req: Request, res: Response) => {
     return res.status(200).json(ping);
   } catch (error) {
     logger.error('Error fetching ping', { error, pingId: req.params.id });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
-export const deletePing = async (req: AuthRequest, res: Response) => {
+export const deletePing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const authorId = req.user?.userId;
@@ -290,11 +302,11 @@ export const deletePing = async (req: AuthRequest, res: Response) => {
     return res.status(204).send();
   } catch (error) {
     logger.error('Error deleting ping', { error, pingId: req.params.id, userId: req.user?.userId });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
-export const updatePing = async (req: AuthRequest, res: Response) => {
+export const updatePing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
@@ -332,7 +344,7 @@ export const updatePing = async (req: AuthRequest, res: Response) => {
     return res.status(200).json(updatedPing);
   } catch (error) {
     logger.error('Error updating ping', { error, pingId: req.params.id, userId: req.user?.userId });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
@@ -355,7 +367,7 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
     return res.status(200).json(updatedPing);
   } catch (error) {
     logger.error('Error updating ping status', { error, pingId: req.params.id });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
@@ -371,7 +383,7 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
     return res.status(200).json(updatedPing);
   } catch (error) {
     logger.error('Error submitting ping', { error, pingId: req.params.id });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
@@ -391,6 +403,7 @@ export const getAllPingsAsAdmin = async (req: Request, res: Response, next: Next
 
     const [pings, totalPings] = await prisma.$transaction([
       prisma.ping.findMany({
+        where: whereClause,
         skip: skip,
         take: limit,
         orderBy: {
@@ -409,7 +422,7 @@ export const getAllPingsAsAdmin = async (req: Request, res: Response, next: Next
           },
         },
       }),
-      prisma.ping.count(),
+      prisma.ping.count({ where: whereClause }),
     ]);
 
     const totalPages = Math.ceil(totalPings / limit);
@@ -425,6 +438,6 @@ export const getAllPingsAsAdmin = async (req: Request, res: Response, next: Next
     });
   } catch (error) {
     logger.error('Error fetching all pings as admin', { error });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };

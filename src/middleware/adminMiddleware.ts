@@ -20,7 +20,7 @@ const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFuncti
             return res.status(403).json({ error: 'Forbidden: Admins only' });
         }
     } catch (error) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return next(error as any);
     }
 };
 

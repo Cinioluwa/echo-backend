@@ -104,7 +104,11 @@ export const deleteCurrentUser = async (req: AuthRequest, res: Response, next: N
 export const updateCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const {firstName, lastName} = req.body;
+    const { firstName, lastName } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: User ID not found' });
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -118,7 +122,7 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
   }
 };
 
-export const getCurrentUser = async (req: AuthRequest, res: Response) => {
+export const getCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
     
@@ -144,7 +148,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
     return res.status(200).json(user);
   } catch (error) {
     logger.error('Error fetching user', { error, userId: req.user?.userId });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 

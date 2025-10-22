@@ -15,6 +15,7 @@ import { pingCommentRouter, waveCommentRouter } from './routes/commentRoutes.js'
 import { pingSurgeRouter, waveSurgeRouter } from './routes/surgeRoutes.js';
 import officialResponseRoutes from './routes/officialResponseRoutes.js';
 import helmet from 'helmet';
+import { connectDatabase } from './config/db.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,12 +24,11 @@ app.use(cors());  // Enable CORS for all routes
 //Will need to configure CORS more specifically in production
 
 // Request logging middleware (should be early in the chain)
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+// Request logging middleware (should run after body parsing so bodies are available)
 app.use(requestLogger);
-
-app.use('/api/users', adminRoutes);
-app.use('/api/pings', pingRoutes);
-
-app.use('/api/admin', adminRoutes);
 
 // General rate limiter for all routes
 const limiter = rateLimit({
@@ -60,10 +60,8 @@ const createLimiter = rateLimit({
   message: 'Too many create/update operations. Please slow down.'
 });
 
-app.use(limiter); // Apply general rate limiter to all routes
 
-// Middleware to parse JSON bodies
-app.use(express.json());
+app.use(limiter); // Apply general rate limiter to all routes
 
 // Apply auth-specific rate limiter to auth routes
 app.use('/api/users/register', authLimiter);
@@ -122,12 +120,27 @@ app.get('/healthz', (_req, res) => {
 });
 
 // Official Response routes
-app.use('/api/pings/:pingId/official-response', officialResponseRoutes);
+app.use('/api/pings/:pingId/official-response', applyCreateLimiter, officialResponseRoutes);
+
+// Admin routes placed after global security/rate-limit middlewares to ensure they are protected
+app.use('/api/admin', adminRoutes);
 
 // Centralized error handler (should be the last middleware)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  logger.info(`🚀 Server is listening on port ${PORT}`);
-  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Ensure DB is connected before starting the server. The db module exports a connect function that will
+// attempt to connect (and log) but will not directly exit the process. This lets the server handle failure
+// modes more gracefully in tests and container orchestrators.
+
+(async () => {
+  try {
+    await connectDatabase();
+    app.listen(PORT, () => {
+      logger.info(`🚀 Server is listening on port ${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (err) {
+    logger.error('Failed to start server due to DB connection error', { error: err });
+    process.exit(1);
+  }
+})();

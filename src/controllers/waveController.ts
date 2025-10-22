@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
@@ -6,7 +6,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 // @desc    Create a new wave (solution) for a ping
 // @route   POST /api/pings/:pingId/waves
 // @access  Private
-export const createWave = async (req: AuthRequest, res: Response) => {
+export const createWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
     const { solution } = req.body;
@@ -38,14 +38,14 @@ export const createWave = async (req: AuthRequest, res: Response) => {
     return res.status(201).json(newWave);
   } catch (error) {
     logger.error('Error creating wave', { error, pingId: req.params.pingId, userId: req.user?.userId });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
 // @desc    Get all waves (solutions) for a specific ping
 // @route   GET /api/pings/:pingId/waves
 // @access  Public
-export const getWavesForPing = async (req: Request, res: Response) => {
+export const getWavesForPing = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
 
@@ -104,14 +104,14 @@ export const getWavesForPing = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Error fetching waves', { error, pingId: req.params.pingId });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };
 
 // @desc    Get a specific wave by ID
 // @route   GET /api/waves/:id
 // @access  Public
-export const getWaveById = async (req: Request, res: Response) => {
+export const getWaveById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
@@ -158,6 +158,6 @@ export const getWaveById = async (req: Request, res: Response) => {
     return res.status(200).json(wave);
   } catch (error) {
     logger.error('Error fetching wave', { error, waveId: req.params.id });
-    return res.status(500).json({ error: 'Something went wrong' });
+    return next(error);
   }
 };

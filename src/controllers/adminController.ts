@@ -21,7 +21,7 @@ export const getPlatformStats = async (req: Request, res: Response, next: NextFu
 
         res.status(200).json(stats);  
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 

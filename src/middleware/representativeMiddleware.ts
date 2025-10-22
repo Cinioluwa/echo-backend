@@ -22,7 +22,7 @@ const representativeMiddleware = async (req: AuthRequest, res: Response, next: N
         }
     } catch (error) {
         logger.error('Error in representativeMiddleware:', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+        return next(error as any);
     }
 };
 
