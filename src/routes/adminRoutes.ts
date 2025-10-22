@@ -6,6 +6,11 @@ import {
      getAllUsers,
      updateUserRole
     } from '../controllers/adminController.js';
+import { 
+    createAnnouncement,
+    updateAnnouncement,
+    deleteAnnouncement
+ } from '../controllers/announcementController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 
@@ -16,6 +21,9 @@ router.get('/pings', authMiddleware, adminMiddleware, getAllPingsAsAdmin);
 router.delete('/pings/:id', authMiddleware, adminMiddleware, deleteAnyPing);
 router.get('/users', authMiddleware, adminMiddleware, getAllUsers);
 router.patch('/users/:id/role', authMiddleware, adminMiddleware, updateUserRole);
+router.post('/announcements', authMiddleware, adminMiddleware, createAnnouncement);
+router.patch('/announcements/:id', authMiddleware, adminMiddleware, updateAnnouncement);
+router.delete('/announcements/:id', authMiddleware, adminMiddleware, deleteAnnouncement);
 
 export default router;
 

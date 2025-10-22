@@ -21,6 +21,7 @@ model User {
   comments  Comment[]
   surges    Surge[]
   officialResponses OfficialResponse[]
+  announcements Announcement[]
 }
 
 model Ping {
@@ -128,6 +129,24 @@ model OfficialResponse {
 
   ping     Ping   @relation(fields: [pingId], references: [id], onDelete: Cascade)
   pingId   Int    @unique
+}
+
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  Int
+
+  targetCollege String[]
+  targetHall    String[]
+  targetLevel   Int[]
+  targetGender  String[]
+
+  // Database indexes for query performance
+  @@index([createdAt(sort: Desc)])   // Sort by newest announcements
 }
 
 // ... (Enums remain the same)

@@ -14,6 +14,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import { pingCommentRouter, waveCommentRouter } from './routes/commentRoutes.js';
 import { pingSurgeRouter, waveSurgeRouter } from './routes/surgeRoutes.js';
 import officialResponseRoutes from './routes/officialResponseRoutes.js';
+import announcementRoutes from './routes/announcementRoutes.js';
 import helmet from 'helmet';
 import { connectDatabase } from './config/db.js';
 
@@ -124,6 +125,10 @@ app.use('/api/pings/:pingId/official-response', applyCreateLimiter, officialResp
 
 // Admin routes placed after global security/rate-limit middlewares to ensure they are protected
 app.use('/api/admin', adminRoutes);
+
+app.use('/api/announcements', announcementRoutes);
+//GET /api/announcements - Get all announcements (with optional filters: ?college=&hall=&level=&gender=)
+//POST /api/admin/announcements - Create a new announcement (admin only)
 
 // Centralized error handler (should be the last middleware)
 app.use(errorHandler);
