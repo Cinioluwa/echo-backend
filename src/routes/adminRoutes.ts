@@ -7,7 +7,8 @@ import {
      updateUserRole,
      getPingStatsByCategory,
      getPingsByLevel,
-     getUserByIdAsAdmin,
+    getUserByIdAsAdmin,
+    updatePingProgressStatus,
 
     } from '../controllers/adminController.js';
 import { 
@@ -40,6 +41,7 @@ router.delete('/announcements/:id', authMiddleware, adminMiddleware, deleteAnnou
 router.get('/analytics/by-level', authMiddleware, adminMiddleware, getPingsByLevel);
 router.get('/analytics/by-category', authMiddleware, adminMiddleware, getPingStatsByCategory);
 router.get('/users/:id', authMiddleware, adminMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
+router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, updatePingProgressStatus);
 
 export default router;
 

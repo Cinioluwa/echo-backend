@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
+import { ProgressStatus } from '@prisma/client';
 
 export const getPlatformStats = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -175,6 +176,27 @@ export const getUserByIdAsAdmin = async (req: Request, res: Response, next: Next
         }
 
         return res.status(200).json(user);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const updatePingProgressStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body as { status: ProgressStatus };
+
+        if (!Object.values(ProgressStatus).includes(status)) {
+            return res.status(400).json({ error: 'Invalid progress status' });
+        }
+
+        const updated = await prisma.ping.update({
+            where: { id: parseInt(id) },
+            data: { progressStatus: status, progressUpdatedAt: new Date() },
+            select: { id: true, title: true, progressStatus: true, progressUpdatedAt: true },
+        });
+
+        return res.status(200).json(updated);
     } catch (error) {
         return next(error);
     }

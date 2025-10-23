@@ -16,8 +16,10 @@ import { pingCommentRouter, waveCommentRouter } from './routes/commentRoutes.js'
 import { pingSurgeRouter, waveSurgeRouter } from './routes/surgeRoutes.js';
 import officialResponseRoutes from './routes/officialResponseRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
 import helmet from 'helmet';
 import { connectDatabase } from './config/db.js';
+import representativeRoutes from './routes/representativeRoutes.js';
 
 const app = express();
 const PORT = env.PORT;
@@ -130,6 +132,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/announcements', announcementRoutes);
 //GET /api/announcements - Get all announcements (with optional filters: ?college=&hall=&level=&gender=)
 //POST /api/admin/announcements - Create a new announcement (admin only)
+app.use('/api/representatives', representativeRoutes);
+// Public routes (Soundboard/Stream)
+app.use('/api/public', publicRoutes);
 
 // Centralized error handler (should be the last middleware)
 app.use(errorHandler);

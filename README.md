@@ -6,6 +6,8 @@ Backend server for the Echo application — a social feedback platform for unive
 - Auth with JWT (register, login, profile, update, delete)
 - Pings (issues), Waves (solutions), Comments, Surges (likes)
 - Announcements and Official Responses
+- Public endpoints: Soundboard (pings) and Stream (waves)
+- Representative workflow: submitted pings, top waves, forward waves
 - Roles: USER, REPRESENTATIVE, ADMIN with protected routes
 - Security: validation (Zod), rate limiting, CORS, Helmet, structured logging
 
@@ -13,9 +15,24 @@ Backend server for the Echo application — a social feedback platform for unive
 - Runtime: Node.js + TypeScript (ES modules)
 - Framework: Express 5
 - Database: PostgreSQL
+# Echo Backend API
+
+Backend server for the Echo application — a social feedback platform for university students.
+
+## What’s inside
+- Auth with JWT (register, login, profile, update, delete)
+- Pings (issues), Waves (solutions), Comments, Surges (likes)
+- Announcements and Official Responses
+- Roles: USER, REPRESENTATIVE, ADMIN with protected routes
+- Security: validation (Zod), rate limiting, CORS, Helmet, structured logging
+
+## Tech stack
+- Runtime: Node.js + TypeScript (ES modules)
+- Framework: Express 5
+- Database: PostgreSQL (Neon)
 - ORM: Prisma
 - Dev tooling: tsx watch, ESLint (flat), Prettier, Nodemon
-- Local DB: Docker Compose
+- Container: Dockerfile (optional for app image)
 
 ## Quick start (local)
 
@@ -25,17 +42,17 @@ Backend server for the Echo application — a social feedback platform for unive
 npm install
 ```
 
-2) Start PostgreSQL with Docker (optional but recommended for local)
+2) Connect to Neon (Postgres-as-a-service)
 
-```powershell
-docker-compose up -d
+- Create a project and database in Neon
+- Copy the connection string
+- Ensure TLS is required (Neon uses SSL); include `sslmode=require` in the URL
+
+Example `DATABASE_URL` (replace placeholders):
+
+```env
+postgresql://<user>:<password>@<neon-host>/<database>?sslmode=require
 ```
-
-This spins up Postgres 15 with defaults from `docker-compose.yml`:
-- user: `myuser`
-- password: `mypassword`
-- database: `mydb`
-- host: `localhost:5432`
 
 3) Create `.env`
 
@@ -43,7 +60,7 @@ Create a `.env` file in the project root with at least the following variables:
 
 ```env
 # Required
-DATABASE_URL="postgresql://myuser:mypassword@localhost:5432/mydb?schema=public"
+DATABASE_URL="postgresql://<user>:<password>@<neon-host>/<database>?sslmode=require"
 JWT_SECRET="replace_with_a_strong_random_secret"
 
 # Optional
@@ -57,6 +74,8 @@ NODE_ENV=development
 npx prisma migrate dev
 npx prisma generate
 ```
+
+Note: For production, use `npx prisma migrate deploy`.
 
 5) Run the API (dev)
 
@@ -92,7 +111,7 @@ echo-backend/
 │   ├── schema.prisma            # Prisma schema (User, Ping, Wave, Comment, Surge, OfficialResponse, Announcement)
 │   └── migrations/              # Migration history
 ├── logs/                        # Winston log files (error.log, combined.log in prod)
-├── docker-compose.yml           # Local Postgres service
+├── Dockerfile                   # Build a production image (connects to Neon)
 ├── package.json                 # Scripts and deps
 └── tsconfig.json                # TS config (NodeNext)
 ```
@@ -101,16 +120,22 @@ echo-backend/
 
 Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 
-| Variable     | Required | Description                                | Example |
-|--------------|----------|--------------------------------------------|---------|
-| DATABASE_URL | Yes      | PostgreSQL connection string               | `postgresql://myuser:mypassword@localhost:5432/mydb?schema=public` |
-| JWT_SECRET   | Yes      | Secret key for JWT signing                 | `a_really_strong_random_string` |
-| PORT         | No       | Port Express listens on (default 3000)     | `3000` |
-| NODE_ENV     | No       | `development` | `production` | `test`      | `development` |
+| Variable     | Required | Description                                 | Example |
+|--------------|----------|---------------------------------------------|---------|
+| DATABASE_URL | Yes      | PostgreSQL connection string (Neon)         | `postgresql://user:pass@neon-host/db?sslmode=require` |
+| JWT_SECRET   | Yes      | Secret key for JWT signing                  | `a_really_strong_random_string` |
+| PORT         | No       | Port Express listens on (default 3000)      | `3000` |
+| NODE_ENV     | No       | `development` / `production` / `test`       | `development` |
+
+## Base URL and auth
+
+- Base URL for APIs: `/api`
+- Protected routes require `Authorization: Bearer <JWT>`
+- Pagination: `?page=<number>&limit=<number>` on most list endpoints
 
 ## API overview
 
-All JSON bodies are validated with Zod. Many list endpoints accept optional pagination: `?page=<number>&limit=<number>`.
+All JSON bodies are validated with Zod. Many list endpoints accept optional pagination.
 
 ### Auth — `/api/users`
 - `POST /register` — Register (email, password, firstName, lastName, level?)
@@ -156,15 +181,25 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `PATCH /api/admin/announcements/:id` — Update announcement (admin only)
 - `DELETE /api/admin/announcements/:id` — Delete announcement (admin only)
 
+### Representatives — `/api/representatives`
+- `GET /pings/submitted` — Pings marked as submitted (rep-only; pagination)
+- `GET /waves/top` — Top waves for review (rep-only)
+- `POST /waves/forward` — Forward waves for admin review (rep-only)
+
 ### Admin — `/api/admin`
 - `GET /stats` — Platform stats (admin)
 - `GET /pings` — List all pings with filters/pagination (admin)
 - `DELETE /pings/:id` — Delete any ping (admin)
+- `PATCH /pings/:id/progress-status` — Update ping progress status (admin)
 - `GET /users` — List users (admin)
 - `GET /users/:id` — Get user by id (admin)
 - `PATCH /users/:id/role` — Update user role (ADMIN | REPRESENTATIVE | USER) (admin)
 - `GET /analytics/by-level` — Pings grouped by level (admin)
 - `GET /analytics/by-category` — Pings grouped by category (admin)
+
+### Public
+- `GET /api/public/soundboard` — Public pings
+- `GET /api/public/stream` — Public waves
 
 ### Health check
 - `GET /healthz` — `{ status: "ok" }`
@@ -179,12 +214,12 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - Centralized error handler with safe logging
 
 ## Database schema (Prisma)
-Models: `User`, `Ping`, `Wave`, `Comment`, `Surge`, `OfficialResponse`, `Announcement` with enums `Role`, `Status`, `WaveCategory` and helpful indexes for query performance. See `prisma/schema.prisma`.
+Models: `User`, `Ping`, `Wave`, `Comment`, `Surge`, `OfficialResponse`, `Announcement` with enums `Role`, `Status`, `WaveCategory`, `ProgressStatus` and helpful indexes for query performance. See `prisma/schema.prisma`.
 
 Common operations:
 
 ```powershell
-# Create/refresh dev DB and apply migrations interactively
+# Create/refresh dev DB and apply migrations interactively (Neon OK)
 npx prisma migrate dev
 
 # Apply migrations in production
@@ -199,11 +234,40 @@ npx prisma studio
 - JSON structured logs in production
 - Files: `logs/error.log` (always), `logs/combined.log` (production)
 
-## Deployment notes
-- Set all environment variables in your platform (DATABASE_URL, JWT_SECRET, etc.)
-- Run `npx prisma migrate deploy` before starting the app
-- Start the compiled server (`npm run build` then `npm start`)
+## Docker (optional)
 
+You can containerize the app with the provided `Dockerfile` and connect it to Neon via `DATABASE_URL`.
+
+```powershell
+# Build image
+docker build -t echo-backend .
+
+# Run container (pass env vars; example with PowerShell)
+docker run -p 3000:3000 `
+  -e DATABASE_URL="postgresql://<user>:<pass>@<neon-host>/<db>?sslmode=require" `
+  -e JWT_SECRET="<your-secret>" `
+  -e NODE_ENV=production `
+  echo-backend
+```
+
+In production, run migrations prior to starting the containerized app:
+
+```powershell
+npx prisma migrate deploy
+```
+
+## Contributing
+1. Fork repository and create a feature branch
+2. Develop with `npm run dev`
+3. Lint/format before committing: `npm run lint && npm run format`
+4. Open a Pull Request
+
+## License
+Private and proprietary
+
+---
+
+Built with ❤️ for university students
 ## Contributing
 1. Fork repository and create a feature branch
 2. Develop with `npm run dev`

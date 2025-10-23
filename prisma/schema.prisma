@@ -23,6 +23,8 @@ model User {
   surges    Surge[]
   officialResponses OfficialResponse[]
   announcements Announcement[]
+  // Waves flagged by this user (representative forwarding)
+  flaggedWaves Wave[] @relation("WaveFlaggedBy")
 }
 
 model Ping {
@@ -33,6 +35,10 @@ model Ping {
   status     Status       @default(POSTED)
   category   WaveCategory @default(GENERAL)
   createdAt  DateTime     @default(now())
+  
+  // Progress tracking for admin workflow
+  progressStatus    ProgressStatus @default(NONE)
+  progressUpdatedAt DateTime?
   
   author     User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId   Int
@@ -68,6 +74,11 @@ model Wave {
   surges     Surge[]
   
   surgeCount Int      @default(0)
+
+  // Representative forwarding to admins
+  flaggedForReview Boolean @default(false)
+  flaggedBy        User?   @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
+  flaggedById      Int?
 
   // Database indexes for query performance
   @@index([pingId])                  // Foreign key for getWavesForPing
@@ -164,10 +175,17 @@ enum WaveCategory {
 
 enum Status {
   POSTED
-  SUBMITTED
   UNDER_REVIEW
   APPROVED
   REJECTED
+}
+
+// Admin progress lifecycle for pings
+enum ProgressStatus {
+  NONE
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
 }
 
 enum Role {
