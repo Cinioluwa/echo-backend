@@ -39,3 +39,9 @@ export const updateUserSchema = z.object({
     level: z.number().int('Level must be an integer').min(1, 'Level must be between 1 and 7').max(7, 'Level must be between 1 and 7').optional(),
   }).strict(), // Prevents adding extra fields like password, email, etc.
 });
+
+export const userIdParamSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'User ID must be a number'),
+  }),
+});

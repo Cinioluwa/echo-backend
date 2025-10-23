@@ -238,7 +238,7 @@ export const getPingById = async (req: Request, res: Response, next: NextFunctio
         },
         waves: {
           include: {
-            surges: true,
+            _count: { select: { surges: true, comments: true } },
           },
         },
         comments: {

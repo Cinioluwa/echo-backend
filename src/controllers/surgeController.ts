@@ -1,5 +1,6 @@
 // src/controllers/surgeController.ts
 import { Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
@@ -28,42 +29,34 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
 
     // Check if the user has already surged this ping
     const existingSurge = await prisma.surge.findFirst({
-      where: {
-        userId,
-        pingId: pingIdInt,
-      },
+      where: { userId, pingId: pingIdInt },
+      select: { id: true },
     });
 
     if (existingSurge) {
-      // If surge exists, delete it and decrement the count (un-surge)
-      await prisma.$transaction([
-        prisma.surge.delete({
-          where: {
-            id: existingSurge.id,
-          },
-        }),
-        prisma.ping.update({
-          where: { id: pingIdInt },
-          data: { surgeCount: { decrement: 1 } },
-        }),
-      ]);
+      // If surge exists, delete it
+      await prisma.surge.delete({ where: { id: existingSurge.id } });
+      // Re-sync the denormalized count to avoid drift
+      const count = await prisma.surge.count({ where: { pingId: pingIdInt } });
+      await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
       return res.status(200).json({ message: 'Surge removed from ping', surged: false });
-    } else {
-      // If surge doesn't exist, create it and increment the count
-      await prisma.$transaction([
-        prisma.surge.create({
-          data: {
-            userId,
-            pingId: pingIdInt,
-          },
-        }),
-        prisma.ping.update({
-          where: { id: pingIdInt },
-          data: { surgeCount: { increment: 1 } },
-        }),
-      ]);
-      return res.status(201).json({ message: 'Ping surged', surged: true });
     }
+
+    // If surge doesn't exist, try to create it
+    try {
+      await prisma.surge.create({ data: { userId, pingId: pingIdInt } });
+    } catch (err: any) {
+      // Handle unique constraint conflicts gracefully (from partial unique index)
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        // Another request created the surge concurrently; proceed
+      } else {
+        throw err;
+      }
+    }
+    // Re-sync the denormalized count to avoid drift
+    const count = await prisma.surge.count({ where: { pingId: pingIdInt } });
+    await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
+    return res.status(201).json({ message: 'Ping surged', surged: true });
   } catch (error) {
     logger.error('Error toggling surge on ping', { error, pingId: req.params.pingId, userId: req.user?.userId });
     return next(error);
@@ -95,42 +88,29 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
 
     // Check if the user has already surged this wave
     const existingSurge = await prisma.surge.findFirst({
-      where: {
-        userId,
-        waveId: waveIdInt,
-      },
+      where: { userId, waveId: waveIdInt },
+      select: { id: true },
     });
 
     if (existingSurge) {
-      // If surge exists, delete it and decrement the count (un-surge)
-      await prisma.$transaction([
-        prisma.surge.delete({
-          where: {
-            id: existingSurge.id,
-          },
-        }),
-        prisma.wave.update({
-          where: { id: waveIdInt },
-          data: { surgeCount: { decrement: 1 } },
-        }),
-      ]);
+      await prisma.surge.delete({ where: { id: existingSurge.id } });
+      const count = await prisma.surge.count({ where: { waveId: waveIdInt } });
+      await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
       return res.status(200).json({ message: 'Surge removed from wave', surged: false });
-    } else {
-      // If surge doesn't exist, create it and increment the count
-      await prisma.$transaction([
-        prisma.surge.create({
-          data: {
-            userId,
-            waveId: waveIdInt,
-          },
-        }),
-        prisma.wave.update({
-          where: { id: waveIdInt },
-          data: { surgeCount: { increment: 1 } },
-        }),
-      ]);
-      return res.status(201).json({ message: 'Wave surged', surged: true });
     }
+
+    try {
+      await prisma.surge.create({ data: { userId, waveId: waveIdInt } });
+    } catch (err: any) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        // Another request created the surge concurrently; proceed
+      } else {
+        throw err;
+      }
+    }
+    const count = await prisma.surge.count({ where: { waveId: waveIdInt } });
+    await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
+    return res.status(201).json({ message: 'Wave surged', surged: true });
   } catch (error) {
     logger.error('Error toggling surge on wave', { error, waveId: req.params.waveId, userId: req.user?.userId });
     return next(error);

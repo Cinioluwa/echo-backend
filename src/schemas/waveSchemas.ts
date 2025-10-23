@@ -29,3 +29,10 @@ export const waveIdParamSchema = z.object({
     id: z.string().regex(/^\d+$/, 'Wave ID must be a number'),
   }),
 });
+
+// Params schema when waveId is provided in the route (e.g., /api/waves/:waveId/...)
+export const waveParamSchema = z.object({
+  params: z.object({
+    waveId: z.string().regex(/^\d+$/, 'Wave ID must be a number'),
+  }),
+});

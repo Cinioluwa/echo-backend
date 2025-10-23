@@ -76,7 +76,6 @@ export const getWavesForPing = async (req: Request, res: Response, next: NextFun
               },
             },
           },
-          surges: true,
           _count: {
             select: { comments: true, surges: true },
           },
@@ -111,15 +110,11 @@ export const getWavesForPing = async (req: Request, res: Response, next: NextFun
 export const getWaveById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
-    // Increment view count
-    const wave = await prisma.wave.update({
-      where: { id: parseInt(id) },
-      data: {
-        viewCount: {
-          increment: 1,
-        },
-      },
+    const waveId = parseInt(id);
+
+    // Fetch the wave with related data first
+    const wave = await prisma.wave.findUnique({
+      where: { id: waveId },
       include: {
         ping: {
           include: {
@@ -145,14 +140,23 @@ export const getWaveById = async (req: Request, res: Response, next: NextFunctio
             },
           },
         },
-        surges: true,
+        _count: { select: { comments: true, surges: true } },
       },
     });
 
     if (!wave) {
       return res.status(404).json({ error: 'Wave not found' });
     }
-    return res.status(200).json(wave);
+
+    // Increment view count after confirming existence
+    await prisma.wave.update({
+      where: { id: waveId },
+      data: { viewCount: { increment: 1 } },
+      select: { id: true },
+    });
+
+    // Return the previously fetched data with an adjusted viewCount to avoid an extra roundtrip
+    return res.status(200).json({ ...wave, viewCount: wave.viewCount + 1 });
   } catch (error) {
     logger.error('Error fetching wave', { error, waveId: req.params.id });
     return next(error);

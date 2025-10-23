@@ -15,6 +15,7 @@ import adminMiddleware from '../middleware/adminMiddleware.js';
 import representativeMiddleware from '../middleware/representativeMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { createPingSchema, updatePingSchema, pingIdSchema } from '../schemas/pingSchemas.js';
+import { paginationSchema, paginationWithFiltersSchema, searchSchema } from '../schemas/paginationSchema.js';
 
 const router = Router();
 
@@ -22,13 +23,13 @@ const router = Router();
 router.post('/', authMiddleware, validate(createPingSchema), createPing);
 
 // Get all pings (with pagination and optional filters)
-router.get('/', getAllPings);
+router.get('/', validate(paginationWithFiltersSchema), getAllPings);
 
 // Search pings by hashtag or text query (must come BEFORE /:id route)
-router.get('/search', searchPings);
+router.get('/search', validate(searchSchema), searchPings);
 
 // Get current user's pings (must come BEFORE /:id route)
-router.get('/me', authMiddleware, getMyPings);
+router.get('/me', authMiddleware, validate(paginationSchema), getMyPings);
 
 // Get a specific ping by ID - with ID validation
 router.get('/:id', validate(pingIdSchema), getPingById);
@@ -40,8 +41,8 @@ router.delete('/:id', authMiddleware, validate(pingIdSchema), deletePing);
 router.patch('/:id', authMiddleware, validate(pingIdSchema), validate(updatePingSchema), updatePing);
 
 // Update ping status (admin only) - with ID validation
-router.patch('/:id/status', authMiddleware, adminMiddleware, updatePingStatus);
+router.patch('/:id/status', authMiddleware, adminMiddleware, validate(pingIdSchema), updatePingStatus);
 
-router.patch('/:id/submit', authMiddleware, representativeMiddleware, submitPing);
+router.patch('/:id/submit', authMiddleware, representativeMiddleware, validate(pingIdSchema), submitPing);
 
 export default router;

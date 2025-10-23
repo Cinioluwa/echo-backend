@@ -26,8 +26,8 @@ app.use(cors());  // Enable CORS for all routes
 //Will need to configure CORS more specifically in production
 
 // Request logging middleware (should be early in the chain)
-// Middleware to parse JSON bodies
-app.use(express.json());
+// Middleware to parse JSON bodies with a sane size limit in dev
+app.use(express.json({ limit: '1mb' }));
 
 // Request logging middleware (should run after body parsing so bodies are available)
 app.use(requestLogger);
