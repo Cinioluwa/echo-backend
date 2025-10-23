@@ -1,167 +1,217 @@
 # Echo Backend API
 
-This is the official backend server for the Echo application, a social feedback platform for university students.
+Backend server for the Echo application — a social feedback platform for university students.
 
-## Features Implemented
-- User Authentication (Register, Login, JWT)
-- Full CRUD for Pings, Waves (solutions), Comments, and Surges
-- Role-Based Access Control (User, Representative, Admin)
-- Admin-only endpoints for moderation and analytics
-- Secure API with validation, rate limiting, CORS, and Helmet
+## What’s inside
+- Auth with JWT (register, login, profile, update, delete)
+- Pings (issues), Waves (solutions), Comments, Surges (likes)
+- Announcements and Official Responses
+- Roles: USER, REPRESENTATIVE, ADMIN with protected routes
+- Security: validation (Zod), rate limiting, CORS, Helmet, structured logging
 
-## Tech Stack
-- **Runtime:** Node.js with TypeScript
-- **Framework:** Express.js
-- **Database:** PostgreSQL
-- **ORM:** Prisma
-- **Local Development:** Docker
+## Tech stack
+- Runtime: Node.js + TypeScript (ES modules)
+- Framework: Express 5
+- Database: PostgreSQL
+- ORM: Prisma
+- Dev tooling: tsx watch, ESLint (flat), Prettier, Nodemon
+- Local DB: Docker Compose
 
-## Setup and Installation
+## Quick start (local)
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/Cinioluwa/echo-backend.git
-    cd echo-backend
-    ```
+1) Install dependencies
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+```powershell
+npm install
+```
 
-3.  **Set up environment variables:**
-    Create a `.env` file in the root directory and copy the contents of `.env.example`. Fill in your actual database URL and a JWT secret.
-    
-    ```bash
-    cp .env.example .env
-    ```
-    
-    Then edit `.env` with your actual values:
-    - `DATABASE_URL`: Your PostgreSQL connection string
-    - `JWT_SECRET`: A secure random string for JWT signing
+2) Start PostgreSQL with Docker (optional but recommended for local)
 
-4.  **Start the local database:**
-    Make sure Docker Desktop is running and execute:
-    ```bash
-    docker-compose up -d
-    ```
+```powershell
+docker-compose up -d
+```
 
-5.  **Run database migrations:**
-    ```bash
-    npx prisma migrate dev
-    ```
+This spins up Postgres 15 with defaults from `docker-compose.yml`:
+- user: `myuser`
+- password: `mypassword`
+- database: `mydb`
+- host: `localhost:5432`
 
-6.  **Start the development server:**
-    ```bash
-    npm run dev
-    ```
-    The server will be available at `http://localhost:3000`.
+3) Create `.env`
 
-## Available Scripts
+Create a `.env` file in the project root with at least the following variables:
 
-- `npm run dev` - Start the development server with hot reload
-- `npm run build` - Build the TypeScript project for production
-- `npm start` - Start the production server
-- `npm run prisma:generate` - Generate Prisma Client
-- `npm run prisma:migrate` - Run database migrations
+```env
+# Required
+DATABASE_URL="postgresql://myuser:mypassword@localhost:5432/mydb?schema=public"
+JWT_SECRET="replace_with_a_strong_random_secret"
 
-## Project Structure
+# Optional
+PORT=3000
+NODE_ENV=development
+```
+
+4) Apply Prisma migrations and generate client
+
+```powershell
+npx prisma migrate dev
+npx prisma generate
+```
+
+5) Run the API (dev)
+
+```powershell
+npm run dev
+```
+
+The server listens on `http://localhost:${PORT}` (default `3000`). Health check: `GET /healthz` → `{ status: "ok" }`.
+
+## Available scripts
+
+- `npm run dev` — Run dev server with hot reload (tsx watch)
+- `npm run build` — TypeScript build to `dist/`
+- `npm start` — Run compiled app (`dist/server.js`)
+- `npm run prisma:migrate` — `prisma migrate dev`
+- `npm run prisma:generate` — Generate Prisma Client
+- `npm run lint` / `npm run lint:fix` — ESLint checks / autofix
+- `npm run format` / `npm run format:check` — Prettier format / check
+
+## Project structure
 
 ```
 echo-backend/
 ├── src/
-│   ├── server.ts              # Application entry point
-│   ├── config/                # Configuration files (DB, logger)
-│   ├── controllers/           # Request handlers
-│   ├── middleware/            # Authentication, validation, error handling
-│   ├── routes/                # API route definitions
-│   ├── schemas/               # Zod validation schemas
-│   └── types/                 # TypeScript type definitions
+│   ├── server.ts                # App entry (Express + middlewares + routes)
+│   ├── config/                  # env, db (Prisma), logger (Winston)
+│   ├── controllers/             # Route handlers
+│   ├── middleware/              # auth, admin/rep guards, validation, errors, request logger
+│   ├── routes/                  # Express routers (users, pings, waves, comments, surges, admin, announcements)
+│   ├── schemas/                 # Zod schemas (validation + pagination)
+│   └── types/                   # Shared TS types
 ├── prisma/
-│   ├── schema.prisma          # Database schema
-│   └── migrations/            # Database migration history
-├── .env                       # Environment variables (not in git)
-├── .env.example               # Environment variables template
-├── docker-compose.yml         # Local database setup
-├── package.json               # Dependencies and scripts
-└── tsconfig.json              # TypeScript configuration
+│   ├── schema.prisma            # Prisma schema (User, Ping, Wave, Comment, Surge, OfficialResponse, Announcement)
+│   └── migrations/              # Migration history
+├── logs/                        # Winston log files (error.log, combined.log in prod)
+├── docker-compose.yml           # Local Postgres service
+├── package.json                 # Scripts and deps
+└── tsconfig.json                # TS config (NodeNext)
 ```
 
-## API Endpoints
+## Environment variables
 
-### Authentication
-- `POST /api/users/register` - Register a new user
-- `POST /api/users/login` - Login and receive JWT token
+Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 
-### Pings (Issues/Complaints)
-- `GET /api/pings` - Get all pings
-- `POST /api/pings` - Create a new ping
-- `GET /api/pings/:id` - Get a specific ping
-- `PUT /api/pings/:id` - Update a ping
-- `DELETE /api/pings/:id` - Delete a ping
+| Variable     | Required | Description                                | Example |
+|--------------|----------|--------------------------------------------|---------|
+| DATABASE_URL | Yes      | PostgreSQL connection string               | `postgresql://myuser:mypassword@localhost:5432/mydb?schema=public` |
+| JWT_SECRET   | Yes      | Secret key for JWT signing                 | `a_really_strong_random_string` |
+| PORT         | No       | Port Express listens on (default 3000)     | `3000` |
+| NODE_ENV     | No       | `development` | `production` | `test`      | `development` |
 
-### Waves (Solutions)
-- `GET /api/waves` - Get all waves
-- `POST /api/waves` - Create a new wave
-- `GET /api/waves/:id` - Get a specific wave
-- `PUT /api/waves/:id` - Update a wave
-- `DELETE /api/waves/:id` - Delete a wave
+## API overview
+
+All JSON bodies are validated with Zod. Many list endpoints accept optional pagination: `?page=<number>&limit=<number>`.
+
+### Auth — `/api/users`
+- `POST /register` — Register (email, password, firstName, lastName, level?)
+- `POST /login` — Login, returns JWT
+- `GET /me` — Current user profile (Authorization: Bearer token)
+- `PATCH /me` — Update profile: firstName, lastName, level (auth)
+- `DELETE /me` — Delete account (auth)
+- `GET /me/surges` — My surges (auth)
+- `GET /me/comments` — My comments (auth)
+
+### Pings — `/api/pings`
+- `GET /` — List pings with optional filters: `category`, `status`, plus pagination
+- `GET /search` — Search by `hashtag` or `q` (text), plus pagination
+- `GET /me` — List my pings (auth, with pagination)
+- `GET /:id` — Get ping by id
+- `POST /` — Create ping (auth)
+- `PATCH /:id` — Update ping (auth)
+- `DELETE /:id` — Delete own ping (auth)
+- `PATCH /:id/status` — Update status (admin only)
+- `PATCH /:id/submit` — Mark ping as submitted (representative only)
+
+### Waves — nested and standalone
+- `GET /api/pings/:pingId/waves` — Waves for a ping (pagination)
+- `POST /api/pings/:pingId/waves` — Create wave for a ping (auth)
+- `GET /api/waves/:id` — Get wave by id (standalone)
 
 ### Comments
-- `POST /api/comments` - Add a comment
-- `PUT /api/comments/:id` - Update a comment
-- `DELETE /api/comments/:id` - Delete a comment
+- `GET /api/pings/:pingId/comments` — Comments for a ping
+- `POST /api/pings/:pingId/comments` — Add a comment to a ping (auth)
+- `GET /api/waves/:waveId/comments` — Comments for a wave
+- `POST /api/waves/:waveId/comments` — Add a comment to a wave (auth)
 
-### Surges (Upvotes)
-- `POST /api/surges` - Toggle a surge on a ping or wave
+### Surges (likes)
+- `POST /api/pings/:pingId/surge` — Toggle surge for a ping (auth)
+- `POST /api/waves/:waveId/surge` — Toggle surge for a wave (auth)
 
-### Admin Routes
-- `GET /api/admin/users` - Get all users
-- `GET /api/admin/analytics` - Get platform analytics
-- `DELETE /api/admin/pings/:id` - Delete any ping
-- `DELETE /api/admin/waves/:id` - Delete any wave
+### Official Responses
+- `POST /api/pings/:pingId/official-response` — Create official response (representative only)
 
-## Security Features
+### Announcements
+- `GET /api/announcements` — Public announcements with optional filters: `college`, `hall`, `level`, `gender`
+- `POST /api/admin/announcements` — Create announcement (admin only)
+- `PATCH /api/admin/announcements/:id` — Update announcement (admin only)
+- `DELETE /api/admin/announcements/:id` — Delete announcement (admin only)
 
-- **JWT Authentication:** Secure token-based authentication
-- **Password Hashing:** Using bcrypt for secure password storage
-- **Rate Limiting:** Prevents abuse and DDoS attacks
-- **CORS:** Configured for secure cross-origin requests
-- **Helmet:** Security headers for Express
-- **Input Validation:** Zod schemas for request validation
-- **Role-Based Access:** User, Representative, and Admin roles
+### Admin — `/api/admin`
+- `GET /stats` — Platform stats (admin)
+- `GET /pings` — List all pings with filters/pagination (admin)
+- `DELETE /pings/:id` — Delete any ping (admin)
+- `GET /users` — List users (admin)
+- `GET /users/:id` — Get user by id (admin)
+- `PATCH /users/:id/role` — Update user role (ADMIN | REPRESENTATIVE | USER) (admin)
+- `GET /analytics/by-level` — Pings grouped by level (admin)
+- `GET /analytics/by-category` — Pings grouped by category (admin)
 
-## Environment Variables
+### Health check
+- `GET /healthz` — `{ status: "ok" }`
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
-| `JWT_SECRET` | Secret key for JWT signing | `your_super_secret_key` |
+## Security and middleware
+- CORS enabled (configure origins for production)
+- Helmet HTTP headers
+- Rate limiting:
+  - Global: 500 req / 15 min
+  - Auth endpoints `/api/users/register`, `/api/users/login`: 5 attempts / 15 min (successful logins don’t count)
+  - Create/update operations (POST/PATCH/DELETE): 30 ops / 15 min
+- Centralized error handler with safe logging
 
-## Deployment
+## Database schema (Prisma)
+Models: `User`, `Ping`, `Wave`, `Comment`, `Surge`, `OfficialResponse`, `Announcement` with enums `Role`, `Status`, `WaveCategory` and helpful indexes for query performance. See `prisma/schema.prisma`.
 
-This backend is designed to be deployed on modern cloud platforms:
+Common operations:
 
-- **Recommended:** Railway, Render, or AWS
-- **Database:** Neon, Supabase, or managed PostgreSQL
-- Ensure all environment variables are set in your deployment platform
-- Run migrations before starting: `npx prisma migrate deploy`
+```powershell
+# Create/refresh dev DB and apply migrations interactively
+npx prisma migrate dev
+
+# Apply migrations in production
+npx prisma migrate deploy
+
+# Open Prisma Studio (optional)
+npx prisma studio
+```
+
+## Logging
+- Human-readable colored logs in development
+- JSON structured logs in production
+- Files: `logs/error.log` (always), `logs/combined.log` (production)
+
+## Deployment notes
+- Set all environment variables in your platform (DATABASE_URL, JWT_SECRET, etc.)
+- Run `npx prisma migrate deploy` before starting the app
+- Start the compiled server (`npm run build` then `npm start`)
 
 ## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork repository and create a feature branch
+2. Develop with `npm run dev`
+3. Lint/format before committing: `npm run lint && npm run format`
+4. Open a Pull Request
 
 ## License
-
-This project is private and proprietary.
-
-## Contact
-
-For questions or support, please contact the development team.
+Private and proprietary
 
 ---
 
