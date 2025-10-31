@@ -24,16 +24,16 @@ const router = Router();
 router.post('/', authMiddleware, organizationMiddleware, validate(createPingSchema), createPing);
 
 // Get all pings (with pagination and optional filters)
-router.get('/', validate(paginationWithFiltersSchema), getAllPings);
+router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithFiltersSchema), getAllPings);
 
 // Search pings by hashtag or text query (must come BEFORE /:id route)
-router.get('/search', validate(searchSchema), searchPings);
+router.get('/search', authMiddleware, organizationMiddleware, validate(searchSchema), searchPings);
 
 // Get current user's pings (must come BEFORE /:id route)
 router.get('/me', authMiddleware, validate(paginationSchema), getMyPings);
 
 // Get a specific ping by ID - with ID validation
-router.get('/:id', validate(pingIdSchema), getPingById);
+router.get('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), getPingById);
 
 // Delete a ping - with ID validation
 router.delete('/:id', authMiddleware, validate(pingIdSchema), deletePing);

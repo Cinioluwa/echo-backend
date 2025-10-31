@@ -11,6 +11,7 @@ generator client {
 model Organization {
   id          Int          @id @default(autoincrement())
   name        String       @unique
+  domain      String       @unique // Add domain field for organization identification
   status      String       @default("PENDING") // PENDING, ACTIVE
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

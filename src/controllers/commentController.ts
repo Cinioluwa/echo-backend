@@ -57,10 +57,15 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
 
 // @desc    Get all comments for a ping
 // @route   GET /api/pings/:pingId/comments
-// @access  Public
-export const getCommentsForPing = async (req: Request, res: Response, next: NextFunction) => {
+// @access  Private
+export const getCommentsForPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required.' });
+    }
 
     // --- Pagination Logic ---
     const page = parseInt(req.query.page as string) || 1;
@@ -69,25 +74,21 @@ export const getCommentsForPing = async (req: Request, res: Response, next: Next
     const skip = (page - 1) * limit;
 
     // --- Filtering Logic ---
-    const { organizationId } = req.query;
     const whereClause: any = {
       pingId: parseInt(pingId),
+      organizationId: organizationId,
     };
 
-    if (organizationId) {
-      whereClause.organizationId = parseInt(organizationId as string);
-    }
-
-    // Verify the ping exists (and belongs to the organization if specified)
+    // Verify the ping exists in the user's org
     const ping = await prisma.ping.findUnique({
       where: { 
         id: parseInt(pingId),
-        ...(organizationId && { organizationId: parseInt(organizationId as string) }),
+        organizationId: organizationId,
       },
     });
 
     if (!ping) {
-      return res.status(404).json({ error: 'Ping not found' });
+      return res.status(404).json({ error: 'Ping not found or access denied' });
     }
 
     // Run two queries in parallel: one for the data, one for the total count
@@ -187,21 +188,26 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
 
 // @desc    Get all comments for a wave
 // @route   GET /api/waves/:waveId/comments
-// @access  Public
+// @access  Private
 export const getCommentsForWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { waveId } = req.params;
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+        return res.status(400).json({ error: 'Organization ID is required.' });
+    }
 
     // Verify the wave exists and belongs to the user's organization
     const wave = await prisma.wave.findUnique({
       where: { 
         id: parseInt(waveId),
-        organizationId: req.organizationId,
+        organizationId: organizationId,
       },
     });
 
     if (!wave) {
-      return res.status(404).json({ error: 'Wave not found' });
+      return res.status(404).json({ error: 'Wave not found or access denied' });
     }
 
     // --- Pagination Logic ---
@@ -210,13 +216,15 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
     if (limit > 100) limit = 100; // Cap the limit to 100
     const skip = (page - 1) * limit;
 
+    const whereClause = {
+        waveId: parseInt(waveId),
+        organizationId: organizationId,
+    };
+
     // Run two queries in parallel: one for the data, one for the total count
     const [comments, totalComments] = await prisma.$transaction([
       prisma.comment.findMany({
-        where: {
-          waveId: parseInt(waveId),
-          organizationId: req.organizationId!,
-        },
+        where: whereClause,
         skip: skip,
         take: limit,
         orderBy: {
@@ -233,12 +241,7 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
           },
         },
       }),
-      prisma.comment.count({ 
-        where: { 
-          waveId: parseInt(waveId),
-          organizationId: req.organizationId!,
-        } 
-      }),
+      prisma.comment.count({ where: whereClause }),
     ]);
 
     // --- Metadata Calculation ---

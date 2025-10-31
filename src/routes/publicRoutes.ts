@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { getPublicPings, getPublicWaves } from '../controllers/publicController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+import organizationMiddleware from '../middleware/organizationMiddleware.js';
 
 const router = Router();
 
-// Public Soundboard (Pings)
-router.get('/soundboard', getPublicPings);
+// Soundboard (Pings) - now requires auth
+router.get('/soundboard', authMiddleware, organizationMiddleware, getPublicPings);
 
-// Public Stream (Waves)
-router.get('/stream', getPublicWaves);
+// Stream (Waves) - now requires auth
+router.get('/stream', authMiddleware, organizationMiddleware, getPublicWaves);
 
 export default router;

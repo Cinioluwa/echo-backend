@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
-import { getPublicPingsSchema, getPublicWavesSchema } from '../schemas/publicSchemas.js';
+import { AuthRequest } from '../types/AuthRequest.js';
 
 function parsePagination(req: Request) {
   const page = Math.max(1, Number(req.query.page ?? 1));
@@ -13,32 +13,24 @@ function parsePagination(req: Request) {
   return { page, limit, skip, top, sort, since };
 }
 
-// Public Soundboard: all pings visible, sortable by trending (surgeCount) or new (createdAt)
-export async function getPublicPings(req: Request, res: Response, next: NextFunction) {
+// Soundboard: all pings for the user's organization, sortable by trending or new
+export async function getPublicPings(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    // Validate request
-    const validation = getPublicPingsSchema.safeParse(req);
-    if (!validation.success) {
-      return res.status(400).json({ error: 'Invalid request', details: validation.error.issues });
-    }
-
     const { limit, skip, top, sort, since } = parsePagination(req);
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required.' });
+    }
 
     const orderBy =
       sort === 'trending'
         ? [{ surgeCount: 'desc' as const }, { createdAt: 'desc' as const }]
         : [{ createdAt: 'desc' as const }];
 
-    const where: any = {};
+    const where: any = { organizationId };
     if (since) where.createdAt = { gte: since };
     
-    // Organization filter is required for multitenancy
-    const { organizationId } = req.query;
-    if (!organizationId) {
-      return res.status(400).json({ error: 'Organization ID is required' });
-    }
-    where.organizationId = parseInt(organizationId as string);
-
     const [items, total] = await Promise.all([
       prisma.ping.findMany({
         where,
@@ -71,25 +63,23 @@ export async function getPublicPings(req: Request, res: Response, next: NextFunc
   }
 }
 
-// Public Stream: all waves visible, sortable by trending (surgeCount) or new (createdAt)
-export async function getPublicWaves(req: Request, res: Response, next: NextFunction) {
+// Stream: all waves for the user's organization, sortable by trending or new
+export async function getPublicWaves(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { limit, skip, top, sort, since } = parsePagination(req);
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required.' });
+    }
 
     const orderBy =
       sort === 'trending'
         ? [{ surgeCount: 'desc' as const }, { createdAt: 'desc' as const }]
         : [{ createdAt: 'desc' as const }];
 
-    const where: any = {};
+    const where: any = { organizationId };
     if (since) where.createdAt = { gte: since };
-    
-    // Organization filter is required for multitenancy
-    const { organizationId } = req.query;
-    if (!organizationId) {
-      return res.status(400).json({ error: 'Organization ID is required' });
-    }
-    where.organizationId = parseInt(organizationId as string);
 
     const [items, total] = await Promise.all([
       prisma.wave.findMany({

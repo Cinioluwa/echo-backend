@@ -15,6 +15,9 @@ export const registerSchema = z.object({
     lastName: z.string({
       message: 'Last name is required',
     }).min(1, 'Last name cannot be empty').max(50),
+    organizationDomain: z.string({
+      message: 'Organization domain is required',
+    }).regex(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid domain format (e.g., example.com)'),
     level: z.number({
       message: 'Level is required',
     }).int('Level must be an integer').min(1, 'Level must be between 1 and 7').max(7, 'Level must be between 1 and 7').optional(),
@@ -29,6 +32,9 @@ export const loginSchema = z.object({
     password: z.string({
       message: 'Password is required',
     }).min(1, 'Password cannot be empty'),
+    organizationDomain: z.string({
+      message: 'Organization domain is required',
+    }).regex(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid domain format (e.g., example.com)'),
   }),
 });
 

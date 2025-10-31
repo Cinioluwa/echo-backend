@@ -15,7 +15,7 @@ const router = Router({ mergeParams: true });
 router.post('/', authMiddleware, organizationMiddleware, validate(createWaveSchema), createWave);
 
 // GET /api/pings/:pingId/waves - Get all waves for a ping
-router.get('/', validate(pingParamSchema), getWavesForPing);
+router.get('/', authMiddleware, organizationMiddleware, validate(pingParamSchema), getWavesForPing);
 
 // Standalone wave-by-id route will be mounted separately at /api/waves/:id
 

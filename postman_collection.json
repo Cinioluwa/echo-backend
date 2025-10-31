@@ -1,423 +1,1454 @@
 {
-  "info": {
-    "_postman_id": "12345678-1234-1234-1234-123456789012",
-    "name": "Echo Backend API Testing",
-    "description": "Complete Postman collection for testing Echo backend with multitenancy support. Import this into Postman and set up the environment variables.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3000",
-      "type": "string"
-    },
-    {
-      "key": "token_org_a",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "token_org_b",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "ping_id_org_a",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "ping_id_org_b",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "wave_id_org_a",
-      "value": "",
-      "type": "string"
-    }
-  ],
-  "item": [
-    {
-      "name": "Authentication",
-      "item": [
-        {
-          "name": "Login Org A",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"email\":\"studentA@testuniva.edu\",\"password\":\"password123\",\"organizationId\":1}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/users/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "login"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('token_org_a', response.token);",
-                  "    console.log('Org A token set:', response.token);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login Org B",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"email\":\"studentB@testunivb.edu\",\"password\":\"password123\",\"organizationId\":2}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/users/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "login"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('token_org_b', response.token);",
-                  "    console.log('Org B token set:', response.token);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Ping Routes",
-      "item": [
-        {
-          "name": "Get All Pings (Org A)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/pings?page=1&limit=20",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Ping (Org A)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_a}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"title\":\"Test Ping from Org A\",\"content\":\"This should only be visible to Org A\",\"categoryId\":1,\"hashtag\":\"test\"}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/pings",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('ping_id_org_a', response.id);",
-                  "    console.log('Ping ID Org A set:', response.id);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Create Ping (Org B)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_b}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"title\":\"Test Ping from Org B\",\"content\":\"This should only be visible to Org B\",\"categoryId\":1,\"hashtag\":\"test\"}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/pings",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('ping_id_org_b', response.id);",
-                  "    console.log('Ping ID Org B set:', response.id);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get Ping by ID (Org A)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings", "{{ping_id_org_a}}"]
-            }
-          }
-        },
-        {
-          "name": "Try Access Org A Ping from Org B (Should Fail)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_b}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings", "{{ping_id_org_a}}"]
-            }
-          }
-        },
-        {
-          "name": "Update Ping (Org A)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_a}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"title\":\"Updated Title\",\"content\":\"Updated content\"}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings", "{{ping_id_org_a}}"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Wave Routes",
-      "item": [
-        {
-          "name": "Create Wave (Org A)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_a}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"solution\":\"This is my solution to the ping\"}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}/waves",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings", "{{ping_id_org_a}}", "waves"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('wave_id_org_a', response.id);",
-                  "    console.log('Wave ID Org A set:', response.id);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get Wave by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/waves/{{wave_id_org_a}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "waves", "{{wave_id_org_a}}"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Comment Routes",
-      "item": [
-        {
-          "name": "Create Comment on Ping (Org A)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_a}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"content\":\"This is my comment on the ping\"}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}/comments",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings", "{{ping_id_org_a}}", "comments"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Surge Routes",
-      "item": [
-        {
-          "name": "Toggle Surge on Ping (Org A)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_a}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}/surge",
-              "host": ["{{base_url}}"],
-              "path": ["api", "pings", "{{ping_id_org_a}}", "surge"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin Routes",
-      "item": [
-        {
-          "name": "Get Platform Stats (Admin)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_org_a}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/admin/stats",
-              "host": ["{{base_url}}"],
-              "path": ["api", "admin", "stats"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Health Check",
-      "item": [
-        {
-          "name": "Health Check",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/healthz",
-              "host": ["{{base_url}}"],
-              "path": ["healthz"]
-            }
-          }
-        }
-      ]
-    }
-  ]
+	"info": {
+		"_postman_id": "a8a0b6e8-c221-4a1f-8b1e-7e6e6b8e4e4f",
+		"name": "Echo Backend API",
+		"description": "A comprehensive Postman collection for testing all aspects of the Echo Backend API.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get Platform Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"stats"
+							]
+						},
+						"description": "Retrieves overall platform statistics. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Pings (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/pings?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"pings"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Retrieves all pings with pagination. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Any Ping",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/pings/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"pings",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Deletes any ping by its ID. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users"
+							]
+						},
+						"description": "Retrieves a list of all users. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Role",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"ADMIN\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/:id/role",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								":id",
+								"role"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user_id"
+								}
+							]
+						},
+						"description": "Updates the role of a specific user. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Announcement",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"This is an important announcement.\",\n  \"level\": \"ORGANIZATION\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/announcements",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"announcements"
+							]
+						},
+						"description": "Creates a new announcement. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Announcement",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"This is an updated announcement.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/announcements/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"announcements",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "announcement_id"
+								}
+							]
+						},
+						"description": "Updates an existing announcement. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Announcement",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/announcements/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"announcements",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "announcement_id"
+								}
+							]
+						},
+						"description": "Deletes an announcement. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pings by Level",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/analytics/by-level",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"analytics",
+								"by-level"
+							]
+						},
+						"description": "Retrieves ping analytics grouped by user level. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ping Stats by Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/analytics/by-category",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"analytics",
+								"by-category"
+							]
+						},
+						"description": "Retrieves ping statistics grouped by category. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user_id"
+								}
+							]
+						},
+						"description": "Retrieves a specific user's details by their ID. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Ping Progress Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"progressStatus\": \"IN_PROGRESS\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/pings/:id/progress-status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"pings",
+								":id",
+								"progress-status"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Updates the progress status of a ping. Requires admin privileges."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Announcements",
+			"item": [
+				{
+					"name": "Get Announcements",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/announcements?level=ORGANIZATION",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"announcements"
+							],
+							"query": [
+								{
+									"key": "level",
+									"value": "ORGANIZATION"
+								}
+							]
+						},
+						"description": "Retrieves announcements for the user's organization."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Pings",
+			"item": [
+				{
+					"name": "Create Ping",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"New Ping Title\",\n  \"content\": \"This is the content of the new ping.\",\n  \"categoryId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/pings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings"
+							]
+						},
+						"description": "Creates a new ping."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Pings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/pings?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Retrieves all pings with pagination."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Pings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/pings/search?q=test",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "test"
+								}
+							]
+						},
+						"description": "Searches for pings by hashtag or text query."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Pings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/pings/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings",
+								"me"
+							]
+						},
+						"description": "Retrieves the current user's pings."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ping by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/pings/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Retrieves a specific ping by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Ping",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/pings/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Deletes a ping by its ID. Only the owner can delete a ping."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Ping",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Ping Title\",\n  \"content\": \"This is the updated content of the ping.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/pings/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Updates a ping. Only the owner can update a ping."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Ping Status (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"APPROVED\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/pings/:id/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings",
+								":id",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Updates the status of a ping. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Submit Ping (Representative)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/pings/:id/submit",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pings",
+								":id",
+								"submit"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Submits a ping for review. Requires representative privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Comments",
+					"item": [
+						{
+							"name": "Create Comment on Ping",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"content\": \"This is a comment on the ping.\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/pings/:pingId/comments",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pings",
+										":pingId",
+										"comments"
+									],
+									"variable": [
+										{
+											"key": "pingId",
+											"value": "ping_id"
+										}
+									]
+								},
+								"description": "Creates a new comment on a specific ping."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Comments for Ping",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/pings/:pingId/comments",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pings",
+										":pingId",
+										"comments"
+									],
+									"variable": [
+										{
+											"key": "pingId",
+											"value": "ping_id"
+										}
+									]
+								},
+								"description": "Retrieves all comments for a specific ping."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Surges",
+					"item": [
+						{
+							"name": "Toggle Surge on Ping",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/pings/:pingId/surge",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pings",
+										":pingId",
+										"surge"
+									],
+									"variable": [
+										{
+											"key": "pingId",
+											"value": "ping_id"
+										}
+									]
+								},
+								"description": "Toggles a surge (like/unlike) on a specific ping."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Waves",
+					"item": [
+						{
+							"name": "Create Wave for Ping",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"New Wave Title\",\n  \"pings\": [\"ping_id_1\", \"ping_id_2\"]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/pings/:pingId/waves",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pings",
+										":pingId",
+										"waves"
+									],
+									"variable": [
+										{
+											"key": "pingId",
+											"value": "ping_id"
+										}
+									]
+								},
+								"description": "Creates a new wave from a specific ping."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Waves for Ping",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/pings/:pingId/waves",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pings",
+										":pingId",
+										"waves"
+									],
+									"variable": [
+										{
+											"key": "pingId",
+											"value": "ping_id"
+										}
+									]
+								},
+								"description": "Retrieves all waves associated with a specific ping."
+							},
+							"response": []
+						},
+						{
+							"name": "Official Responses",
+							"item": [
+								{
+									"name": "Create Official Response on Wave",
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{authToken}}"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"content\": \"This is the official response to the wave.\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/waves/:waveId/official-response",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"waves",
+												":waveId",
+												"official-response"
+											],
+											"variable": [
+												{
+													"key": "waveId",
+													"value": "wave_id"
+												}
+											]
+										},
+										"description": "Creates an official response to a specific wave. Requires representative privileges."
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Public",
+			"item": [
+				{
+					"name": "Get Public Pings (Soundboard)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/public/soundboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"public",
+								"soundboard"
+							]
+						},
+						"description": "Retrieves public pings for the soundboard."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Public Waves (Stream)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/public/stream",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"public",
+								"stream"
+							]
+						},
+						"description": "Retrieves public waves for the stream."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Representative",
+			"item": [
+				{
+					"name": "Get Submitted Pings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/representative/pings/submitted",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"representative",
+								"pings",
+								"submitted"
+							]
+						},
+						"description": "Retrieves pings that have been submitted for review. Requires representative privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Waves for Review",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/representative/waves/top",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"representative",
+								"waves",
+								"top"
+							]
+						},
+						"description": "Retrieves the top waves that need review. Requires representative privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Forward Waves",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"waveIds\": [\"wave_id_1\", \"wave_id_2\"],\n  \"forwardTo\": \"some_destination\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/representative/waves/forward",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"representative",
+								"waves",
+								"forward"
+							]
+						},
+						"description": "Forwards selected waves to another system or user. Requires representative privileges."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"organizationDomain\": \"cu.edu.ng\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"register"
+							]
+						},
+						"description": "Registers a new user."
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"organizationDomain\": \"cu.edu.ng\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"login"
+							]
+						},
+						"description": "Logs in a user and returns an authentication token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me"
+							]
+						},
+						"description": "Retrieves the profile of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Current User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me"
+							]
+						},
+						"description": "Updates the profile of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Current User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me"
+							]
+						},
+						"description": "Deletes the account of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Surges",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/me/surges",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me",
+								"surges"
+							]
+						},
+						"description": "Retrieves all surges (likes) made by the current user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Comments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/me/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"me",
+								"comments"
+							]
+						},
+						"description": "Retrieves all comments made by the current user."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Waves (Standalone)",
+			"item": [
+				{
+					"name": "Get Wave by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/waves/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"waves",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "wave_id"
+								}
+							]
+						},
+						"description": "Retrieves a specific wave by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Comments",
+					"item": [
+						{
+							"name": "Create Comment on Wave",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"content\": \"This is a comment on the wave.\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/waves/:waveId/comments",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"waves",
+										":waveId",
+										"comments"
+									],
+									"variable": [
+										{
+											"key": "waveId",
+											"value": "wave_id"
+										}
+									]
+								},
+								"description": "Creates a new comment on a specific wave."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Comments for Wave",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/waves/:waveId/comments",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"waves",
+										":waveId",
+										"comments"
+									],
+									"variable": [
+										{
+											"key": "waveId",
+											"value": "wave_id"
+										}
+									]
+								},
+								"description": "Retrieves all comments for a specific wave."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Surges",
+					"item": [
+						{
+							"name": "Toggle Surge on Wave",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/waves/:waveId/surge",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"waves",
+										":waveId",
+										"surge"
+									],
+									"variable": [
+										{
+											"key": "waveId",
+											"value": "wave_id"
+										}
+									]
+								},
+								"description": "Toggles a surge (like/unlike) on a specific wave."
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api"
+		},
+		{
+			"key": "authToken",
+			"value": ""
+		}
+	]
 }

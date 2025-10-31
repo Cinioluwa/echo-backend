@@ -89,7 +89,7 @@ app.use('/api/users', userRoutes);
 //GET /api/users/me/comments - Get all comments by current user (organization-scoped, with pagination)
 
 app.use('/api/pings', applyCreateLimiter, pingRoutes);
-//GET /api/pings - Get all pings in user's organization (with pagination: ?page=1&limit=20 and optional filters: ?category=GENERAL&status=POSTED)
+//GET /api/pings - Get all pings in user's organization (with pagination: ?page=1&limit=20 and optional filters: ?category=<categoryId>&status=POSTED)
 //POST /api/pings - Create a new ping (requires organization membership)
 //GET /api/pings/search - Search pings by hashtag (?hashtag=exam) or text query (?q=calculus) within organization
 //GET /api/pings/me - Get current user's pings within organization (with pagination: ?page=1&limit=20)

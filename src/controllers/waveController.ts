@@ -10,7 +10,11 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const { pingId } = req.params;
     const { solution } = req.body;
-    const organizationId = req.organizationId!; // From organizationMiddleware
+    const organizationId = req.user?.organizationId; // From authMiddleware
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Bad Request: Organization context missing' });
+    }
 
     if (!solution) {
       return res.status(400).json({ error: 'Solution is required' });
@@ -42,11 +46,15 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
 
 // @desc    Get all waves (solutions) for a specific ping
 // @route   GET /api/pings/:pingId/waves
-// @access  Public
-export const getWavesForPing = async (req: Request, res: Response, next: NextFunction) => {
+// @access  Private
+export const getWavesForPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
-    const { organizationId } = req.query;
+    const organizationId = req.user?.organizationId; // From authMiddleware
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required.' });
+    }
 
     // --- Pagination Logic ---
     const page = parseInt(req.query.page as string) || 1;
@@ -54,13 +62,15 @@ export const getWavesForPing = async (req: Request, res: Response, next: NextFun
     if (limit > 100) limit = 100; // Cap the limit to 100
     const skip = (page - 1) * limit;
 
+    const whereClause = {
+      pingId: parseInt(pingId),
+      organizationId: organizationId,
+    };
+
     // Run two queries in parallel: one for the data, one for the total count
     const [waves, totalWaves] = await prisma.$transaction([
       prisma.wave.findMany({
-        where: {
-          pingId: parseInt(pingId),
-          organizationId: organizationId ? parseInt(organizationId as string) : undefined,
-        },
+        where: whereClause,
         skip: skip,
         take: limit,
         orderBy: {
@@ -84,7 +94,7 @@ export const getWavesForPing = async (req: Request, res: Response, next: NextFun
           },
         },
       }),
-      prisma.wave.count({ where: { pingId: parseInt(pingId) } }),
+      prisma.wave.count({ where: whereClause }),
     ]);
 
     // --- Metadata Calculation ---
@@ -109,18 +119,22 @@ export const getWavesForPing = async (req: Request, res: Response, next: NextFun
 
 // @desc    Get a specific wave by ID
 // @route   GET /api/waves/:id
-// @access  Public
-export const getWaveById = async (req: Request, res: Response, next: NextFunction) => {
+// @access  Private
+export const getWaveById = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { organizationId } = req.query;
+    const organizationId = req.user?.organizationId;
     const waveId = parseInt(id);
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required.' });
+    }
 
     // Fetch the wave with related data first
     const wave = await prisma.wave.findUnique({
       where: { 
         id: waveId,
-        organizationId: organizationId ? parseInt(organizationId as string) : undefined,
+        organizationId: organizationId,
       },
       include: {
         ping: {

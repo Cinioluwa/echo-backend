@@ -22,7 +22,7 @@ export const pingCommentRouter = Router({ mergeParams: true });
 
 pingCommentRouter.route('/')
   .post(authMiddleware, organizationMiddleware, validate(createCommentOnPingSchema), createCommentOnPing)  // Create a comment on a ping
-  .get(validate(getCommentsForPingSchema), getCommentsForPing);                    // Get all comments for a ping
+  .get(authMiddleware, organizationMiddleware, validate(getCommentsForPingSchema), getCommentsForPing);                    // Get all comments for a ping
 
 // Router for wave comments: /api/waves/:waveId/comments
 export const waveCommentRouter = Router({ mergeParams: true });

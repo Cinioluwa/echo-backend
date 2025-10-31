@@ -9,7 +9,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 // relative imports must include the .js extension to match the emitted JavaScript files.
 export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, firstName, lastName, level, organizationId } = req.body;
+    const { email, password, firstName, lastName, level, organizationDomain } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string' || email.trim() === '' || password.trim() === '') {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -19,12 +19,18 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
       return res.status(400).json({ error: 'First name and last name are required' });
     }
 
-    if (!organizationId) {
-      return res.status(400).json({ error: 'Organization ID is required' });
+    if (!organizationDomain) {
+      return res.status(400).json({ error: 'Organization domain is required' });
+    }
+
+    // Find organization by domain
+    const organization = await prisma.organization.findUnique({ where: { domain: organizationDomain } });
+    if (!organization) {
+      return res.status(400).json({ error: 'Invalid organization domain' });
     }
 
     // Check if user already exists in the org
-    const existingUser = await prisma.user.findUnique({ where: { email_organizationId: { email, organizationId } } });
+    const existingUser = await prisma.user.findUnique({ where: { email_organizationId: { email, organizationId: organization.id } } });
     if (existingUser) {
       return res.status(409).json({ 
         error: 'An account with this email already exists in this organization. Please use a different email or try logging in.' 
@@ -40,7 +46,7 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
         firstName: firstName,
         lastName: lastName,
         level: level, // Include level if provided
-        organizationId: organizationId,
+        organizationId: organization.id,
       },
     });
 
@@ -60,17 +66,23 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
 
 export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, organizationId } = req.body;
+    const { email, password, organizationDomain } = req.body;
 
-    if (!organizationId) {
-      return res.status(400).json({ error: 'Organization ID is required' });
+    if (!organizationDomain) {
+      return res.status(400).json({ error: 'Organization domain is required' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email_organizationId: { email, organizationId } } });
+    // Find organization by domain
+    const organization = await prisma.organization.findUnique({ where: { domain: organizationDomain } });
+    if (!organization) {
+      return res.status(400).json({ error: 'Invalid organization domain' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email_organizationId: { email, organizationId: organization.id } } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       logger.warn('Failed login attempt', {
         email,
-        organizationId,
+        organizationId: organization.id,
         requestId: (req as any).requestId,
       });
       return res.status(401).json({ error: 'Invalid email, password, or organization' });
