@@ -18,6 +18,7 @@ import {
  } from '../controllers/announcementController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
+import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { paginationWithFiltersSchema } from '../schemas/paginationSchema.js';
 import { pingIdSchema } from '../schemas/pingSchemas.js';
@@ -35,9 +36,9 @@ router.get('/pings', authMiddleware, adminMiddleware, validate(paginationWithFil
 router.delete('/pings/:id', authMiddleware, adminMiddleware, validate(pingIdSchema), deleteAnyPing);
 router.get('/users', authMiddleware, adminMiddleware, getAllUsers);
 router.patch('/users/:id/role', authMiddleware, adminMiddleware, validate(updateUserRoleSchema), updateUserRole);
-router.post('/announcements', authMiddleware, adminMiddleware, validate(createAnnouncementSchema), createAnnouncement);
-router.patch('/announcements/:id', authMiddleware, adminMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
-router.delete('/announcements/:id', authMiddleware, adminMiddleware, deleteAnnouncement);
+router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddleware, validate(createAnnouncementSchema), createAnnouncement);
+router.patch('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
+router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, deleteAnnouncement);
 router.get('/analytics/by-level', authMiddleware, adminMiddleware, getPingsByLevel);
 router.get('/analytics/by-category', authMiddleware, adminMiddleware, getPingStatsByCategory);
 router.get('/users/:id', authMiddleware, adminMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);

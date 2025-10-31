@@ -1,0 +1,423 @@
+{
+  "info": {
+    "_postman_id": "12345678-1234-1234-1234-123456789012",
+    "name": "Echo Backend API Testing",
+    "description": "Complete Postman collection for testing Echo backend with multitenancy support. Import this into Postman and set up the environment variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token_org_a",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_org_b",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ping_id_org_a",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ping_id_org_b",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "wave_id_org_a",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login Org A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"studentA@testuniva.edu\",\"password\":\"password123\",\"organizationId\":1}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('token_org_a', response.token);",
+                  "    console.log('Org A token set:', response.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Org B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"studentB@testunivb.edu\",\"password\":\"password123\",\"organizationId\":2}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('token_org_b', response.token);",
+                  "    console.log('Org B token set:', response.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ping Routes",
+      "item": [
+        {
+          "name": "Get All Pings (Org A)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pings?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Ping (Org A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_a}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Test Ping from Org A\",\"content\":\"This should only be visible to Org A\",\"categoryId\":1,\"hashtag\":\"test\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('ping_id_org_a', response.id);",
+                  "    console.log('Ping ID Org A set:', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Ping (Org B)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_b}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Test Ping from Org B\",\"content\":\"This should only be visible to Org B\",\"categoryId\":1,\"hashtag\":\"test\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('ping_id_org_b', response.id);",
+                  "    console.log('Ping ID Org B set:', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Ping by ID (Org A)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings", "{{ping_id_org_a}}"]
+            }
+          }
+        },
+        {
+          "name": "Try Access Org A Ping from Org B (Should Fail)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_b}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings", "{{ping_id_org_a}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Ping (Org A)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_a}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Updated Title\",\"content\":\"Updated content\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings", "{{ping_id_org_a}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wave Routes",
+      "item": [
+        {
+          "name": "Create Wave (Org A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_a}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"solution\":\"This is my solution to the ping\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}/waves",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings", "{{ping_id_org_a}}", "waves"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('wave_id_org_a', response.id);",
+                  "    console.log('Wave ID Org A set:', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Wave by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/waves/{{wave_id_org_a}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "waves", "{{wave_id_org_a}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comment Routes",
+      "item": [
+        {
+          "name": "Create Comment on Ping (Org A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_a}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"content\":\"This is my comment on the ping\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings", "{{ping_id_org_a}}", "comments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Surge Routes",
+      "item": [
+        {
+          "name": "Toggle Surge on Ping (Org A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pings/{{ping_id_org_a}}/surge",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pings", "{{ping_id_org_a}}", "surge"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Routes",
+      "item": [
+        {
+          "name": "Get Platform Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_org_a}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/healthz",
+              "host": ["{{base_url}}"],
+              "path": ["healthz"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

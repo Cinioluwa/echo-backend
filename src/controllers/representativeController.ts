@@ -1,15 +1,19 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { Status } from '@prisma/client';
+import { AuthRequest } from '../types/AuthRequest.js';
 
-export const getSubmittedPings = async (req: Request, res: Response, next: NextFunction) => {
+export const getSubmittedPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
         let limit = parseInt(req.query.limit as string) || 20;
         if (limit > 100) limit = 100;
         const skip = (page - 1) * limit;
 
-    const whereClause = { status: Status.UNDER_REVIEW };
+    const whereClause = { 
+        status: Status.UNDER_REVIEW,
+        organizationId: req.organizationId!,
+    };
 
         const [pings, totalPings] = await prisma.$transaction([
             prisma.ping.findMany({
@@ -50,13 +54,15 @@ export const getSubmittedPings = async (req: Request, res: Response, next: NextF
 };
 
 // GET /api/representatives/waves/top?days=7&take=3
-export const getTopWavesForReview = async (req: Request, res: Response, next: NextFunction) => {
+export const getTopWavesForReview = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const days = req.query.days === 'all' ? 'all' : Number(req.query.days ?? 7);
         const since = days === 'all' ? undefined : new Date(Date.now() - (Number.isFinite(days) ? (days as number) : 7) * 24 * 60 * 60 * 1000);
         const take = Math.min(Number(req.query.take ?? 3), 20);
 
-        const where: any = {};
+        const where: any = {
+            organizationId: req.organizationId!,
+        };
         if (since) where.createdAt = { gte: since };
 
         const waves = await prisma.wave.findMany({
@@ -76,7 +82,7 @@ export const getTopWavesForReview = async (req: Request, res: Response, next: Ne
 };
 
 // POST /api/representatives/waves/forward  { waveIds: number[] }
-export const forwardWaves = async (req: Request, res: Response, next: NextFunction) => {
+export const forwardWaves = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { waveIds } = req.body as { waveIds: number[] };
         if (!Array.isArray(waveIds) || waveIds.length === 0) {
@@ -84,9 +90,12 @@ export const forwardWaves = async (req: Request, res: Response, next: NextFuncti
         }
 
         // Update waves to flaggedForReview=true and mark who flagged (if available)
-        const flaggedById = (req as any).user?.userId ?? null;
+        const flaggedById = req.user?.userId ?? null;
         const updated = await prisma.wave.updateMany({
-            where: { id: { in: waveIds.map(Number).filter(Boolean) } },
+            where: { 
+                id: { in: waveIds.map(Number).filter(Boolean) },
+                organizationId: req.organizationId!,
+            },
             data: { flaggedForReview: true, flaggedById },
         });
 

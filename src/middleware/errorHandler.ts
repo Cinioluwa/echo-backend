@@ -2,7 +2,6 @@
 import { NextFunction, Request, Response } from 'express';
 import logger from '../config/logger.js';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   // Log error with context
   logger.error('Error caught by error handler', {

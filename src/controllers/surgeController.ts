@@ -18,9 +18,12 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
   const pingIdInt = parseInt(pingId);
 
   try {
-    // Verify the ping exists
+    // Verify the ping exists and belongs to the user's organization
     const ping = await prisma.ping.findUnique({
-      where: { id: pingIdInt },
+      where: { 
+        id: pingIdInt,
+        organizationId: req.organizationId!,
+      },
     });
 
     if (!ping) {
@@ -29,7 +32,11 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
 
     // Check if the user has already surged this ping
     const existingSurge = await prisma.surge.findFirst({
-      where: { userId, pingId: pingIdInt },
+      where: { 
+        userId, 
+        pingId: pingIdInt,
+        organizationId: req.organizationId!,
+      },
       select: { id: true },
     });
 
@@ -37,14 +44,25 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
       // If surge exists, delete it
       await prisma.surge.delete({ where: { id: existingSurge.id } });
       // Re-sync the denormalized count to avoid drift
-      const count = await prisma.surge.count({ where: { pingId: pingIdInt } });
+      const count = await prisma.surge.count({ 
+        where: { 
+          pingId: pingIdInt,
+          organizationId: req.organizationId!,
+        } 
+      });
       await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
       return res.status(200).json({ message: 'Surge removed from ping', surged: false });
     }
 
     // If surge doesn't exist, try to create it
     try {
-      await prisma.surge.create({ data: { userId, pingId: pingIdInt } });
+      await prisma.surge.create({ 
+        data: { 
+          userId, 
+          pingId: pingIdInt,
+          organizationId: req.organizationId!,
+        } 
+      });
     } catch (err: any) {
       // Handle unique constraint conflicts gracefully (from partial unique index)
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -54,7 +72,12 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
       }
     }
     // Re-sync the denormalized count to avoid drift
-    const count = await prisma.surge.count({ where: { pingId: pingIdInt } });
+    const count = await prisma.surge.count({ 
+      where: { 
+        pingId: pingIdInt,
+        organizationId: req.organizationId!,
+      } 
+    });
     await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
     return res.status(201).json({ message: 'Ping surged', surged: true });
   } catch (error) {
@@ -77,9 +100,12 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
   const waveIdInt = parseInt(waveId);
 
   try {
-    // Verify the wave exists
+    // Verify the wave exists and belongs to the user's organization
     const wave = await prisma.wave.findUnique({
-      where: { id: waveIdInt },
+      where: { 
+        id: waveIdInt,
+        organizationId: req.organizationId!,
+      },
     });
 
     if (!wave) {
@@ -88,19 +114,34 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
 
     // Check if the user has already surged this wave
     const existingSurge = await prisma.surge.findFirst({
-      where: { userId, waveId: waveIdInt },
+      where: { 
+        userId, 
+        waveId: waveIdInt,
+        organizationId: req.organizationId!,
+      },
       select: { id: true },
     });
 
     if (existingSurge) {
       await prisma.surge.delete({ where: { id: existingSurge.id } });
-      const count = await prisma.surge.count({ where: { waveId: waveIdInt } });
+      const count = await prisma.surge.count({ 
+        where: { 
+          waveId: waveIdInt,
+          organizationId: req.organizationId!,
+        } 
+      });
       await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
       return res.status(200).json({ message: 'Surge removed from wave', surged: false });
     }
 
     try {
-      await prisma.surge.create({ data: { userId, waveId: waveIdInt } });
+      await prisma.surge.create({ 
+        data: { 
+          userId, 
+          waveId: waveIdInt,
+          organizationId: req.organizationId!,
+        } 
+      });
     } catch (err: any) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         // Another request created the surge concurrently; proceed
@@ -108,7 +149,12 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
         throw err;
       }
     }
-    const count = await prisma.surge.count({ where: { waveId: waveIdInt } });
+    const count = await prisma.surge.count({ 
+      where: { 
+        waveId: waveIdInt,
+        organizationId: req.organizationId!,
+      } 
+    });
     await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
     return res.status(201).json({ message: 'Wave surged', surged: true });
   } catch (error) {

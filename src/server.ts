@@ -80,43 +80,45 @@ const applyCreateLimiter = (req: express.Request, res: express.Response, next: e
 };
 
 app.use('/api/users', userRoutes);
-//POST /api/users/register - Register a new user
-//POST /api/users/login - Login a user
-//GET /api/users/me - Get current user profile
-//PATCH /api/users/me - Update logged-in user's profile (firstName/lastName)
-//DELETE /api/users/me - Delete a user account
-//GET /api/users/me/surges - Get all surges (likes) by current user (with pagination)
-//GET /api/users/me/comments - Get all comments by current user (with pagination)
+//POST /api/users/register - Register a new user (organization assigned during registration)
+//POST /api/users/login - Login a user (returns JWT with organizationId)
+//GET /api/users/me - Get current user profile (organization-scoped)
+//PATCH /api/users/me - Update logged-in user's profile (firstName/lastName) - organization-scoped
+//DELETE /api/users/me - Delete a user account (organization-scoped)
+//GET /api/users/me/surges - Get all surges (likes) by current user (organization-scoped, with pagination)
+//GET /api/users/me/comments - Get all comments by current user (organization-scoped, with pagination)
 
 app.use('/api/pings', applyCreateLimiter, pingRoutes);
-//GET /api/pings - Get all pings (with pagination: ?page=1&limit=20 and optional filters: ?category=GENERAL&status=POSTED)
-//POST /api/pings - Create a new ping
-//GET /api/pings/search - Search pings by hashtag (?hashtag=exam) or text query (?q=calculus)
-//GET /api/pings/me - Get current user's pings (with pagination: ?page=1&limit=20)
-//GET /api/pings/:id - Get a specific ping by id
-//PATCH /api/pings/:id - Update a ping
-//DELETE /api/pings/:id - Delete a ping
+//GET /api/pings - Get all pings in user's organization (with pagination: ?page=1&limit=20 and optional filters: ?category=GENERAL&status=POSTED)
+//POST /api/pings - Create a new ping (requires organization membership)
+//GET /api/pings/search - Search pings by hashtag (?hashtag=exam) or text query (?q=calculus) within organization
+//GET /api/pings/me - Get current user's pings within organization (with pagination: ?page=1&limit=20)
+//GET /api/pings/:id - Get a specific ping by id (organization-scoped)
+//PATCH /api/pings/:id - Update a ping (organization-scoped)
+//DELETE /api/pings/:id - Delete a ping (organization-scoped)
 
 // Wave routes (nested under pings)
 app.use('/api/pings/:pingId/waves', applyCreateLimiter, waveRoutes);
-//GET /api/pings/:pingId/waves - Get all waves for a ping (with pagination: ?page=1&limit=20)
-//POST /api/pings/:pingId/waves - Create a wave (solution) for a ping
-//GET /api/waves/:id - Get a specific wave by id (increments viewCount)
+//GET /api/pings/:pingId/waves - Get all waves for a ping within organization (with pagination: ?page=1&limit=20)
+//POST /api/pings/:pingId/waves - Create a wave (solution) for a ping (requires organization membership)
+//GET /api/waves/:id - Get a specific wave by id within organization (increments viewCount)
 
 // Standalone wave route
 app.use('/api/waves', waveStandaloneRoutes);
 
 // Comment routes
 app.use('/api/pings/:pingId/comments', applyCreateLimiter, pingCommentRouter);
-//GET / POST a comment for a PING?
+//GET /api/pings/:pingId/comments - Get all comments for a ping within organization
+//POST /api/pings/:pingId/comments - Create a comment on a ping (requires organization membership)
 app.use('/api/waves/:waveId/comments', applyCreateLimiter, waveCommentRouter);
-//GET / POST a comment for a WAVE?
+//GET /api/waves/:waveId/comments - Get all comments for a wave within organization
+//POST /api/waves/:waveId/comments - Create a comment on a wave (requires organization membership)
 
 // Surge routes
 app.use('/api/pings/:pingId/surge', applyCreateLimiter, pingSurgeRouter);
-//POST a surge/unsurge for a ping
+//POST /api/pings/:pingId/surge - Toggle surge (like/unlike) on a ping within organization (requires organization membership)
 app.use('/api/waves/:waveId/surge', applyCreateLimiter, waveSurgeRouter);
-//POST a surge/unsurge for a wave
+//POST /api/waves/:waveId/surge - Toggle surge (like/unlike) on a wave within organization (requires organization membership)
 
 // Simple healthcheck endpoint
 app.get('/healthz', (_req, res) => {
@@ -125,13 +127,15 @@ app.get('/healthz', (_req, res) => {
 
 // Official Response routes
 app.use('/api/pings/:pingId/official-response', applyCreateLimiter, officialResponseRoutes);
+//GET /api/pings/:pingId/official-response - Get official response for a ping within organization
+//POST /api/pings/:pingId/official-response - Create/update official response for a ping (representative only, organization-scoped)
 
 // Admin routes placed after global security/rate-limit middlewares to ensure they are protected
 app.use('/api/admin', adminRoutes);
 
 app.use('/api/announcements', announcementRoutes);
-//GET /api/announcements - Get all announcements (with optional filters: ?college=&hall=&level=&gender=)
-//POST /api/admin/announcements - Create a new announcement (admin only)
+//GET /api/announcements - Get all announcements for user's organization (with optional filters: ?college=&hall=&level=&gender=)
+//POST /api/admin/announcements - Create a new announcement (admin only, organization-scoped)
 app.use('/api/representatives', representativeRoutes);
 // Public routes (Soundboard/Stream)
 app.use('/api/public', publicRoutes);
@@ -146,9 +150,10 @@ app.use(errorHandler);
 (async () => {
   try {
     await connectDatabase();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, '127.0.0.1', () => {
       logger.info(`🚀 Server is listening on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log('Server address:', server.address());
     });
   } catch (err) {
     logger.error('Failed to start server due to DB connection error', { error: err });

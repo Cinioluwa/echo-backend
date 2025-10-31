@@ -11,6 +11,7 @@ import {
     submitPing
 } from '../controllers/pingController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 import representativeMiddleware from '../middleware/representativeMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
@@ -20,7 +21,7 @@ import { paginationSchema, paginationWithFiltersSchema, searchSchema } from '../
 const router = Router();
 
 // Create a new ping - with validation
-router.post('/', authMiddleware, validate(createPingSchema), createPing);
+router.post('/', authMiddleware, organizationMiddleware, validate(createPingSchema), createPing);
 
 // Get all pings (with pagination and optional filters)
 router.get('/', validate(paginationWithFiltersSchema), getAllPings);

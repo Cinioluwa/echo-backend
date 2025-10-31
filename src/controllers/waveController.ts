@@ -10,25 +10,26 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const { pingId } = req.params;
     const { solution } = req.body;
-    const userId = req.user!.userId; // Non-null assertion since middleware validates this
-    
+    const organizationId = req.organizationId!; // From organizationMiddleware
+
     if (!solution) {
       return res.status(400).json({ error: 'Solution is required' });
     }
 
-    // Verify the ping exists
+    // Verify the ping exists in the user's org
     const ping = await prisma.ping.findUnique({
-      where: { id: parseInt(pingId) },
+      where: { id: parseInt(pingId), organizationId },
     });
 
     if (!ping) {
-      return res.status(404).json({ error: 'Ping not found' });
+      return res.status(404).json({ error: 'Ping not found or access denied' });
     }
 
     const newWave = await prisma.wave.create({
       data: {
         solution,
         pingId: parseInt(pingId),
+        organizationId, // Add organizationId
       },
     });
 
@@ -45,6 +46,7 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
 export const getWavesForPing = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
+    const { organizationId } = req.query;
 
     // --- Pagination Logic ---
     const page = parseInt(req.query.page as string) || 1;
@@ -57,6 +59,7 @@ export const getWavesForPing = async (req: Request, res: Response, next: NextFun
       prisma.wave.findMany({
         where: {
           pingId: parseInt(pingId),
+          organizationId: organizationId ? parseInt(organizationId as string) : undefined,
         },
         skip: skip,
         take: limit,
@@ -110,11 +113,15 @@ export const getWavesForPing = async (req: Request, res: Response, next: NextFun
 export const getWaveById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const { organizationId } = req.query;
     const waveId = parseInt(id);
 
     // Fetch the wave with related data first
     const wave = await prisma.wave.findUnique({
-      where: { id: waveId },
+      where: { 
+        id: waveId,
+        organizationId: organizationId ? parseInt(organizationId as string) : undefined,
+      },
       include: {
         ping: {
           include: {

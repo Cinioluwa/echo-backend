@@ -8,9 +8,20 @@ export const createOfficialResponse = async (req: AuthRequest, res: Response, ne
         const { pingId } = req.params;
         const { content } = req.body;
         const userId = req.user?.userId;
+        const organizationId = req.user?.organizationId;
 
-        if (!userId) {
-            return res.status(401).json({ message: 'Unauthorized: User ID not found' });
+        if (!userId || !organizationId) {
+            return res.status(401).json({ message: 'Unauthorized: User or organization context missing' });
+        }
+
+        const ping = await prisma.ping.findFirst({
+            where: {
+                id: parseInt(pingId),
+                organizationId: organizationId,
+            },
+        });
+        if (!ping) {
+            return res.status(404).json({ message: 'Ping not found in your organization' });
         }
 
         const newResponse = await prisma.officialResponse.create({
@@ -18,6 +29,7 @@ export const createOfficialResponse = async (req: AuthRequest, res: Response, ne
                 content,
                 authorId: userId,
                 pingId: parseInt(pingId),
+                organizationId,
             },
         });
         return res.status(201).json(newResponse);

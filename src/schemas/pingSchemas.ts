@@ -9,17 +9,8 @@ export const createPingSchema = z.object({
     content: z.string({
       message: 'Content is required',
     }).min(1, 'Content cannot be empty').max(5000),
-    category: z.enum([
-      'GENERAL',
-      'ACADEMICS',
-      'CHAPEL',
-      'COLLEGE',
-      'FINANCE',
-      'HALL',
-      'SPORT',
-      'WELFARE',
-    ], {
-      message: 'Invalid category',
+    categoryId: z.number().int().positive({
+      message: 'Valid category ID is required',
     }),
     hashtag: z.string().max(50).optional().nullable(),
   }),
@@ -47,5 +38,24 @@ export const updatePingSchema = z.object({
 export const pingIdSchema = z.object({
   params: z.object({
     id: z.string().regex(/^\d+$/, 'Ping ID must be a number'),
+  }),
+});
+
+export const getPingByIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'Ping ID must be a number'),
+  }),
+  query: z.object({
+    organizationId: z.string().regex(/^\d+$/, 'Organization ID must be a number'),
+  }),
+});
+
+export const searchPingsSchema = z.object({
+  query: z.object({
+    q: z.string().min(1, 'Search query is required').max(100).optional(),
+    hashtag: z.string().min(1, 'Hashtag is required').max(50).optional(),
+    organizationId: z.string().regex(/^\d+$/, 'Organization ID must be a number'),
+  }).refine((data) => data.q || data.hashtag, {
+    message: 'Either search query (q) or hashtag must be provided',
   }),
 });

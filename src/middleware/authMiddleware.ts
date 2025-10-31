@@ -7,6 +7,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 // Here we define the expected JWT payload shape.
 type JwtPayload = {
   userId: number;
+  organizationId: number;
   iat?: number;
   exp?: number;
 };
@@ -22,9 +23,9 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-    (req as AuthRequest).user = { userId: decoded.userId }; // attach a typed, minimal payload
+    (req as AuthRequest).user = { userId: decoded.userId, organizationId: decoded.organizationId }; // attach organizationId
     next(); // Proceed to the next function (the controller)
-  } catch (error) {
+  } catch (_error) {
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 };

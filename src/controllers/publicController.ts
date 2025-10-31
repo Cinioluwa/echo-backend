@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
+import { getPublicPingsSchema, getPublicWavesSchema } from '../schemas/publicSchemas.js';
 
 function parsePagination(req: Request) {
   const page = Math.max(1, Number(req.query.page ?? 1));
@@ -15,6 +16,12 @@ function parsePagination(req: Request) {
 // Public Soundboard: all pings visible, sortable by trending (surgeCount) or new (createdAt)
 export async function getPublicPings(req: Request, res: Response, next: NextFunction) {
   try {
+    // Validate request
+    const validation = getPublicPingsSchema.safeParse(req);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid request', details: validation.error.issues });
+    }
+
     const { limit, skip, top, sort, since } = parsePagination(req);
 
     const orderBy =
@@ -24,6 +31,13 @@ export async function getPublicPings(req: Request, res: Response, next: NextFunc
 
     const where: any = {};
     if (since) where.createdAt = { gte: since };
+    
+    // Organization filter is required for multitenancy
+    const { organizationId } = req.query;
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required' });
+    }
+    where.organizationId = parseInt(organizationId as string);
 
     const [items, total] = await Promise.all([
       prisma.ping.findMany({
@@ -69,6 +83,13 @@ export async function getPublicWaves(req: Request, res: Response, next: NextFunc
 
     const where: any = {};
     if (since) where.createdAt = { gte: since };
+    
+    // Organization filter is required for multitenancy
+    const { organizationId } = req.query;
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required' });
+    }
+    where.organizationId = parseInt(organizationId as string);
 
     const [items, total] = await Promise.all([
       prisma.wave.findMany({

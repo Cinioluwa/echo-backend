@@ -1,15 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { ProgressStatus } from '@prisma/client';
+import { AuthRequest } from '../types/AuthRequest.js';
 
-export const getPlatformStats = async (req: Request, res: Response, next: NextFunction) => {
+export const getPlatformStats = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const [totalUsers, totalPings, totalSurges, totalWaves, totalComments] = await prisma.$transaction([
-            prisma.user.count(),
-            prisma.ping.count(),
-            prisma.surge.count(),
-            prisma.wave.count(),
-            prisma.comment.count()
+            prisma.user.count({ where: { organizationId: req.organizationId! } }),
+            prisma.ping.count({ where: { organizationId: req.organizationId! } }),
+            prisma.surge.count({ where: { organizationId: req.organizationId! } }),
+            prisma.wave.count({ where: { organizationId: req.organizationId! } }),
+            prisma.comment.count({ where: { organizationId: req.organizationId! } }),
         ]);
 
         const stats = {
@@ -26,13 +27,16 @@ export const getPlatformStats = async (req: Request, res: Response, next: NextFu
     }
 };
 
-export const deleteAnyPing = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteAnyPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const pingId = parseInt(id);
 
         const ping = await prisma.ping.findUnique({
-            where: { id: pingId }
+            where: { 
+                id: pingId,
+                organizationId: req.organizationId!,
+            }
         });
 
         if (!ping) {
@@ -40,7 +44,10 @@ export const deleteAnyPing = async (req: Request, res: Response, next: NextFunct
         }
 
         await prisma.ping.delete({
-            where: { id: pingId }
+            where: { 
+                id: pingId,
+                organizationId: req.organizationId!,
+            }
         });
 
         return res.status(204).send();
@@ -49,9 +56,12 @@ export const deleteAnyPing = async (req: Request, res: Response, next: NextFunct
     }
 };
 
-export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllUsers = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const users = await prisma.user.findMany({
+            where: {
+                organizationId: req.organizationId!,
+            },
             select: {
                 id: true,
                 email: true,
@@ -67,7 +77,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
     }  
 };
 
-export const updateUserRole = async (req: Request, res: Response, next: NextFunction) => {
+export const updateUserRole = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const { role } = req.body;
@@ -77,7 +87,10 @@ export const updateUserRole = async (req: Request, res: Response, next: NextFunc
         }
 
         const updatedUser = await prisma.user.update({
-            where: { id: parseInt(id) },
+            where: { 
+                id: parseInt(id),
+                organizationId: req.organizationId!,
+            },
             data: { role }
         });
 
@@ -88,9 +101,12 @@ export const updateUserRole = async (req: Request, res: Response, next: NextFunc
     }
 };
 
-export const getPingsByLevel = async (req: Request, res: Response, next: NextFunction) => {
+export const getPingsByLevel = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const pings = await prisma.ping.findMany({
+            where: {
+                organizationId: req.organizationId!,
+            },
             select: {
                 author: {
                     select: {
@@ -118,10 +134,13 @@ export const getPingsByLevel = async (req: Request, res: Response, next: NextFun
 };
 
 
-export const getPingStatsByCategory = async (req: Request, res: Response, next: NextFunction) => {
+export const getPingStatsByCategory = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const stats = await prisma.ping.groupBy({
-      by: ['category'],
+      where: {
+        organizationId: req.organizationId!,
+      },
+      by: ['categoryId'],
       _count: {
         id: true, 
       },
@@ -132,8 +151,22 @@ export const getPingStatsByCategory = async (req: Request, res: Response, next: 
       },
     });
 
+    // Get category names for the IDs
+    const categoryIds = stats.map(item => item.categoryId).filter(id => id !== null);
+    const categories = await prisma.category.findMany({
+      where: {
+        id: { in: categoryIds },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    const categoryMap = new Map(categories.map(cat => [cat.id, cat.name]));
+
     const formattedStats = stats.map(item => ({
-      name: item.category,
+      name: item.categoryId ? categoryMap.get(item.categoryId) || 'Unknown' : 'No Category',
       count: item._count.id,
     }));
 
@@ -143,12 +176,15 @@ export const getPingStatsByCategory = async (req: Request, res: Response, next: 
   }
 };
 
-export const getUserByIdAsAdmin = async (req: Request, res: Response, next: NextFunction) => {
+export const getUserByIdAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const userId = parseInt(id);
         const user = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { 
+                id: userId,
+                organizationId: req.organizationId!,
+            },
             select: {
                 id: true,
                 email: true,
@@ -181,7 +217,7 @@ export const getUserByIdAsAdmin = async (req: Request, res: Response, next: Next
     }
 };
 
-export const updatePingProgressStatus = async (req: Request, res: Response, next: NextFunction) => {
+export const updatePingProgressStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body as { status: ProgressStatus };
@@ -191,7 +227,10 @@ export const updatePingProgressStatus = async (req: Request, res: Response, next
         }
 
         const updated = await prisma.ping.update({
-            where: { id: parseInt(id) },
+            where: { 
+                id: parseInt(id),
+                organizationId: req.organizationId!,
+            },
             data: { progressStatus: status, progressUpdatedAt: new Date() },
             select: { id: true, title: true, progressStatus: true, progressUpdatedAt: true },
         });

@@ -4,7 +4,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 
 export const createAnnouncement = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const { title, content, targetCollege, targetHall, targetLevel, targetGender } = req.body;
+        const { title, content, categoryIds } = req.body;
         const userId = req.user!.userId; // Non-null assertion since middleware validates this
 
         const newAnnouncement = await prisma.announcement.create({
@@ -12,10 +12,19 @@ export const createAnnouncement = async (req: AuthRequest, res: Response, next: 
                 title,
                 content,
                 authorId: userId,
-                targetCollege,
-                targetHall,
-                targetLevel,
-                targetGender,
+                organizationId: req.organizationId!,
+                categories: {
+                    connect: categoryIds?.map((id: number) => ({ id })) || [],
+                },
+            },
+            include: {
+                categories: true,
+                author: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
             },
         });
 
@@ -27,14 +36,20 @@ export const createAnnouncement = async (req: AuthRequest, res: Response, next: 
 
 export const getAnnouncements = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const { college, hall, level, gender } = req.query;
+        const { categoryId } = req.query;
 
-        const whereClause: any = {};
-        // Use hasSome to match if array contains any of the filter values
-        if (college) whereClause.targetCollege = { hasSome: [college as string] };
-        if (hall) whereClause.targetHall = { hasSome: [hall as string] };
-        if (level) whereClause.targetLevel = { hasSome: [parseInt(level as string)] };
-        if (gender) whereClause.targetGender = { hasSome: [gender as string] };
+        const whereClause: any = {
+            organizationId: req.organizationId!,
+        };
+
+        // Filter by specific category if provided
+        if (categoryId) {
+            whereClause.categories = {
+                some: {
+                    id: parseInt(categoryId as string),
+                },
+            };
+        }
 
         const announcements = await prisma.announcement.findMany({
             where: whereClause,
@@ -46,6 +61,7 @@ export const getAnnouncements = async (req: AuthRequest, res: Response, next: Ne
                         lastName: true,
                     },
                 },
+                categories: true,
             },
             });
             return res.status(200).json(announcements);
@@ -57,17 +73,28 @@ export const getAnnouncements = async (req: AuthRequest, res: Response, next: Ne
 export const updateAnnouncement = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const { title, content, targetCollege, targetHall, targetLevel, targetGender } = req.body;
+        const { title, content, categoryIds } = req.body;
 
         const updatedAnnouncement = await prisma.announcement.update({
-            where: { id: parseInt(id) },
+            where: { 
+                id: parseInt(id),
+                organizationId: req.organizationId!, // Ensure it belongs to the user's org
+            },
             data: {
                 title,
                 content,
-                targetCollege,
-                targetHall,
-                targetLevel,
-                targetGender,
+                categories: {
+                    set: categoryIds?.map((id: number) => ({ id })) || [],
+                },
+            },
+            include: {
+                categories: true,
+                author: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
             },
         });
 
@@ -82,7 +109,10 @@ export const deleteAnnouncement = async (req: AuthRequest, res: Response, next: 
     try {
         const { id } = req.params;
         await prisma.announcement.delete({
-            where: { id: parseInt(id) },
+            where: { 
+                id: parseInt(id),
+                organizationId: req.organizationId!, // Ensure it belongs to the user's org
+            },
         });
         return res.status(204).send();
     }

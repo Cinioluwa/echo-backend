@@ -84,7 +84,7 @@ export const sanitizeForLog = (data: any): any => {
 
   try {
     return mask(data);
-  } catch (err) {
+  } catch (_err) {
     // If sanitization fails for any reason, avoid leaking sensitive data
     return '[REDACTED]';
   }

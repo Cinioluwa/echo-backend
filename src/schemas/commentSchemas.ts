@@ -17,6 +17,9 @@ export const getCommentsForPingSchema = z.object({
   params: z.object({
     pingId: z.string().regex(/^\d+$/, 'Ping ID must be a number'),
   }),
+  query: z.object({
+    organizationId: z.string().regex(/^\d+$/, 'Organization ID must be a number').optional(),
+  }),
 });
 
 export const createCommentOnWaveSchema = z.object({

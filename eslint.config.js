@@ -10,8 +10,32 @@ export default [
   {
     ignores: ['dist/**', 'node_modules/**', 'logs/**', 'coverage/**', 'prisma/**'],
   },
-  js.configs.recommended,
-  eslintConfigPrettier,
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        global: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 'off',
+      'no-unused-vars': 'off',
+    },
+  },
   {
     files: ['**/*.ts'],
     languageOptions: {

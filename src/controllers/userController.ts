@@ -9,7 +9,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 // relative imports must include the .js extension to match the emitted JavaScript files.
 export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, firstName, lastName, level } = req.body;
+    const { email, password, firstName, lastName, level, organizationId } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string' || email.trim() === '' || password.trim() === '') {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -19,11 +19,15 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
       return res.status(400).json({ error: 'First name and last name are required' });
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required' });
+    }
+
+    // Check if user already exists in the org
+    const existingUser = await prisma.user.findUnique({ where: { email_organizationId: { email, organizationId } } });
     if (existingUser) {
       return res.status(409).json({ 
-        error: 'An account with this email already exists. Please use a different email or try logging in.' 
+        error: 'An account with this email already exists in this organization. Please use a different email or try logging in.' 
       });
     }
 
@@ -36,12 +40,14 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
         firstName: firstName,
         lastName: lastName,
         level: level, // Include level if provided
+        organizationId: organizationId,
       },
     });
 
     logger.info('New user registered', {
       userId: newUser.id,
       email: newUser.email,
+      organizationId: newUser.organizationId,
       requestId: (req as any).requestId,
     });
 
@@ -54,19 +60,27 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
 
 export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, organizationId } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email_organizationId: { email, organizationId } } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       logger.warn('Failed login attempt', {
         email,
+        organizationId,
         requestId: (req as any).requestId,
       });
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email, password, or organization' });
     }
 
     const token = jwt.sign(
-      { userId: user.id },
+      { 
+        userId: user.id,
+        organizationId: user.organizationId // Add organizationId to JWT
+      },
       process.env.JWT_SECRET as string,
       { expiresIn: '1h' }
     );
@@ -74,6 +88,7 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
     logger.info('User logged in', {
       userId: user.id,
       email: user.email,
+      organizationId: user.organizationId,
       requestId: (req as any).requestId,
     });
 

@@ -2,17 +2,19 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { getPingByIdSchema, searchPingsSchema } from '../schemas/pingSchemas.js';
 
 export const createPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { title, content, category, hashtag } = req.body;
+    const { title, content, categoryId, hashtag } = req.body;
     const authorId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
     
-    if (!authorId) {
-      return res.status(401).json({ error: 'Unauthorized: User ID not found' });
+    if (!authorId || !organizationId) {
+      return res.status(401).json({ error: 'Unauthorized: User or organization context missing' });
     }
-    if (!title || !content || !category) {
-      return res.status(400).json({ error: 'Title, content and category are required' });
+    if (!title || !content || !categoryId) {
+      return res.status(400).json({ error: 'Title, content and categoryId are required' });
     }
 
     const newPing = await prisma.ping.create({
@@ -20,7 +22,8 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
         title,
         content,
         authorId,
-        category,
+        organizationId,
+        categoryId,
         hashtag: hashtag || null,
       },
     });
@@ -32,20 +35,22 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
   }
 };
 
-export const getAllPings = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     // --- Pagination Logic ---
-    const page = parseInt(_req.query.page as string) || 1;
-    let limit = parseInt(_req.query.limit as string) || 20;
+    const page = parseInt(req.query.page as string) || 1;
+    let limit = parseInt(req.query.limit as string) || 20;
     if (limit > 100) limit = 100; // Cap the limit to 100
     const skip = (page - 1) * limit;
 
     // --- Filtering Logic ---
-    const { category, status } = _req.query;
-    const whereClause: any = {};
+    const { category, status } = req.query;
+    const whereClause: any = {
+      organizationId: req.organizationId, // Always filter by user's organization
+    };
     
     if (category) {
-      whereClause.category = category;
+      whereClause.categoryId = category; // Now category is ID
     }
     if (status) {
       whereClause.status = status;
@@ -67,8 +72,10 @@ export const getAllPings = async (_req: Request, res: Response, next: NextFuncti
               email: true,
               firstName: true,
               lastName: true,
+              level: true,
             },
           },
+          category: true, // Include category details
           // Include counts of related items
           _count: {
             select: { waves: true, comments: true, surges: true },
@@ -152,12 +159,14 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 };
 
 export const searchPings = async (req: Request, res: Response, next: NextFunction) => {
-  const { hashtag, q } = req.query;
-  
   try {
-    if (!hashtag && !q) {
-      return res.status(400).json({ error: 'Please provide a search query (hashtag or q)' });
+    // Validate request
+    const validation = searchPingsSchema.safeParse(req);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid request', details: validation.error.issues });
     }
+
+    const { q, hashtag, organizationId } = req.query;
 
     // --- Pagination Logic ---
     const page = parseInt(req.query.page as string) || 1;
@@ -166,7 +175,9 @@ export const searchPings = async (req: Request, res: Response, next: NextFunctio
     const skip = (page - 1) * limit;
 
     // --- Search/Filtering Logic ---
-    const whereClause: any = {};
+    const whereClause: any = {
+      organizationId: parseInt(organizationId as string), // Always filter by organization
+    };
     if (hashtag) {
       whereClause.hashtag = {
         contains: hashtag as string,
@@ -225,8 +236,19 @@ export const searchPings = async (req: Request, res: Response, next: NextFunctio
 export const getPingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const { organizationId } = req.query;
+    
+    // Validate request
+    const validation = getPingByIdSchema.safeParse(req);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid request', details: validation.error.issues });
+    }
+
     const ping = await prisma.ping.findUnique({
-      where: { id: parseInt(id) },
+      where: { 
+        id: parseInt(id),
+        organizationId: parseInt(organizationId as string) // Ensure ping belongs to the requested organization
+      },
       include: {
         author: {
           select: { 
@@ -377,7 +399,7 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
 
     const updatedPing = await prisma.ping.update({
       where: { id: parseInt(id) },
-      data: { status: 'SUBMITTED' },
+      data: { status: 'UNDER_REVIEW' },
     });
 
     return res.status(200).json(updatedPing);
