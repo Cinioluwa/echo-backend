@@ -124,8 +124,11 @@ Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 |--------------|----------|---------------------------------------------|---------|
 | DATABASE_URL | Yes      | PostgreSQL connection string (Neon)         | `postgresql://user:pass@neon-host/db?sslmode=require` |
 | JWT_SECRET   | Yes      | Secret key for JWT signing                  | `a_really_strong_random_string` |
+| GOOGLE_CLIENT_ID | No   | Google OAuth Client ID (for Google Sign-In) | `123456789.apps.googleusercontent.com` |
 | PORT         | No       | Port Express listens on (default 3000)      | `3000` |
 | NODE_ENV     | No       | `development` / `production` / `test`       | `development` |
+
+**📝 Note**: See `GOOGLE_AUTH_IMPLEMENTATION.md` and `GOOGLE_AUTH_TESTING_GUIDE.md` for Google OAuth setup.
 
 ## Base URL and auth
 
@@ -137,14 +140,15 @@ Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 
 All JSON bodies are validated with Zod. Many list endpoints accept optional pagination.
 
-### Auth — `/api/users`
-- `POST /register` — Register (email, password, firstName, lastName, level?)
-- `POST /login` — Login, returns JWT
-- `GET /me` — Current user profile (Authorization: Bearer token)
-- `PATCH /me` — Update profile: firstName, lastName, level (auth)
-- `DELETE /me` — Delete account (auth)
-- `GET /me/surges` — My surges (auth)
-- `GET /me/comments` — My comments (auth)
+### Auth — `/api/users` & `/api/auth`
+- `POST /api/users/register` — Register (email, password, firstName, lastName, level?)
+- `POST /api/users/login` — Login, returns JWT
+- `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (token: Google ID token)
+- `GET /api/users/me` — Current user profile (Authorization: Bearer token)
+- `PATCH /api/users/me` — Update profile: firstName, lastName, level (auth)
+- `DELETE /api/users/me` — Delete account (auth)
+- `GET /api/users/me/surges` — My surges (auth)
+- `GET /api/users/me/comments` — My comments (auth)
 
 ### Pings — `/api/pings`
 - `GET /` — List pings with optional filters: `category`, `status`, plus pagination

@@ -233,6 +233,14 @@ export const loginUser = async (
       });
     }
 
+    // Check if user has a password (Google OAuth users don't have passwords)
+    if (!user.password) {
+      return res.status(400).json({
+        error: 'This account uses Google Sign-In. Please sign in with Google.',
+        code: 'GOOGLE_AUTH_REQUIRED',
+      });
+    }
+
     const passwordMatches = await bcrypt.compare(password, user.password);
 
     if (!passwordMatches) {

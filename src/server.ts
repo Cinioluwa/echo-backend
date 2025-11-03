@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import logger from './config/logger.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import userRoutes from './routes/userRoutes.js'; 
+import authRoutes from './routes/authRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import pingRoutes from './routes/pingRoutes.js';
 import waveRoutes from './routes/waveRoutes.js';
@@ -76,6 +77,7 @@ app.use('/api/users/forgot-password', authLimiter);
 app.use('/api/users/reset-password', authLimiter);
 app.use('/api/users/verify-email', authLimiter);
 app.use('/api/users/organization-waitlist', authLimiter);
+app.use('/api/auth/google', authLimiter); // Google auth rate limiting
 
 // Apply create limiter to write operations (POST, PATCH, DELETE)
 const applyCreateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -93,6 +95,9 @@ app.use('/api/users', userRoutes);
 //DELETE /api/users/me - Delete a user account (organization-scoped)
 //GET /api/users/me/surges - Get all surges (likes) by current user (organization-scoped, with pagination)
 //GET /api/users/me/comments - Get all comments by current user (organization-scoped, with pagination)
+
+app.use('/api/auth', authRoutes);
+//POST /api/auth/google - Authenticate with Google OAuth
 
 app.use('/api/pings', applyCreateLimiter, pingRoutes);
 //GET /api/pings - Get all pings in user's organization (with pagination: ?page=1&limit=20 and optional filters: ?category=<categoryId>&status=POSTED)

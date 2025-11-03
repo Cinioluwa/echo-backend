@@ -35,7 +35,10 @@ model User {
   firstName      String?
   lastName       String?
   level          Int?
-  password       String
+  password       String?  // Optional for Google OAuth users
+  googleId       String?  @unique // Google's unique user identifier
+  profilePicture String?  // Store Google profile picture URL
+  isVerified     Boolean  @default(false) // Email verification status
   role           Role     @default(USER)
   status         String   @default("PENDING") // PENDING, ACTIVE
   createdAt      DateTime @default(now())
