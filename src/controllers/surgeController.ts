@@ -19,7 +19,7 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
 
   try {
     // Verify the ping exists and belongs to the user's organization
-    const ping = await prisma.ping.findUnique({
+    const ping = await prisma.ping.findFirst({
       where: { 
         id: pingIdInt,
         organizationId: req.organizationId!,
@@ -101,7 +101,7 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
 
   try {
     // Verify the wave exists and belongs to the user's organization
-    const wave = await prisma.wave.findUnique({
+    const wave = await prisma.wave.findFirst({
       where: { 
         id: waveIdInt,
         organizationId: req.organizationId!,

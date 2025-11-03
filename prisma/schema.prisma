@@ -25,6 +25,7 @@ model Organization {
   officialResponses OfficialResponse[]
   invitations Invitation[]
   categories  Category[] // An organization can have many custom categories
+  requests    OrganizationRequest[]
 }
 
 // User Model with Organization Link
@@ -50,6 +51,8 @@ model User {
   officialResponses  OfficialResponse[]
   // Waves flagged by this user (representative forwarding)
   flaggedWaves       Wave[] @relation("WaveFlaggedBy")
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens      PasswordResetToken[]
 
   @@unique([email, organizationId]) // Email unique per org
 }
@@ -216,6 +219,51 @@ model Invitation {
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
+}
+
+model EmailVerificationToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model OrganizationRequest {
+  id               Int      @id @default(autoincrement())
+  organizationName String
+  domain           String
+  requesterEmail   String
+  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  resolvedAt       DateTime?
+
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int?
+
+  @@unique([domain])
+  @@index([status])
 }
 
 // Enums

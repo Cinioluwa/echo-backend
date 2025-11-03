@@ -15,7 +15,7 @@ const representativeMiddleware = async (req: AuthRequest, res: Response, next: N
             where: { id: userId },
         });
 
-        if (user && (user.role === 'REPRESENTATIVE' || user.role === 'ADMIN')) {
+        if (user && (user.role === 'REPRESENTATIVE' || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) {
             next();
         } else {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });

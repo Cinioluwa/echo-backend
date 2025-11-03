@@ -15,9 +15,12 @@ This guide provides comprehensive testing instructions for the Echo backend API 
    Authorization: Bearer <your-jwt-token>
    ```
 
-3. **Test Organizations**: The setup script creates:
-   - **Org A**: University of Toronto (organizationId: test-org-a)
-   - **Org B**: University of Waterloo (organizationId: test-org-b)
+3. **Test Organizations**: The setup script creates domains you can target by email:
+  - **Covenant University** – domain: `cu.edu.ng`
+  - **Test University A** – domain: `testuniva.edu`
+  - **Test University B** – domain: `testunivb.edu`
+
+> ℹ️ Registration and login now infer the organization from the email domain. As long as the domain is pre-registered and active, the user will be placed in the correct tenant automatically.
 
 ## Test Users
 
@@ -39,13 +42,13 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 **Body**:
 ```json
 {
-  "email": "newuser@example.com",
+  "email": "student@cu.edu.ng",
   "password": "password123",
   "firstName": "John",
-  "lastName": "Doe",
-  "organizationId": "test-org-a"
+  "lastName": "Doe"
 }
 ```
+**Notes**: The backend derives the organization from the email domain. The user receives a verification email before the account becomes active.
 
 #### POST /api/users/login
 **Purpose**: Login user and get JWT token
@@ -54,11 +57,69 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 ```json
 {
   "email": "studentA@testuniva.edu",
-  "password": "password123",
-  "organizationId": 1
+  "password": "password123"
 }
 ```
-**Expected Response**: JWT token with organizationId
+**Expected Response**: JWT token containing `organizationId` and `role` claims.
+
+#### POST /api/users/google
+**Purpose**: Sign in via Google OAuth (auto-registers on first login)
+**Auth**: Google ID token
+**Body**:
+```json
+{
+  "idToken": "<google-id-token>"
+}
+```
+**Notes**: The verified email returned by Google determines the organization.
+
+#### POST /api/users/verify-email
+**Purpose**: Activate a newly registered account
+**Auth**: None required
+**Body**:
+```json
+{
+  "token": "<verification-token-from-email>"
+}
+```
+
+#### POST /api/users/forgot-password
+**Purpose**: Request a password reset link
+**Auth**: None required
+**Body**:
+```json
+{
+  "email": "student@cu.edu.ng"
+}
+```
+
+#### PATCH /api/users/reset-password
+**Purpose**: Complete password reset
+**Auth**: None required
+**Body**:
+```json
+{
+  "token": "<reset-token-from-email>",
+  "password": "newSecurePassword123"
+}
+```
+
+#### POST /api/users/organization-waitlist
+**Purpose**: Request onboarding for a new organization (creates pending org + admin user)
+**Auth**: None required
+**Body**:
+```json
+{
+  "organizationName": "New University",
+  "email": "founder@newuni.edu",
+  "firstName": "Founder",
+  "lastName": "Person",
+  "password": "password123",
+  "metadata": {
+    "notes": "Interested in early access"
+  }
+}
+```
 
 ### User Management Routes
 
@@ -331,9 +392,10 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 ## Testing Strategy
 
 ### 1. Authentication Testing
-1. Register users for both organizations
-2. Login and verify JWT tokens contain correct organizationId
-3. Test that tokens from one org don't work for another org's data
+1. Register users for both organizations using valid domains
+2. Call `POST /api/users/verify-email` with the email token to activate the accounts
+3. Login and verify JWT tokens contain the correct `organizationId` and `role`
+4. Test that tokens from one org don't work for another org's data
 
 ### 2. Data Isolation Testing
 1. Create content (pings, waves, comments) as users from Org A

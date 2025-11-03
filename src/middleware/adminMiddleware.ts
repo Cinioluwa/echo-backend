@@ -14,7 +14,7 @@ const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFuncti
             where: { id: userId },
         });
 
-        if (user && user.role === 'ADMIN') {
+        if (user && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) {
             next();
         } else {
             return res.status(403).json({ error: 'Forbidden: Admins only' });

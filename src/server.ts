@@ -17,6 +17,7 @@ import { pingSurgeRouter, waveSurgeRouter } from './routes/surgeRoutes.js';
 import officialResponseRoutes from './routes/officialResponseRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 import helmet from 'helmet';
 import { connectDatabase } from './config/db.js';
 import representativeRoutes from './routes/representativeRoutes.js';
@@ -70,6 +71,11 @@ app.use(limiter); // Apply general rate limiter to all routes
 // Apply auth-specific rate limiter to auth routes
 app.use('/api/users/register', authLimiter);
 app.use('/api/users/login', authLimiter);
+app.use('/api/users/google', authLimiter);
+app.use('/api/users/forgot-password', authLimiter);
+app.use('/api/users/reset-password', authLimiter);
+app.use('/api/users/verify-email', authLimiter);
+app.use('/api/users/organization-waitlist', authLimiter);
 
 // Apply create limiter to write operations (POST, PATCH, DELETE)
 const applyCreateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -139,6 +145,8 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/representatives', representativeRoutes);
 // Public routes (Soundboard/Stream)
 app.use('/api/public', publicRoutes);
+// Categories (per-organization)
+app.use('/api/categories', categoryRoutes);
 
 // Centralized error handler (should be the last middleware)
 app.use(errorHandler);

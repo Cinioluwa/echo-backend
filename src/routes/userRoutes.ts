@@ -3,6 +3,11 @@ import { Router } from 'express';
 import { 
   registerUser, 
   loginUser, 
+  loginWithGoogle,
+  verifyEmail,
+  requestPasswordReset,
+  resetPassword,
+  requestOrganizationOnboarding,
   deleteCurrentUser, 
   updateCurrentUser, 
   getCurrentUser,
@@ -11,7 +16,16 @@ import {
 } from '../controllers/userController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { registerSchema, loginSchema, updateUserSchema } from '../schemas/userSchemas.js';
+import { 
+  registerSchema, 
+  loginSchema, 
+  updateUserSchema, 
+  googleAuthSchema,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  organizationWaitlistSchema,
+} from '../schemas/userSchemas.js';
 
 const router = Router();
 
@@ -20,6 +34,23 @@ router.post('/register', validate(registerSchema), registerUser);
 
 // Login a user - with validation
 router.post('/login', validate(loginSchema), loginUser);
+
+// Google OAuth login
+router.post('/google', validate(googleAuthSchema), loginWithGoogle);
+
+// Email verification
+router.post('/verify-email', validate(verifyEmailSchema), verifyEmail);
+
+// Password reset flow
+router.post('/forgot-password', validate(forgotPasswordSchema), requestPasswordReset);
+router.patch('/reset-password', validate(resetPasswordSchema), resetPassword);
+
+// New organization onboarding request
+router.post(
+  '/organization-waitlist',
+  validate(organizationWaitlistSchema),
+  requestOrganizationOnboarding
+);
 
 // Current user routes (get, update, delete profile)
 router.route('/me')

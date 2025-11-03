@@ -32,7 +32,7 @@ export const deleteAnyPing = async (req: AuthRequest, res: Response, next: NextF
         const { id } = req.params;
         const pingId = parseInt(id);
 
-        const ping = await prisma.ping.findUnique({
+        const ping = await prisma.ping.findFirst({
             where: { 
                 id: pingId,
                 organizationId: req.organizationId!,
@@ -43,7 +43,7 @@ export const deleteAnyPing = async (req: AuthRequest, res: Response, next: NextF
             return res.status(404).json({ error: 'Ping not found' });
         }
 
-        await prisma.ping.delete({
+        await prisma.ping.deleteMany({
             where: { 
                 id: pingId,
                 organizationId: req.organizationId!,
@@ -86,15 +86,20 @@ export const updateUserRole = async (req: AuthRequest, res: Response, next: Next
             return res.status(400).json({ error: 'Invalid role specified' });
         }
 
-        const updatedUser = await prisma.user.update({
+        const updateResult = await prisma.user.updateMany({
             where: { 
                 id: parseInt(id),
                 organizationId: req.organizationId!,
             },
             data: { role }
         });
-
-        const { password: _pw, ...safeUser } = updatedUser;
+        if (updateResult.count === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const safeUser = await prisma.user.findFirst({
+            where: { id: parseInt(id), organizationId: req.organizationId! },
+            select: { id: true, email: true, firstName: true, lastName: true, role: true, createdAt: true }
+        });
         return res.status(200).json(safeUser);
     } catch (error) {
         return next(error);
@@ -180,7 +185,7 @@ export const getUserByIdAsAdmin = async (req: AuthRequest, res: Response, next: 
     try {
         const { id } = req.params;
         const userId = parseInt(id);
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { 
                 id: userId,
                 organizationId: req.organizationId!,
@@ -226,15 +231,20 @@ export const updatePingProgressStatus = async (req: AuthRequest, res: Response, 
             return res.status(400).json({ error: 'Invalid progress status' });
         }
 
-        const updated = await prisma.ping.update({
+        const updateResult = await prisma.ping.updateMany({
             where: { 
                 id: parseInt(id),
                 organizationId: req.organizationId!,
             },
             data: { progressStatus: status, progressUpdatedAt: new Date() },
-            select: { id: true, title: true, progressStatus: true, progressUpdatedAt: true },
         });
-
+        if (updateResult.count === 0) {
+            return res.status(404).json({ error: 'Ping not found' });
+        }
+        const updated = await prisma.ping.findFirst({
+            where: { id: parseInt(id), organizationId: req.organizationId! },
+            select: { id: true, title: true, progressStatus: true, progressUpdatedAt: true }
+        });
         return res.status(200).json(updated);
     } catch (error) {
         return next(error);

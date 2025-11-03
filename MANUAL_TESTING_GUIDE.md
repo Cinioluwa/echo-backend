@@ -29,7 +29,7 @@ For each controller, verify:
 
 ### Test Scenario 1: Data Isolation
 ```
-POST /api/auth/login
+POST /api/users/login
 Body: { "email": "user@org1.com", "password": "..." }
 // Should return JWT with organizationId: 1
 
@@ -40,7 +40,7 @@ Headers: { "Authorization": "Bearer <jwt>" }
 
 ### Test Scenario 2: Cross-Organization Access Prevention
 ```
-POST /api/auth/login
+POST /api/users/login
 Body: { "email": "user@org2.com", "password": "..." }
 // JWT contains organizationId: 2
 
@@ -51,7 +51,7 @@ Headers: { "Authorization": "Bearer <jwt>" }
 
 ### Test Scenario 3: Admin Scope
 ```
-POST /api/auth/login
+POST /api/users/login
 Body: { "email": "admin@org1.com", "password": "..." }
 
 GET /api/admin/users

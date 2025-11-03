@@ -21,7 +21,7 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
     }
 
     // Verify the ping exists in the user's org
-    const ping = await prisma.ping.findUnique({
+    const ping = await prisma.ping.findFirst({
       where: { id: parseInt(pingId), organizationId },
     });
 
@@ -131,7 +131,7 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     // Fetch the wave with related data first
-    const wave = await prisma.wave.findUnique({
+    const wave = await prisma.wave.findFirst({
       where: { 
         id: waveId,
         organizationId: organizationId,

@@ -178,7 +178,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"content\": \"This is an important announcement.\",\n  \"level\": \"ORGANIZATION\"\n}"
+							"raw": "{\n  \"title\": \"Important Update\",\n  \"content\": \"This is an important announcement.\",\n  \"categoryIds\": [1]\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/admin/announcements",
@@ -210,7 +210,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"content\": \"This is an updated announcement.\"\n}"
+							"raw": "{\n  \"title\": \"Updated Announcement Title\",\n  \"content\": \"This is an updated announcement.\",\n  \"categoryIds\": [1,2]\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/admin/announcements/:id",
@@ -401,7 +401,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/announcements?level=ORGANIZATION",
+							"raw": "{{baseUrl}}/announcements?categoryId=1",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -410,8 +410,8 @@
 							],
 							"query": [
 								{
-									"key": "level",
-									"value": "ORGANIZATION"
+									"key": "categoryId",
+									"value": "1"
 								}
 							]
 						},
@@ -840,7 +840,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"New Wave Title\",\n  \"pings\": [\"ping_id_1\", \"ping_id_2\"]\n}"
+									"raw": "{\n  \"solution\": \"Proposed solution text here\"\n}"
 								},
 								"url": {
 									"raw": "{{baseUrl}}/pings/:pingId/waves",
@@ -898,7 +898,7 @@
 							"name": "Official Responses",
 							"item": [
 								{
-									"name": "Create Official Response on Wave",
+									"name": "Create Official Response on Ping",
 									"request": {
 										"method": "POST",
 										"header": [
@@ -913,26 +913,26 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"content\": \"This is the official response to the wave.\"\n}"
+											"raw": "{\n  \"content\": \"This is the official response to the ping.\"\n}"
 										},
 										"url": {
-											"raw": "{{baseUrl}}/waves/:waveId/official-response",
+											"raw": "{{baseUrl}}/pings/:pingId/official-response",
 											"host": [
 												"{{baseUrl}}"
 											],
 											"path": [
-												"waves",
-												":waveId",
+												"pings",
+												":pingId",
 												"official-response"
 											],
 											"variable": [
 												{
-													"key": "waveId",
-													"value": "wave_id"
+													"key": "pingId",
+													"value": "ping_id"
 												}
 											]
 										},
-										"description": "Creates an official response to a specific wave. Requires representative privileges."
+										"description": "Creates an official response to a specific ping. Requires representative privileges."
 									},
 									"response": []
 								}
@@ -990,6 +990,34 @@
 							]
 						},
 						"description": "Retrieves public waves for the stream."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "List Categories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{authToken}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/categories?q=acad",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"categories"
+							],
+							"query": [
+								{ "key": "q", "value": "acad" }
+							]
+						},
+						"description": "Lists categories in the current organization (optional q filter)"
 					},
 					"response": []
 				}
@@ -1098,7 +1126,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"organizationDomain\": \"cu.edu.ng\"\n}"
+							"raw": "{\n  \"email\": \"student@cu.edu.ng\",\n  \"password\": \"password123\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/users/register",
@@ -1126,7 +1154,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"organizationDomain\": \"cu.edu.ng\"\n}"
+							"raw": "{\n  \"email\": \"student@cu.edu.ng\",\n  \"password\": \"password123\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/users/login",
@@ -1139,6 +1167,146 @@
 							]
 						},
 						"description": "Logs in a user and returns an authentication token."
+					},
+					"response": []
+				},
+				{
+					"name": "Login with Google",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"idToken\": \"<google-id-token>\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/google",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"google"
+							]
+						},
+						"description": "Logs in or registers a user using a Google ID token."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"<verification-token>\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/verify-email",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"verify-email"
+							]
+						},
+						"description": "Verifies a user's email using the token sent to their inbox."
+					},
+					"response": []
+				},
+				{
+					"name": "Request Password Reset",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"student@cu.edu.ng\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"forgot-password"
+							]
+						},
+						"description": "Initiates the password reset flow for an email address."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"<reset-token>\",\n  \"password\": \"newSecurePassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"reset-password"
+							]
+						},
+						"description": "Completes the password reset using the emailed token."
+					},
+					"response": []
+				},
+				{
+					"name": "Request Organization Onboarding",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"organizationName\": \"New University\",\n  \"email\": \"founder@newuni.edu\",\n  \"firstName\": \"Founder\",\n  \"lastName\": \"Person\",\n  \"password\": \"password123\",\n  \"metadata\": {\n    \"notes\": \"Interested in early access\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/organization-waitlist",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"organization-waitlist"
+							]
+						},
+						"description": "Submits a new organization request and creates the initial admin account."
 					},
 					"response": []
 				},

@@ -31,18 +31,18 @@ import {
 
 const router = Router();
 
-router.get('/stats', authMiddleware, adminMiddleware, getPlatformStats);
+router.get('/stats', authMiddleware, adminMiddleware, organizationMiddleware, getPlatformStats);
 router.get('/pings', authMiddleware, adminMiddleware, validate(paginationWithFiltersSchema), getAllPingsAsAdmin);
-router.delete('/pings/:id', authMiddleware, adminMiddleware, validate(pingIdSchema), deleteAnyPing);
-router.get('/users', authMiddleware, adminMiddleware, getAllUsers);
-router.patch('/users/:id/role', authMiddleware, adminMiddleware, validate(updateUserRoleSchema), updateUserRole);
+router.delete('/pings/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), deleteAnyPing);
+router.get('/users', authMiddleware, adminMiddleware, organizationMiddleware, getAllUsers);
+router.patch('/users/:id/role', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateUserRoleSchema), updateUserRole);
 router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddleware, validate(createAnnouncementSchema), createAnnouncement);
 router.patch('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
 router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, deleteAnnouncement);
-router.get('/analytics/by-level', authMiddleware, adminMiddleware, getPingsByLevel);
-router.get('/analytics/by-category', authMiddleware, adminMiddleware, getPingStatsByCategory);
-router.get('/users/:id', authMiddleware, adminMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
-router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, updatePingProgressStatus);
+router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, getPingsByLevel);
+router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, getPingStatsByCategory);
+router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
+router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, organizationMiddleware, updatePingProgressStatus);
 
 export default router;
 

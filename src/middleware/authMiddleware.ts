@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import type { Role } from '@prisma/client';
 
 // Adding a 'user' property to the Express Request type
 // Keep global augmentation minimal or rely on AuthRequest type in controllers.
@@ -8,11 +10,12 @@ import { AuthRequest } from '../types/AuthRequest.js';
 type JwtPayload = {
   userId: number;
   organizationId: number;
+  role: Role;
   iat?: number;
   exp?: number;
 };
 
-const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -23,9 +26,40 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-    (req as AuthRequest).user = { userId: decoded.userId, organizationId: decoded.organizationId }; // attach organizationId
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        organizationId: true,
+        role: true,
+        status: true,
+        organization: {
+          select: {
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!user || user.status !== 'ACTIVE') {
+      return res.status(401).json({ error: 'Unauthorized: Account inactive' });
+    }
+
+    if (
+      user.organization &&
+      user.organization.status !== 'ACTIVE' &&
+      user.role !== 'SUPER_ADMIN'
+    ) {
+      return res.status(403).json({ error: 'Organization is not active' });
+    }
+
+    (req as AuthRequest).user = {
+      userId: user.id,
+      organizationId: user.organizationId,
+      role: user.role,
+    };
     next(); // Proceed to the next function (the controller)
-  } catch (_error) {
+  } catch {
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 };

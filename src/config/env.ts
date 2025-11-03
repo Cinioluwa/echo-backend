@@ -12,6 +12,19 @@ const envSchema = z.object({
   // Server
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // App URLs
+  APP_URL: z.string().url('APP_URL must be a valid URL').default('http://localhost:3000'),
+
+  // OAuth
+  GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required for Google auth').optional(),
+
+  // Email
+  SMTP_HOST: z.string().min(1, 'SMTP_HOST must not be empty').optional(),
+  SMTP_PORT: z.coerce.number().int().positive('SMTP_PORT must be a positive integer').optional(),
+  SMTP_USER: z.string().min(1, 'SMTP_USER must not be empty').optional(),
+  SMTP_PASS: z.string().min(1, 'SMTP_PASS must not be empty').optional(),
+  EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email address').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

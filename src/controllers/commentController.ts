@@ -21,7 +21,7 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
     }
 
     // Verify the ping exists in the user's org
-    const ping = await prisma.ping.findUnique({
+    const ping = await prisma.ping.findFirst({
       where: { id: parseInt(pingId), organizationId },
     });
 
@@ -80,7 +80,7 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
     };
 
     // Verify the ping exists in the user's org
-    const ping = await prisma.ping.findUnique({
+    const ping = await prisma.ping.findFirst({
       where: { 
         id: parseInt(pingId),
         organizationId: organizationId,
@@ -149,10 +149,10 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     }
 
     // Verify the wave exists and belongs to the user's organization
-    const wave = await prisma.wave.findUnique({
+    const wave = await prisma.wave.findFirst({
       where: { 
         id: parseInt(waveId),
-        organizationId: req.organizationId,
+        organizationId: req.organizationId!,
       },
     });
 
@@ -199,7 +199,7 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
     }
 
     // Verify the wave exists and belongs to the user's organization
-    const wave = await prisma.wave.findUnique({
+    const wave = await prisma.wave.findFirst({
       where: { 
         id: parseInt(waveId),
         organizationId: organizationId,

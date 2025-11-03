@@ -255,9 +255,10 @@ async function main() {
     console.log('   - Admin: adminB@testunivb.edu');
     console.log('   - Student: studentB@testunivb.edu');
     console.log('');
-    console.log('💡 Use organizationDomain: "cu.edu.ng" for CU registration/login');
-    console.log('💡 Use organizationDomain: "testuniva.edu" for Test University A');
-    console.log('💡 Use organizationDomain: "testunivb.edu" for Test University B');
+  console.log('💡 Register or log in with email addresses that use these domains:');
+  console.log('     • cu.edu.ng (Covenant University)');
+  console.log('     • testuniva.edu (Test University A)');
+  console.log('     • testunivb.edu (Test University B)');
 
   } catch (error) {
     console.error('❌ Setup failed:', error);
