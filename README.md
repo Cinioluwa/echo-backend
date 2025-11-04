@@ -144,6 +144,10 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `POST /api/users/register` — Register (email, password, firstName, lastName, level?)
 - `POST /api/users/login` — Login, returns JWT
 - `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (token: Google ID token)
+- `POST /api/users/verify-email` — Verify email with token from registration
+- `POST /api/users/forgot-password` — Request password reset (sends email)
+- `PATCH /api/users/reset-password` — Reset password with token from email
+- `POST /api/users/organization-waitlist` — Request new organization onboarding
 - `GET /api/users/me` — Current user profile (Authorization: Bearer token)
 - `PATCH /api/users/me` — Update profile: firstName, lastName, level (auth)
 - `DELETE /api/users/me` — Delete account (auth)
@@ -204,6 +208,9 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 ### Public
 - `GET /api/public/soundboard` — Public pings
 - `GET /api/public/stream` — Public waves
+
+### Categories — `/api/categories`
+- `GET /api/categories` — Get all categories for user's organization (auth, optional search: `?q=text`)
 
 ### Health check
 - `GET /healthz` — `{ status: "ok" }`
