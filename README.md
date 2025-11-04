@@ -272,15 +272,3 @@ Private and proprietary
 ---
 
 Built with ❤️ for university students
-## Contributing
-1. Fork repository and create a feature branch
-2. Develop with `npm run dev`
-3. Lint/format before committing: `npm run lint && npm run format`
-4. Open a Pull Request
-
-## License
-Private and proprietary
-
----
-
-Built with ❤️ for university students
