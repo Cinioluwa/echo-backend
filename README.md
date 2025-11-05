@@ -60,6 +60,15 @@ npx prisma generate
 
 Note: For production, use `npx prisma migrate deploy`.
 
+4b) Optional — seed multitenancy test data (recommended for trying features)
+
+```powershell
+# Seeds organizations, users, and categories for 3 test orgs
+node setup-multitenancy-tests.js
+```
+
+Details and test credentials are listed in the section "Multitenancy: seed test data" below.
+
 5) Run the API (dev)
 
 ```powershell
@@ -249,6 +258,72 @@ In production, run migrations prior to starting the containerized app:
 ```powershell
 npx prisma migrate deploy
 ```
+
+## Multitenancy: seed test data
+
+If you want to quickly try multitenancy flows and organization-scoped APIs, run the provided seed script after applying migrations.
+
+Prerequisites:
+- `.env` has a valid `DATABASE_URL`
+- You have run `npx prisma migrate dev` (or `deploy` in prod)
+
+Seed command:
+
+```powershell
+node setup-multitenancy-tests.js
+```
+
+What it does:
+- Creates 3 organizations: Covenant University (cu.edu.ng), Test University A (testuniva.edu), Test University B (testunivb.edu)
+- Upserts categories per organization
+- Creates users in each org with roles ADMIN / REPRESENTATIVE / USER
+
+Test credentials (password for all: `password123`):
+- Covenant University: `admin@cu.edu.ng`, `rep@cu.edu.ng`, `student@cu.edu.ng`
+- Test University A: `adminA@testuniva.edu`, `studentA@testuniva.edu`
+- Test University B: `adminB@testunivb.edu`, `studentB@testunivb.edu`
+
+Notes:
+- The script uses upserts, so it’s safe to re-run.
+- Organization membership is determined by the email domain in your flows. Use the above domains for testing isolation.
+- See `MULTITENANCY_TESTING.md` for a checklist and test ideas.
+
+## Pre-deploy: Redis rate limiting (for scaling)
+
+You only need this when running multiple app instances (e.g., AWS Fargate). For single-instance dev, the in-memory limiter is fine.
+
+Steps to enable later:
+1) Install packages
+
+```powershell
+npm install ioredis rate-limit-redis
+```
+
+2) Configure `REDIS_URL` (local or ElastiCache in prod). Example for local:
+
+```env
+REDIS_URL=redis://localhost:6379
+```
+
+3) In `src/server.ts`, there is a PRE-DEPLOY comment block with a ready-to-uncomment Redis-backed limiter. Uncomment that block and apply it (replace the in-memory limiter).
+
+Optional: Local Redis via docker-compose (if you use compose)
+
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+```
+
+In production, point `REDIS_URL` to your Amazon ElastiCache endpoint.
 
 ## Contributing
 1. Fork repository and create a feature branch
