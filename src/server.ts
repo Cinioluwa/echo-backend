@@ -36,6 +36,57 @@ app.use(express.json({ limit: '1mb' }));
 // Request logging middleware (should run after body parsing so bodies are available)
 app.use(requestLogger);
 
+/**
+ * PRE-DEPLOY: Redis-backed rate limiting for horizontal scaling (Fargate/multiple instances)
+ *
+ * Why: In-memory rate limiters reset per instance and don't coordinate across replicas.
+ * Enable this only when you're ready to run more than one instance.
+ *
+ * How to enable later:
+ *  1) Install deps in the repo root:
+ *     npm install ioredis rate-limit-redis
+ *  2) Add REDIS_URL to your environment (e.g., in .env):
+ *     REDIS_URL=redis://localhost:6379
+ *     # In production, set REDIS_URL to your ElastiCache endpoint
+ *  3) Replace the in-memory limiter(s) below with the Redis-backed example here.
+ *
+ * Example (commented out on purpose):
+ *
+ *   import RedisStore from 'rate-limit-redis';
+ *   import Redis from 'ioredis';
+ *
+ *   const redisClient = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+ *
+ *   const redisBackedLimiter = rateLimit({
+ *     store: new (RedisStore as any)({
+ *       client: redisClient,
+ *       // prefix: 'rl:'
+ *     }),
+ *     windowMs: 15 * 60 * 1000,
+ *     max: 500,
+ *     standardHeaders: 'draft-7',
+ *     legacyHeaders: false,
+ *     message: 'Too many requests from this IP, please try again after 15 minutes.'
+ *   });
+ *
+ *   // Then apply globally (or per-route):
+ *   // app.use(redisBackedLimiter);
+ *
+ * Optional docker-compose service for local dev (only if you're using docker-compose):
+ *
+ *   services:
+ *     redis:
+ *       image: redis:7-alpine
+ *       restart: unless-stopped
+ *       ports:
+ *         - "6379:6379"
+ *       volumes:
+ *         - redis-data:/data
+ *
+ *   volumes:
+ *     redis-data:
+ */
+
 // General rate limiter for all routes
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
