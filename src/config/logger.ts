@@ -1,4 +1,3 @@
-// src/config/logger.ts
 import winston from 'winston';
 
 const { combine, timestamp, printf, colorize, align, json, errors } = winston.format;
@@ -27,17 +26,18 @@ const prodFormat = combine(
   json()
 );
 
-// Create the logger
-const logger = winston.createLogger({
-  level: isProduction ? 'info' : 'debug', // More verbose in dev
-  format: isProduction ? prodFormat : devFormat,
-  defaultMeta: { service: 'echo-backend' }, // Add service name to all logs
-  transports: [
-    // Always log to console
-    new winston.transports.Console({
-      stderrLevels: ['error'], // Errors go to stderr
-    }),
-    
+// Define transports array dynamically
+const transports: winston.transport[] = [
+  // Always log to console
+  new winston.transports.Console({
+    stderrLevels: ['error'], // Errors go to stderr
+  }),
+];
+
+// Only add File transports if we are NOT in production
+// This prevents "EACCES: permission denied" errors on read-only file systems (like Railway/AWS Fargate)
+if (!isProduction) {
+  transports.push(
     // Log all errors to error.log
     new winston.transports.File({
       filename: 'logs/error.log',
@@ -45,16 +45,21 @@ const logger = winston.createLogger({
       maxsize: 5242880, // 5MB
       maxFiles: 5, // Keep 5 files
     }),
-    
-    // Log everything (info and above) to combined.log in production
-    ...(isProduction ? [
-      new winston.transports.File({
-        filename: 'logs/combined.log',
-        maxsize: 5242880, // 5MB
-        maxFiles: 5,
-      })
-    ] : []),
-  ],
+    // Log everything (info and above) to combined.log
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    })
+  );
+}
+
+// Create the logger
+const logger = winston.createLogger({
+  level: isProduction ? 'info' : 'debug', // More verbose in dev
+  format: isProduction ? prodFormat : devFormat,
+  defaultMeta: { service: 'echo-backend' }, // Add service name to all logs
+  transports: transports,
 });
 
 // Helper to sanitize sensitive data from logs
