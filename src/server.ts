@@ -22,12 +22,33 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import helmet from 'helmet';
 import { connectDatabase } from './config/db.js';
 import representativeRoutes from './routes/representativeRoutes.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 const app = express();
 const PORT = env.PORT;
 
-app.use(cors());  // Enable CORS for all routes
-//Will need to configure CORS more specifically in production
+const allowedOrigins = [
+  'http://localhost:3000',      // Frontend Dev
+  'http://localhost:3001',      // Frontend Dev Alt
+  'https://echo-ng.com',        // Production Frontend
+  'https://tryecho.online'      // Landing Page
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // Optional: Log blocked origins for debugging
+      // console.log('Blocked CORS origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true // Allow cookies/auth headers
+}));
 
 // Request logging middleware (should be early in the chain)
 // Middleware to parse JSON bodies with a sane size limit in dev
@@ -97,6 +118,8 @@ const limiter = rateLimit({
 });
 
 app.use(helmet()); // Set security-related HTTP headers
+
+app.use('/health', healthRoutes);
 
 // Strict rate limiter for authentication endpoints
 const authLimiter = rateLimit({

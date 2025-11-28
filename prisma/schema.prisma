@@ -58,6 +58,10 @@ model User {
   passwordResetTokens      PasswordResetToken[]
 
   @@unique([email, organizationId]) // Email unique per org
+  
+  // New performance indexes
+  @@index([organizationId, email])
+  @@index([organizationId, role])
 }
 
 // Dynamic Category Model (Replaces Enum)
@@ -107,6 +111,12 @@ model Ping {
   @@index([hashtag])                       // Used in searchPings by hashtag
   @@index([createdAt(sort: Desc)])         // Used for orderBy in most queries
   @@index([status, categoryId, createdAt]) // Composite index for common filter + sort pattern
+  
+  // New performance indexes
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@index([organizationId, surgeCount])
+  @@index([organizationId, hashtag])
 }
 
 model Wave {
@@ -132,6 +142,9 @@ model Wave {
   @@index([organizationId])          // Multitenancy filter
   @@index([viewCount(sort: Desc)])   // Sort by most viewed waves
   @@index([createdAt(sort: Desc)])   // Sort by newest waves
+  
+  // New performance indexes
+  @@index([organizationId, pingId])
 }
 
 model Comment {
@@ -155,6 +168,9 @@ model Comment {
   @@index([organizationId])          // Multitenancy filter
   @@index([authorId])                // Find user's comments
   @@index([createdAt(sort: Desc)])   // Sort by newest comments
+  
+  // New performance indexes
+  @@index([organizationId, pingId])
 }
 
 model Surge {
@@ -176,6 +192,10 @@ model Surge {
   @@index([organizationId])    // Multitenancy filter
   @@index([pingId, userId])    // Check if user surged a ping (toggle surge)
   @@index([waveId, userId])    // Check if user surged a wave (toggle surge)
+  
+  // New performance indexes
+  @@index([organizationId, pingId])
+  @@index([organizationId, userId])
 }
 
 model OfficialResponse {
