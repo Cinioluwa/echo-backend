@@ -90,6 +90,7 @@ model Ping {
   progressUpdatedAt DateTime?
   createdAt        DateTime @default(now())
   surgeCount       Int      @default(0)
+  isAnonymous      Boolean  @default(false)
 
   author           User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId         Int
@@ -126,6 +127,7 @@ model Wave {
   surgeCount       Int      @default(0)
   flaggedForReview Boolean  @default(false)
   createdAt        DateTime @default(now())
+  isAnonymous      Boolean  @default(false)
 
   ping             Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
   pingId           Int
@@ -151,6 +153,7 @@ model Comment {
   id             Int      @id @default(autoincrement())
   content        String
   createdAt      DateTime @default(now())
+  isAnonymous    Boolean  @default(false)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int

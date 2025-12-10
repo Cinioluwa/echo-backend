@@ -3,9 +3,33 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 
+const sanitizePingAuthor = (ping: any) => {
+  if (!ping) return ping;
+  if (ping.isAnonymous) {
+    const { authorId, author, ...rest } = ping;
+    return { ...rest, author: null };
+  }
+  return {
+    ...ping,
+    author: ping.author ?? null,
+  };
+};
+
+const sanitizeComments = (comments: any[] = []) =>
+  comments.map((comment) => {
+    if (comment.isAnonymous) {
+      const { authorId, author, ...rest } = comment;
+      return { ...rest, author: null };
+    }
+    return {
+      ...comment,
+      author: comment.author ?? null,
+    };
+  });
+
 export const createPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { title, content, categoryId, hashtag } = req.body;
+    const { title, content, categoryId, hashtag, isAnonymous = false } = req.body;
     const authorId = req.user?.userId;
     const organizationId = req.user?.organizationId;
     
@@ -24,10 +48,29 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
         organizationId,
         categoryId,
         hashtag: hashtag || null,
+        isAnonymous,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            level: true,
+          },
+        },
+        category: true,
+        _count: {
+          select: { waves: true, comments: true, surges: true },
+        },
       },
     });
 
-    return res.status(201).json(newPing);
+    // Sanitize anonymous ping
+    const sanitizedPing = sanitizePingAuthor(newPing);
+
+    return res.status(201).json(sanitizedPing);
   } catch (error) {
     logger.error('Error creating ping', { error, authorId: req.user?.userId });
     return next(error);
@@ -88,8 +131,11 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalPings / limit);
 
+    // Sanitize anonymous pings
+    const sanitizedPings = pings.map(sanitizePingAuthor);
+
     return res.status(200).json({
-      data: pings,
+      data: sanitizedPings,
       pagination: {
         totalPings,
         totalPages,
@@ -141,8 +187,10 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 
     const totalPages = Math.ceil(totalPings / limit);
 
+    const sanitizedPings = pings.map(sanitizePingAuthor);
+
     return res.status(200).json({
-      data: pings,
+      data: sanitizedPings,
       pagination: {
         totalPings,
         totalPages,
@@ -215,8 +263,10 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
 
     const totalPages = Math.ceil(totalPings / limit);
 
+    const sanitizedPings = pings.map(sanitizePingAuthor);
+
     return res.status(200).json({
-      data: pings,
+      data: sanitizedPings,
       pagination: {
         totalPings,
         totalPages,
@@ -286,7 +336,13 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
     if (!ping) {
       return res.status(404).json({ error: 'Ping not found' });
     }
-    return res.status(200).json(ping);
+
+    const sanitizedPing = {
+      ...sanitizePingAuthor(ping),
+      comments: sanitizeComments(ping.comments),
+    };
+
+    return res.status(200).json(sanitizedPing);
   } catch (error) {
     logger.error('Error fetching ping', { error, pingId: req.params.id });
     return next(error);
@@ -330,7 +386,7 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(400).json({ error: 'Request body is required' });
     }
     
-    const { title, content, categoryId, hashtag, status } = req.body;
+    const { title, content, categoryId, hashtag, status, isAnonymous } = req.body;
 
     const ping = await prisma.ping.findUnique({
       where: { id: parseInt(id) },
@@ -350,13 +406,14 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
     if (categoryId !== undefined) updateData.categoryId = categoryId;
     if (hashtag !== undefined) updateData.hashtag = hashtag;
     if (status !== undefined) updateData.status = status;
+    if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
 
     const updatedPing = await prisma.ping.update({
       where: { id: parseInt(id) },
       data: updateData,
     });
 
-    return res.status(200).json(updatedPing);
+    return res.status(200).json(sanitizePingAuthor(updatedPing));
   } catch (error) {
     logger.error('Error updating ping', { error, pingId: req.params.id, userId: req.user?.userId });
     return next(error);
@@ -379,7 +436,7 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
         status: status,
       },
     });
-    return res.status(200).json(updatedPing);
+    return res.status(200).json(sanitizePingAuthor(updatedPing));
   } catch (error) {
     logger.error('Error updating ping status', { error, pingId: req.params.id });
     return next(error);
@@ -395,7 +452,7 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
       data: { status: 'UNDER_REVIEW' },
     });
 
-    return res.status(200).json(updatedPing);
+    return res.status(200).json(sanitizePingAuthor(updatedPing));
   } catch (error) {
     logger.error('Error submitting ping', { error, pingId: req.params.id });
     return next(error);

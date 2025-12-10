@@ -10,6 +10,7 @@ export const createCommentOnPingSchema = z.object({
       .string({ message: 'Content is required' })
       .min(2, 'Content must be at least 2 characters')
       .max(5000, 'Content is too long'),
+    isAnonymous: z.boolean().optional().default(false),
   }),
 });
 
@@ -31,6 +32,7 @@ export const createCommentOnWaveSchema = z.object({
       .string({ message: 'Content is required' })
       .min(2, 'Content must be at least 2 characters')
       .max(5000, 'Content is too long'),
+    isAnonymous: z.boolean().optional().default(false),
   }),
 });
 

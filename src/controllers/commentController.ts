@@ -3,13 +3,25 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 
+const sanitizeComment = (comment: any) => {
+  if (!comment) return comment;
+  if (comment.isAnonymous) {
+    const { authorId, author, ...rest } = comment;
+    return { ...rest, author: null };
+  }
+  return {
+    ...comment,
+    author: comment.author ?? null,
+  };
+};
+
 // @desc    Create a new comment on a ping
 // @route   POST /api/pings/:pingId/comments
 // @access  Private
 export const createCommentOnPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
-    const { content } = req.body;
+    const { content, isAnonymous = false } = req.body;
     const userId = req.user?.userId;
     const organizationId = req.organizationId!;
 
@@ -35,6 +47,7 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
         authorId: userId,
         pingId: parseInt(pingId),
         organizationId, // Add organizationId
+        isAnonymous,
       },
       include: {
         author: {
@@ -48,7 +61,9 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
       },
     });
 
-    return res.status(201).json(newComment);
+    const sanitizedComment = sanitizeComment(newComment);
+
+    return res.status(201).json(sanitizedComment);
   } catch (error) {
     logger.error('Error creating comment on ping', { error, pingId: req.params.pingId, userId: req.user?.userId });
     return next(error);
@@ -117,8 +132,11 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalComments / limit);
 
+    // Sanitize anonymous comments
+    const sanitizedComments = comments.map(sanitizeComment);
+
     return res.status(200).json({
-      data: comments,
+      data: sanitizedComments,
       pagination: {
         totalComments,
         totalPages,
@@ -138,7 +156,7 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
 export const createCommentOnWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { waveId } = req.params;
-    const { content } = req.body;
+    const { content, isAnonymous = false } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -166,6 +184,7 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
         authorId: userId,
         waveId: parseInt(waveId),
         organizationId: req.organizationId!,
+        isAnonymous,
       },
       include: {
         author: {
@@ -179,7 +198,9 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
       },
     });
 
-    return res.status(201).json(newComment);
+    const sanitizedComment = sanitizeComment(newComment);
+
+    return res.status(201).json(sanitizedComment);
   } catch (error) {
     logger.error('Error creating comment on wave', { error, waveId: req.params.waveId, userId: req.user?.userId });
     return next(error);
@@ -247,8 +268,11 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalComments / limit);
 
+    // Sanitize anonymous comments
+    const sanitizedComments = comments.map(sanitizeComment);
+
     return res.status(200).json({
-      data: comments,
+      data: sanitizedComments,
       pagination: {
         totalComments,
         totalPages,

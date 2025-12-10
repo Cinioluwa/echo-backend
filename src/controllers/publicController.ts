@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 
+const sanitizePublicPing = (ping: any) => ({
+  ...ping,
+  author: ping?.isAnonymous ? null : ping?.author ?? null,
+});
+
 function parsePagination(req: Request) {
   const page = Math.max(1, Number(req.query.page ?? 1));
   const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 20)));
@@ -45,6 +50,7 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
           status: true,
           surgeCount: true,
           createdAt: true,
+          isAnonymous: true,
           author: { select: { id: true, firstName: true, lastName: true } },
           _count: { select: { waves: true, comments: true, surges: true } },
         },
@@ -52,8 +58,10 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
       top ? Promise.resolve(0) : prisma.ping.count({ where }),
     ]);
 
+    const sanitizedItems = items.map(sanitizePublicPing);
+
     res.status(200).json({
-      data: items,
+      data: sanitizedItems,
       pagination: top
         ? { top, sort }
         : { page: Math.floor(skip / limit) + 1, limit, total, sort },

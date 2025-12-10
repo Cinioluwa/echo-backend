@@ -20,6 +20,7 @@ export const createWaveSchema = z.object({
       })
       .min(3, 'Solution must be at least 3 characters')
       .max(10000, 'Solution is too long'),
+    isAnonymous: z.boolean().optional().default(false),
   }),
 });
 

@@ -3,6 +3,11 @@ import prisma from '../config/db.js';
 import { Status } from '@prisma/client';
 import { AuthRequest } from '../types/AuthRequest.js';
 
+const sanitizePingAuthor = (ping: any) => ({
+    ...ping,
+    author: ping?.isAnonymous ? null : ping?.author ?? null,
+});
+
 export const getSubmittedPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
@@ -39,8 +44,10 @@ export const getSubmittedPings = async (req: AuthRequest, res: Response, next: N
 
         const totalPages = Math.ceil(totalPings / limit);
 
+        const sanitizedPings = pings.map(sanitizePingAuthor);
+
         return res.status(200).json({
-            data: pings,
+            data: sanitizedPings,
             pagination: {
                 totalPings,
                 totalPages,

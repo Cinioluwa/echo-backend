@@ -9,7 +9,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 export const createWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
-    const { solution } = req.body;
+    const { solution, isAnonymous = false } = req.body;
     const organizationId = req.user?.organizationId; // From authMiddleware
 
     if (!organizationId) {
@@ -34,6 +34,7 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
         solution,
         pingId: parseInt(pingId),
         organizationId, // Add organizationId
+        isAnonymous,
       },
     });
 
@@ -100,8 +101,17 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalWaves / limit);
 
+    // Sanitize anonymous waves and comments
+    const sanitizedWaves = waves.map(wave => ({
+      ...wave,
+      comments: wave.comments.map(comment => ({
+        ...comment,
+        author: comment.isAnonymous ? null : comment.author,
+      })),
+    }));
+
     return res.status(200).json({
-      data: waves,
+      data: sanitizedWaves,
       pagination: {
         totalWaves,
         totalPages,

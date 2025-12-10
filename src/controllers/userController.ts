@@ -33,6 +33,14 @@ const googleClient = env.GOOGLE_CLIENT_ID
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const normalizeName = (value: string) => value.trim();
 
+const sanitizePingAuthor = (ping: any) =>
+  ping
+    ? {
+        ...ping,
+        author: ping?.isAnonymous ? null : ping?.author ?? null,
+      }
+    : ping;
+
 const issueJwtForUser = (user: {
   id: number;
   organizationId: number;
@@ -838,6 +846,7 @@ export const getMySurges = async (req: AuthRequest, res: Response, next: NextFun
               category: true,
               status: true,
               createdAt: true,
+              isAnonymous: true,
               author: {
                 select: {
                   id: true,
@@ -864,8 +873,13 @@ export const getMySurges = async (req: AuthRequest, res: Response, next: NextFun
 
     const totalPages = Math.ceil(totalSurges / limit);
 
+    const sanitizedSurges = surges.map((surge) => ({
+      ...surge,
+      ping: sanitizePingAuthor(surge.ping),
+    }));
+
     return res.status(200).json({
-      data: surges,
+      data: sanitizedSurges,
       pagination: {
         totalSurges,
         totalPages,
@@ -908,6 +922,7 @@ export const getMyComments = async (req: AuthRequest, res: Response, next: NextF
               category: true,
               status: true,
               createdAt: true,
+              isAnonymous: true,
               author: {
                 select: {
                   id: true,
@@ -934,8 +949,13 @@ export const getMyComments = async (req: AuthRequest, res: Response, next: NextF
 
     const totalPages = Math.ceil(totalComments / limit);
 
+    const sanitizedComments = comments.map((comment) => ({
+      ...comment,
+      ping: sanitizePingAuthor(comment.ping),
+    }));
+
     return res.status(200).json({
-      data: comments,
+      data: sanitizedComments,
       pagination: {
         totalComments,
         totalPages,

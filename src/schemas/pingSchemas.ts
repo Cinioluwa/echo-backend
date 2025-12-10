@@ -13,6 +13,7 @@ export const createPingSchema = z.object({
       message: 'Valid category ID is required',
     }),
     hashtag: z.string().max(50).optional().nullable(),
+    isAnonymous: z.boolean().optional().default(false),
   }),
 });
 
@@ -23,6 +24,7 @@ export const updatePingSchema = z.object({
     categoryId: z.number().int().positive().optional(),
     hashtag: z.string().max(50).optional().nullable(),
     status: z.enum(['POSTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED']).optional(),
+    isAnonymous: z.boolean().optional(),
   }).strict(), // Prevents adding extra fields
 });
 
