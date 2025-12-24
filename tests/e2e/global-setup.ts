@@ -60,9 +60,11 @@ export default async function globalSetup() {
   execSync('npx prisma db push --schema=prisma/test-schema.prisma --accept-data-loss', { stdio: 'inherit' });
 
   // Start the E2E server using tsx
-  serverProcess = spawn('./node_modules/.bin/tsx.cmd', ['src/e2e-server.ts'], {
+  // Use npx to be cross-platform (works on Windows and Linux)
+  serverProcess = spawn('npx', ['tsx', 'src/e2e-server.ts'], {
     stdio: 'pipe', // Change to pipe to avoid conflicts
-    env: { ...process.env, NODE_ENV: 'test' }
+    env: { ...process.env, NODE_ENV: 'test' },
+    shell: true // Required for npx on Windows
   });
 
   // Wait for server to be ready

@@ -1,10 +1,10 @@
-import { execSync } from 'child_process';
+import { unlinkSync, existsSync } from 'fs';
 
 export default async function globalTeardown() {
   // Clean up the E2E database file
-  if (process.env.E2E_DB_FILE) {
+  if (process.env.E2E_DB_FILE && existsSync(process.env.E2E_DB_FILE)) {
     try {
-      execSync(`del ${process.env.E2E_DB_FILE} 2>nul`, { stdio: 'inherit' });
+      unlinkSync(process.env.E2E_DB_FILE);
     } catch (error) {
       // Ignore cleanup errors
     }
