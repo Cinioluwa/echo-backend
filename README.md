@@ -1,20 +1,22 @@
 # Echo Backend API
 
-Backend server for the Echo application — a social feedback platform for university students.
+Backend server for the Echo application — a social feedback platform for university students with multitenancy support.
 
-## What’s inside
-- Auth with JWT (register, login, profile, update, delete)
-- Pings (issues), Waves (solutions), Comments, Surges (likes)
-- Announcements and Official Responses
+## What's inside
+- Auth with JWT (register, login, Google OAuth, profile management)
+- Multitenancy: Organization-scoped data isolation (pings, waves, comments, surges, announcements)
+- Pings (issues), Waves (solutions), Comments, Surges (likes), Official Responses
 - Roles: USER, REPRESENTATIVE, ADMIN with protected routes
-- Security: validation (Zod), rate limiting, CORS, Helmet, structured logging
+- Security: Validation (Zod), rate limiting, CORS, Helmet, structured logging
+- Testing: Unit, integration, and E2E suites (Vitest, Supertest, Playwright)
 
 ## Tech stack
 - Runtime: Node.js + TypeScript (ES modules)
 - Framework: Express 5
-- Database: PostgreSQL (Neon)
-- ORM: Prisma
+- Database: PostgreSQL (Neon) with Prisma ORM
+- Auth: JWT + Google OAuth (google-auth-library)
 - Dev tooling: tsx watch, ESLint (flat), Prettier, Nodemon
+- Testing: Vitest (unit/integration), Playwright (E2E)
 - Container: Dockerfile (optional for app image)
 
 ## Quick start (local)
@@ -49,6 +51,7 @@ JWT_SECRET="replace_with_a_strong_random_secret"
 # Optional
 PORT=3000
 NODE_ENV=development
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 ```
 
 4) Apply Prisma migrations and generate client
@@ -63,11 +66,10 @@ Note: For production, use `npx prisma migrate deploy`.
 4b) Optional — seed multitenancy test data (recommended for trying features)
 
 ```powershell
-# Seeds organizations, users, and categories for 3 test orgs
 node setup-multitenancy-tests.js
 ```
 
-Details and test credentials are listed in the section "Multitenancy: seed test data" below.
+Details and test credentials are listed in the "Multitenancy: seed test data" section below.
 
 5) Run the API (dev)
 
@@ -76,6 +78,16 @@ npm run dev
 ```
 
 The server listens on `http://localhost:${PORT}` (default `3000`). Health check: `GET /healthz` → `{ status: "ok" }`.
+
+6) Optional — Run tests
+
+```powershell
+# Unit and integration tests
+npm run test
+
+# E2E tests (requires seeded data)
+npm run test:e2e
+```
 
 ## Available scripts
 
@@ -86,6 +98,10 @@ The server listens on `http://localhost:${PORT}` (default `3000`). Health check:
 - `npm run prisma:generate` — Generate Prisma Client
 - `npm run lint` / `npm run lint:fix` — ESLint checks / autofix
 - `npm run format` / `npm run format:check` — Prettier format / check
+- `npm run test` — Run unit and integration tests (Vitest)
+- `npm run test:unit` — Run unit tests only
+- `npm run test:integration` — Run integration tests
+- `npm run test:e2e` — Run E2E tests (Playwright)
 
 ## Project structure
 
@@ -93,40 +109,59 @@ The server listens on `http://localhost:${PORT}` (default `3000`). Health check:
 echo-backend/
 ├── src/
 │   ├── server.ts                # App entry (Express + middlewares + routes)
+│   ├── app.ts                   # Express app factory (for testing)
 │   ├── config/                  # env, db (Prisma), logger (Winston)
-│   ├── controllers/             # Route handlers
-│   ├── middleware/              # auth, admin/rep guards, validation, errors, request logger
-│   ├── routes/                  # Express routers (users, pings, waves, comments, surges, admin, announcements)
+│   ├── controllers/             # Route handlers (auth, pings, waves, admin, etc.)
+│   ├── middleware/              # auth, admin/rep guards, validation, errors, request logger, organization context
+│   ├── routes/                  # Express routers (users, pings, waves, comments, surges, admin, announcements, public)
 │   ├── schemas/                 # Zod schemas (validation + pagination)
-│   └── types/                   # Shared TS types
+│   ├── services/                # Business logic (email, Google auth, tokens)
+│   ├── types/                   # Shared TS types (AuthRequest, etc.)
+│   └── utils/                   # Utility functions
 ├── prisma/
-│   ├── schema.prisma            # Prisma schema (User, Ping, Wave, Comment, Surge, OfficialResponse, Announcement)
+│   ├── schema.prisma            # Prisma schema (User, Ping, Wave, Comment, Surge, OfficialResponse, Announcement, Organization)
+│   ├── test-schema.prisma       # Test schema (SQLite)
 │   └── migrations/              # Migration history
+├── tests/
+│   ├── unit/                    # Unit tests
+│   ├── integration/             # Integration tests (with SQLite DB)
+│   ├── e2e/                     # E2E tests (Playwright, API-only)
+│   ├── fixtures/                # Test data factories
+│   ├── vitest.config.ts         # Vitest config
+│   └── playwright.config.ts     # Playwright config
 ├── logs/                        # Winston log files (error.log, combined.log in prod)
 ├── Dockerfile                   # Build a production image (connects to Neon)
+├── setup-multitenancy-tests.js  # Seed script for test data
 ├── package.json                 # Scripts and deps
-└── tsconfig.json                # TS config (NodeNext)
+├── tsconfig.json                # TS config (NodeNext)
+└── tsconfig.build.json          # TS config for production builds
 ```
 
 ## Environment variables
 
 Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 
-| Variable     | Required | Description                                 | Example |
-|--------------|----------|---------------------------------------------|---------|
-| DATABASE_URL | Yes      | PostgreSQL connection string (Neon)         | `postgresql://user:pass@neon-host/db?sslmode=require` |
-| JWT_SECRET   | Yes      | Secret key for JWT signing                  | `a_really_strong_random_string` |
-| GOOGLE_CLIENT_ID | No   | Google OAuth Client ID (for Google Sign-In) | `123456789.apps.googleusercontent.com` |
-| PORT         | No       | Port Express listens on (default 3000)      | `3000` |
-| NODE_ENV     | No       | `development` / `production` / `test`       | `development` |
+| Variable          | Required | Description                                      | Example |
+|-------------------|----------|--------------------------------------------------|---------|
+| DATABASE_URL      | Yes      | PostgreSQL connection string (Neon)              | `postgresql://user:pass@neon-host/db?sslmode=require` |
+| JWT_SECRET        | Yes      | Secret key for JWT signing                       | `a_really_strong_random_string` |
+| GOOGLE_CLIENT_ID  | No       | Google OAuth Client ID (for Google Sign-In)      | `123456789.apps.googleusercontent.com` |
+| PORT              | No       | Port Express listens on (default 3000)           | `3000` |
+| NODE_ENV          | No       | `development` / `production` / `test`            | `development` |
+| APP_URL           | No       | Base URL for the app (default localhost:3000)    | `https://yourapp.com` |
+| SMTP_HOST         | No       | SMTP host for email (optional for email features)| `smtp.gmail.com` |
+| SMTP_PORT         | No       | SMTP port                                        | `587` |
+| SMTP_USER         | No       | SMTP username                                    | `your-email@gmail.com` |
+| SMTP_PASS         | No       | SMTP password                                    | `your-app-password` |
 
-**📝 Note**: See `GOOGLE_AUTH_IMPLEMENTATION.md` and `GOOGLE_AUTH_TESTING_GUIDE.md` for Google OAuth setup.
+**📝 Note**: See `GOOGLE_AUTH_IMPLEMENTATION.md` and `GOOGLE_AUTH_TESTING_GUIDE.md` for Google OAuth setup. Email is optional but required for password resets and organization requests.
 
 ## Base URL and auth
 
 - Base URL for APIs: `/api`
 - Protected routes require `Authorization: Bearer <JWT>`
 - Pagination: `?page=<number>&limit=<number>` on most list endpoints
+- Multitenancy: All data is scoped to the user's organization (inferred from email domain)
 
 ## API overview
 
@@ -135,7 +170,7 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 ### Auth — `/api/users` & `/api/auth`
 - `POST /api/users/register` — Register (email, password, firstName, lastName, level?)
 - `POST /api/users/login` — Login, returns JWT
-- `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (token: Google ID token)
+- `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (body: { idToken })
 - `POST /api/users/verify-email` — Verify email with token from registration
 - `POST /api/users/forgot-password` — Request password reset (sends email)
 - `PATCH /api/users/reset-password` — Reset password with token from email
@@ -161,6 +196,8 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `GET /api/pings/:pingId/waves` — Waves for a ping (pagination)
 - `POST /api/pings/:pingId/waves` — Create wave for a ping (auth)
 - `GET /api/waves/:id` — Get wave by id (standalone)
+- `PATCH /api/waves/:id` — Update wave (auth, author only)
+- `DELETE /api/waves/:id` — Delete wave (auth, author only)
 
 ### Comments
 - `GET /api/pings/:pingId/comments` — Comments for a ping
@@ -173,6 +210,7 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `POST /api/waves/:waveId/surge` — Toggle surge for a wave (auth)
 
 ### Official Responses
+- `GET /api/pings/:pingId/official-response` — Get official response for a ping
 - `POST /api/pings/:pingId/official-response` — Create official response (representative only)
 
 ### Announcements
@@ -196,10 +234,13 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `PATCH /users/:id/role` — Update user role (ADMIN | REPRESENTATIVE | USER) (admin)
 - `GET /analytics/by-level` — Pings grouped by level (admin)
 - `GET /analytics/by-category` — Pings grouped by category (admin)
+- `POST /announcements` — Create announcement (admin)
+- `PATCH /announcements/:id` — Update announcement (admin)
+- `DELETE /announcements/:id` — Delete announcement (admin)
 
 ### Public
-- `GET /api/public/soundboard` — Public pings
-- `GET /api/public/stream` — Public waves
+- `GET /api/public/soundboard` — Public pings (organization-scoped)
+- `GET /api/public/stream` — Public waves (organization-scoped)
 
 ### Categories — `/api/categories`
 - `GET /api/categories` — Get all categories for user's organization (auth, optional search: `?q=text`)
@@ -212,12 +253,13 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - Helmet HTTP headers
 - Rate limiting:
   - Global: 500 req / 15 min
-  - Auth endpoints `/api/users/register`, `/api/users/login`: 5 attempts / 15 min (successful logins don’t count)
+  - Auth endpoints `/api/users/register`, `/api/users/login`: 5 attempts / 15 min (successful logins don't count)
   - Create/update operations (POST/PATCH/DELETE): 30 ops / 15 min
 - Centralized error handler with safe logging
+- Multitenancy middleware: `organizationMiddleware` attaches `req.organizationId` from JWT
 
 ## Database schema (Prisma)
-Models: `User`, `Ping`, `Wave`, `Comment`, `Surge`, `OfficialResponse`, `Announcement` with enums `Role`, `Status`, `WaveCategory`, `ProgressStatus` and helpful indexes for query performance. See `prisma/schema.prisma`.
+Models: `User`, `Organization`, `Ping`, `Wave`, `Comment`, `Surge`, `OfficialResponse`, `Announcement` with enums `Role`, `Status`, `WaveCategory`, `ProgressStatus` and helpful indexes for query performance. See `prisma/schema.prisma`.
 
 Common operations:
 
@@ -231,6 +273,12 @@ npx prisma migrate deploy
 # Open Prisma Studio (optional)
 npx prisma studio
 ```
+
+## Testing
+- **Unit tests**: Logic in services, middleware, schemas (Vitest)
+- **Integration tests**: API endpoints with SQLite DB (Vitest + Supertest)
+- **E2E tests**: Full workflows via API (Playwright, API-only)
+- Run with seeded data for multitenancy tests. See `TEST_TODO.md` for coverage details.
 
 ## Logging
 - Human-readable colored logs in development
@@ -284,7 +332,7 @@ Test credentials (password for all: `password123`):
 - Test University B: `adminB@testunivb.edu`, `studentB@testunivb.edu`
 
 Notes:
-- The script uses upserts, so it’s safe to re-run.
+- The script uses upserts, so it's safe to re-run.
 - Organization membership is determined by the email domain in your flows. Use the above domains for testing isolation.
 - See `MULTITENANCY_TESTING.md` for a checklist and test ideas.
 
@@ -329,7 +377,8 @@ In production, point `REDIS_URL` to your Amazon ElastiCache endpoint.
 1. Fork repository and create a feature branch
 2. Develop with `npm run dev`
 3. Lint/format before committing: `npm run lint && npm run format`
-4. Open a Pull Request
+4. Run tests: `npm run test && npm run test:e2e`
+5. Open a Pull Request
 
 ## License
 Private and proprietary
