@@ -36,10 +36,10 @@ router.get('/me', authMiddleware, validate(paginationSchema), getMyPings);
 router.get('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), getPingById);
 
 // Delete a ping - with ID validation
-router.delete('/:id', authMiddleware, validate(pingIdSchema), deletePing);
+router.delete('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), deletePing);
 
 // Update a ping - with ID and body validation
-router.patch('/:id', authMiddleware, validate(pingIdSchema), validate(updatePingSchema), updatePing);
+router.patch('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), validate(updatePingSchema), updatePing);
 
 // Update ping status (admin only) - with ID validation
 router.patch('/:id/status', authMiddleware, adminMiddleware, validate(pingIdSchema), updatePingStatus);

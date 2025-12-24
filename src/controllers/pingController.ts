@@ -353,12 +353,18 @@ export const deletePing = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const { id } = req.params;
     const authorId = req.user?.userId;
+    const organizationId = (req as any).organizationId;
 
     const ping = await prisma.ping.findUnique({
       where: { id: parseInt(id) },
     });
 
     if (!ping) {
+      return res.status(404).json({ error: 'Ping not found' });
+    }
+
+    // Check organization isolation first
+    if (ping.organizationId !== organizationId) {
       return res.status(404).json({ error: 'Ping not found' });
     }
 
@@ -381,6 +387,7 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
+    const organizationId = (req as any).organizationId;
     
     if (!req.body) {
       return res.status(400).json({ error: 'Request body is required' });
@@ -393,6 +400,11 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
     });
 
     if (!ping) {
+      return res.status(404).json({ error: 'Ping not found' });
+    }
+
+    // Check organization isolation first
+    if (ping.organizationId !== organizationId) {
       return res.status(404).json({ error: 'Ping not found' });
     }
 

@@ -23,7 +23,7 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
     const { pingId } = req.params;
     const { content, isAnonymous = false } = req.body;
     const userId = req.user?.userId;
-    const organizationId = req.organizationId!;
+    const organizationId = req.user?.organizationId;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -46,7 +46,7 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
         content,
         authorId: userId,
         pingId: parseInt(pingId),
-        organizationId, // Add organizationId
+        organizationId: organizationId!,
         isAnonymous,
       },
       include: {
@@ -158,6 +158,7 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     const { waveId } = req.params;
     const { content, isAnonymous = false } = req.body;
     const userId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -170,7 +171,7 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     const wave = await prisma.wave.findFirst({
       where: { 
         id: parseInt(waveId),
-        organizationId: req.organizationId!,
+        organizationId: organizationId,
       },
     });
 
@@ -183,7 +184,7 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
         content,
         authorId: userId,
         waveId: parseInt(waveId),
-        organizationId: req.organizationId!,
+        organizationId: organizationId!,
         isAnonymous,
       },
       include: {

@@ -804,6 +804,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         firstName: true,
         lastName: true,
         level: true,
+        organizationId: true,
         createdAt: true,
       },
     });

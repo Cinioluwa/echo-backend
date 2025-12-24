@@ -37,3 +37,15 @@ export const waveParamSchema = z.object({
     waveId: z.string().regex(/^\d+$/, 'Wave ID must be a number'),
   }),
 });
+
+// Body schema for updating a wave
+export const updateWaveSchema = z.object({
+  body: z.object({
+    solution: z
+      .string()
+      .min(3, 'Solution must be at least 3 characters')
+      .max(10000, 'Solution is too long')
+      .optional(),
+    isAnonymous: z.boolean().optional(),
+  }),
+});

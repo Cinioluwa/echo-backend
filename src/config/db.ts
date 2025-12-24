@@ -2,23 +2,21 @@
 import { PrismaClient } from '@prisma/client';
 import logger from './logger.js';
 
+// For testing: allow injecting a test Prisma client
+declare global {
+  var __testPrismaClient: PrismaClient | undefined;
+}
+
 // Create a single, reusable Prisma Client instance with logging
-const prisma = new PrismaClient({
+// Use test client if available (for testing), otherwise use production client
+const prisma = globalThis.__testPrismaClient || new PrismaClient({
   log: [
     { level: 'warn', emit: 'event' },
     { level: 'error', emit: 'event' },
   ],
 });
 
-// Log Prisma warnings
-prisma.$on('warn' as any, (e: any) => {
-  logger.warn('Prisma warning', { message: e.message, target: e.target });
-});
-
-// Log Prisma errors
-prisma.$on('error' as any, (e: any) => {
-  logger.error('Prisma error', { message: e.message, target: e.target });
-});
+// Log Prisma warnings and errors are handled by the logger configuration above
 
 // Export a helper to connect on demand instead of forcing a process exit at import time.
 export const connectDatabase = async (options?: { retries?: number; initialDelayMs?: number; maxDelayMs?: number }) => {

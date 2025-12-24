@@ -57,6 +57,15 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
       return res.status(400).json({ error: 'Organization ID is required.' });
     }
 
+    // Verify the ping exists and belongs to the user's organization
+    const ping = await prisma.ping.findFirst({
+      where: { id: parseInt(pingId), organizationId },
+    });
+
+    if (!ping) {
+      return res.status(404).json({ error: 'Ping not found or access denied' });
+    }
+
     // --- Pagination Logic ---
     const page = parseInt(req.query.page as string) || 1;
     let limit = parseInt(req.query.limit as string) || 20;
@@ -190,6 +199,130 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
     return res.status(200).json({ ...wave, viewCount: wave.viewCount + 1 });
   } catch (error) {
     logger.error('Error fetching wave', { error, waveId: req.params.id });
+    return next(error);
+  }
+};
+
+// @desc    Update a wave
+// @route   PATCH /api/waves/:id
+// @access  Private
+export const updateWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
+
+    if (!req.body) {
+      return res.status(400).json({ error: 'Request body is required' });
+    }
+
+    const { solution, isAnonymous } = req.body;
+
+    const wave = await prisma.wave.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!wave) {
+      return res.status(404).json({ error: 'Wave not found' });
+    }
+
+    // Check organization isolation first
+    if (wave.organizationId !== organizationId) {
+      return res.status(404).json({ error: 'Wave not found' });
+    }
+
+    // For now, only allow the ping author to update waves (can be expanded later)
+    const ping = await prisma.ping.findUnique({
+      where: { id: wave.pingId },
+      select: { authorId: true },
+    });
+
+    if (!ping || ping.authorId !== userId) {
+      return res.status(403).json({ error: 'Forbidden: Only the ping author can update waves' });
+    }
+
+    const updateData: any = {};
+    if (solution !== undefined) updateData.solution = solution;
+    if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
+
+    const updatedWave = await prisma.wave.update({
+      where: { id: parseInt(id) },
+      data: updateData,
+      include: {
+        ping: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        _count: { select: { comments: true, surges: true } },
+      },
+    });
+
+    return res.status(200).json(updatedWave);
+  } catch (error) {
+    logger.error('Error updating wave', { error, waveId: req.params.id, userId: req.user?.userId });
+    return next(error);
+  }
+};
+
+// @desc    Delete a wave
+// @route   DELETE /api/waves/:id
+// @access  Private
+export const deleteWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
+
+    const wave = await prisma.wave.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!wave) {
+      return res.status(404).json({ error: 'Wave not found' });
+    }
+
+    // Check organization isolation first
+    if (wave.organizationId !== organizationId) {
+      return res.status(404).json({ error: 'Wave not found' });
+    }
+
+    // For now, only allow the ping author to delete waves (can be expanded later)
+    const ping = await prisma.ping.findUnique({
+      where: { id: wave.pingId },
+      select: { authorId: true },
+    });
+
+    if (!ping || ping.authorId !== userId) {
+      return res.status(403).json({ error: 'Forbidden: Only the ping author can delete waves' });
+    }
+
+    await prisma.wave.delete({
+      where: { id: parseInt(id) },
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    logger.error('Error deleting wave', { error, waveId: req.params.id, userId: req.user?.userId });
     return next(error);
   }
 };

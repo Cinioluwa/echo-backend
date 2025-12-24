@@ -24,3 +24,6 @@ Thumbs.db
 
 # Prisma generated files
 /src/generated/prisma
+
+# Test coverage
+*.db

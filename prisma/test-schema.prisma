@@ -1,0 +1,316 @@
+datasource testDb {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator testClient {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/test-client"
+}
+
+// Tenancy Model
+model Organization {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  domain      String       @unique // Add domain field for organization identification
+  status      String       @default("PENDING") // PENDING, ACTIVE
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  users       User[]
+  pings       Ping[]
+  waves       Wave[]
+  comments    Comment[]
+  surges      Surge[]
+  announcements Announcement[]
+  officialResponses OfficialResponse[]
+  invitations Invitation[]
+  categories  Category[] // An organization can have many custom categories
+  requests    OrganizationRequest[]
+}
+
+// User Model with Organization Link
+model User {
+  id             Int      @id @default(autoincrement())
+  email          String
+  firstName      String?
+  lastName       String?
+  level          Int?
+  password       String?  // Optional for Google OAuth users
+  googleId       String?  @unique // Google's unique user identifier
+  profilePicture String?  // Store Google profile picture URL
+  isVerified     Boolean  @default(false) // Email verification status
+  role           Role     @default(USER)
+  status         String   @default("PENDING") // PENDING, ACTIVE
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  pings              Ping[]
+  comments           Comment[]
+  surges             Surge[]
+  announcements      Announcement[]
+  officialResponses  OfficialResponse[]
+  // Waves flagged by this user (representative forwarding)
+  flaggedWaves       Wave[] @relation("WaveFlaggedBy")
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens      PasswordResetToken[]
+
+  @@unique([email, organizationId]) // Email unique per org
+
+  // New performance indexes
+  @@index([organizationId, email])
+  @@index([organizationId, role])
+}
+
+// Dynamic Category Model (Replaces Enum)
+model Category {
+  id             Int      @id @default(autoincrement())
+  name           String
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  pings          Ping[]
+  announcements  Announcement[]
+
+  @@unique([name, organizationId])
+}
+
+// Content Models with Organization Link and Dynamic Category
+model Ping {
+  id               Int      @id @default(autoincrement())
+  title            String
+  content          String
+  hashtag          String?
+  status           Status   @default(POSTED)
+  progressStatus   ProgressStatus @default(NONE)
+  progressUpdatedAt DateTime?
+  createdAt        DateTime @default(now())
+  surgeCount       Int      @default(0)
+  isAnonymous      Boolean  @default(false)
+
+  author           User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId         Int
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId   Int
+  category         Category     @relation(fields: [categoryId], references: [id])
+  categoryId       Int
+
+  comments         Comment[]
+  surges           Surge[]
+  waves            Wave[]
+  officialResponse OfficialResponse?
+
+  // Database indexes for query performance
+  @@index([authorId])                      // Used in getMyPings and foreign key joins
+  @@index([organizationId])                // Multitenancy filter
+  @@index([categoryId])                    // Used in filtering getAllPings
+  @@index([status])                        // Used in filtering getAllPings
+  @@index([hashtag])                       // Used in searchPings by hashtag
+  @@index([createdAt(sort: Desc)])         // Used for orderBy in most queries
+  @@index([status, categoryId, createdAt]) // Composite index for common filter + sort pattern
+
+  // New performance indexes
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@index([organizationId, surgeCount])
+  @@index([organizationId, hashtag])
+}
+
+model Wave {
+  id               Int      @id @default(autoincrement())
+  solution         String
+  viewCount        Int      @default(0)
+  surgeCount       Int      @default(0)
+  flaggedForReview Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  isAnonymous      Boolean  @default(false)
+
+  ping             Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId           Int
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId   Int
+
+  comments         Comment[]
+  surges           Surge[]
+  flaggedBy        User?        @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
+  flaggedById      Int?
+
+  // Database indexes for query performance
+  @@index([pingId])                  // Foreign key for getWavesForPing
+  @@index([organizationId])          // Multitenancy filter
+  @@index([viewCount(sort: Desc)])   // Sort by most viewed waves
+  @@index([createdAt(sort: Desc)])   // Sort by newest waves
+
+  // New performance indexes
+  @@index([organizationId, pingId])
+}
+
+model Comment {
+  id             Int      @id @default(autoincrement())
+  content        String
+  createdAt      DateTime @default(now())
+  isAnonymous    Boolean  @default(false)
+
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId       Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  ping           Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId         Int?
+  wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId         Int?
+
+  // Database indexes for query performance
+  @@index([pingId])                  // Foreign key for getCommentsForPing
+  @@index([waveId])                  // Foreign key for getCommentsForWave
+  @@index([organizationId])          // Multitenancy filter
+  @@index([authorId])                // Find user's comments
+  @@index([createdAt(sort: Desc)])   // Sort by newest comments
+
+  // New performance indexes
+  @@index([organizationId, pingId])
+}
+
+model Surge {
+  id             Int      @id @default(autoincrement())
+  createdAt      DateTime @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  ping           Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId         Int?
+  wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId         Int?
+
+  // Database indexes for query performance
+  @@index([userId])            // Find user's surges
+  @@index([organizationId])    // Multitenancy filter
+  @@index([pingId, userId])    // Check if user surged a ping (toggle surge)
+  @@index([waveId, userId])    // Check if user surged a wave (toggle surge)
+
+  // New performance indexes
+  @@index([organizationId, pingId])
+  @@index([organizationId, userId])
+}
+
+model OfficialResponse {
+  id             Int      @id @default(autoincrement())
+  content        String
+  createdAt      DateTime @default(now())
+
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId       Int
+  ping           Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId         Int          @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+}
+
+model Announcement {
+  id             Int      @id @default(autoincrement())
+  title          String
+  content        String
+  createdAt      DateTime @default(now())
+
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId       Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  // Announcements now target dynamic categories
+  categories     Category[]
+
+  // Database indexes for query performance
+  @@index([organizationId])          // Multitenancy filter
+  @@index([createdAt(sort: Desc)])   // Sort by newest announcements
+}
+
+// Invitation Model
+model Invitation {
+  id             Int          @id @default(autoincrement())
+  email          String
+  token          String       @unique
+  role           Role         @default(USER)
+  status         String       @default("PENDING") // PENDING, ACCEPTED, EXPIRED
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+}
+
+model EmailVerificationToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model OrganizationRequest {
+  id               Int      @id @default(autoincrement())
+  organizationName String
+  domain           String
+  requesterEmail   String
+  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  resolvedAt       DateTime?
+
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int?
+
+  @@unique([domain])
+  @@index([status])
+}
+
+// Enums
+enum Role {
+  USER
+  REPRESENTATIVE
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Status {
+  POSTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ProgressStatus {
+  NONE
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+}

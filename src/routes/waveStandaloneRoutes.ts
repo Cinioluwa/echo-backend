@@ -1,13 +1,19 @@
 import { Router } from 'express';
-import { getWaveById } from '../controllers/waveController.js';
+import { getWaveById, updateWave, deleteWave } from '../controllers/waveController.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { waveIdParamSchema } from '../schemas/waveSchemas.js';
+import { waveIdParamSchema, updateWaveSchema } from '../schemas/waveSchemas.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 
 const waveStandaloneRouter = Router();
 
-// GET /api/waves/:id - Standalone route, now requires authentication
+// GET /api/waves/:id - Get a specific wave by ID
 waveStandaloneRouter.get('/:id', authMiddleware, organizationMiddleware, validate(waveIdParamSchema), getWaveById);
+
+// PATCH /api/waves/:id - Update a wave
+waveStandaloneRouter.patch('/:id', authMiddleware, organizationMiddleware, validate(waveIdParamSchema), validate(updateWaveSchema), updateWave);
+
+// DELETE /api/waves/:id - Delete a wave
+waveStandaloneRouter.delete('/:id', authMiddleware, organizationMiddleware, validate(waveIdParamSchema), deleteWave);
 
 export default waveStandaloneRouter;
