@@ -51,7 +51,7 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
         } 
       });
       await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
-      return res.status(200).json({ message: 'Surge removed from ping', surged: false });
+      return res.status(200).json({ message: 'Surge removed from ping', surged: false, surgeCount: count });
     }
 
     // If surge doesn't exist, try to create it
@@ -79,7 +79,7 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
       } 
     });
     await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
-    return res.status(201).json({ message: 'Ping surged', surged: true });
+    return res.status(201).json({ message: 'Ping surged', surged: true, surgeCount: count });
   } catch (error) {
     logger.error('Error toggling surge on ping', { error, pingId: req.params.pingId, userId: req.user?.userId });
     return next(error);
@@ -131,7 +131,7 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
         } 
       });
       await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
-      return res.status(200).json({ message: 'Surge removed from wave', surged: false });
+      return res.status(200).json({ message: 'Surge removed from wave', surged: false, surgeCount: count });
     }
 
     try {
@@ -156,7 +156,7 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
       } 
     });
     await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
-    return res.status(201).json({ message: 'Wave surged', surged: true });
+    return res.status(201).json({ message: 'Wave surged', surged: true, surgeCount: count });
   } catch (error) {
     logger.error('Error toggling surge on wave', { error, waveId: req.params.waveId, userId: req.user?.userId });
     return next(error);

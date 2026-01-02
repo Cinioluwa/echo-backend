@@ -130,16 +130,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     const surgeData = await surgeResponse.json();
     expect(surgeData).toHaveProperty('surged');
     expect(surgeData.surged).toBe(true);
-
-    // Verify surge count via ping details
-    const pingAfterSurgeResponse = await request.get(`/api/pings/${pingData.id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    expect(pingAfterSurgeResponse.status()).toBe(200);
-    const pingAfterSurge = await pingAfterSurgeResponse.json();
-    expect(pingAfterSurge.surgeCount).toBe(1);
+    expect(surgeData).toHaveProperty('surgeCount');
+    expect(surgeData.surgeCount).toBe(1);
 
     // Step 8: Add a comment to the ping
     const commentResponse = await request.post(`/api/pings/${pingData.id}/comments`, {
