@@ -88,6 +88,8 @@ model Ping {
   status           Status   @default(POSTED)
   progressStatus   ProgressStatus @default(NONE)
   progressUpdatedAt DateTime?
+  acknowledgedAt   DateTime?
+  resolvedAt       DateTime?
   createdAt        DateTime @default(now())
   surgeCount       Int      @default(0)
   isAnonymous      Boolean  @default(false)
