@@ -62,7 +62,7 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 ```
 **Expected Response**: JWT token containing `organizationId` and `role` claims.
 
-#### POST /api/users/google
+#### POST /api/auth/google
 **Purpose**: Sign in via Google OAuth (auto-registers on first login)
 **Auth**: Google ID token
 **Body**:
@@ -71,7 +71,9 @@ This guide provides comprehensive testing instructions for the Echo backend API 
   "idToken": "<google-id-token>"
 }
 ```
-**Notes**: The verified email returned by Google determines the organization.
+**Notes**:
+- The verified email returned by Google determines the organization.
+- A legacy alias exists at `POST /api/users/google` for backwards compatibility.
 
 #### POST /api/users/verify-email
 **Purpose**: Activate a newly registered account

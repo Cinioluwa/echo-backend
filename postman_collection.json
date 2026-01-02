@@ -384,6 +384,101 @@
 						"description": "Updates the progress status of a ping. Requires admin privileges."
 					},
 					"response": []
+				},
+				{
+					"name": "Acknowledge Ping",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/pings/:id/acknowledge",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"pings",
+								":id",
+								"acknowledge"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Idempotently marks a ping as acknowledged (sets acknowledgedAt if missing). Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Resolve Ping",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/pings/:id/resolve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"pings",
+								":id",
+								"resolve"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ping_id"
+								}
+							]
+						},
+						"description": "Idempotently marks a ping as resolved (sets resolvedAt if missing). Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Response Time Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/analytics/response-times?days=30",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"analytics",
+								"response-times"
+							],
+							"query": [
+								{
+									"key": "days",
+									"value": "30"
+								}
+							]
+						},
+						"description": "Retrieves response-time analytics for pings (acknowledge/resolve), optionally filtered by a lookback window in days. Requires admin privileges."
+					},
+					"response": []
 				}
 			]
 		},
@@ -1195,6 +1290,34 @@
 							]
 						},
 						"description": "Logs in or registers a user using a Google ID token."
+					},
+					"response": []
+				},
+				{
+					"name": "Login with Google (Preferred)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"idToken\": \"<google-id-token>\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/google",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"google"
+							]
+						},
+						"description": "Preferred Google login endpoint. Logs in or registers a user using a Google ID token."
 					},
 					"response": []
 				},

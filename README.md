@@ -170,7 +170,8 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 ### Auth — `/api/users` & `/api/auth`
 - `POST /api/users/register` — Register (email, password, firstName, lastName, level?)
 - `POST /api/users/login` — Login, returns JWT
-- `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (body: { idToken })
+- `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (body: { idToken }) **(preferred)**
+- `POST /api/users/google` — Google OAuth Sign-In/Sign-Up (body: { idToken }) (legacy alias)
 - `POST /api/users/verify-email` — Verify email with token from registration
 - `POST /api/users/forgot-password` — Request password reset (sends email)
 - `PATCH /api/users/reset-password` — Reset password with token from email
@@ -229,11 +230,14 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `GET /pings` — List all pings with filters/pagination (admin)
 - `DELETE /pings/:id` — Delete any ping (admin)
 - `PATCH /pings/:id/progress-status` — Update ping progress status (admin)
+- `POST /pings/:id/acknowledge` — Mark ping as acknowledged (admin)
+- `POST /pings/:id/resolve` — Mark ping as resolved (admin)
 - `GET /users` — List users (admin)
 - `GET /users/:id` — Get user by id (admin)
 - `PATCH /users/:id/role` — Update user role (ADMIN | REPRESENTATIVE | USER) (admin)
 - `GET /analytics/by-level` — Pings grouped by level (admin)
 - `GET /analytics/by-category` — Pings grouped by category (admin)
+- `GET /analytics/response-times` — Response-time analytics (admin) (query: `days`, default 30)
 - `POST /announcements` — Create announcement (admin)
 - `PATCH /announcements/:id` — Update announcement (admin)
 - `DELETE /announcements/:id` — Delete announcement (admin)
