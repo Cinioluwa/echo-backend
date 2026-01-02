@@ -89,7 +89,7 @@ test.describe('Ping Lifecycle E2E', () => {
     const surgeResponse1 = await request.post(`/api/pings/${testPing.id}/surge`, {
       headers: { 'Authorization': `Bearer ${userToken}` }
     });
-    expect(surgeResponse1.status()).toBe(201);
+    expect(surgeResponse1.status()).toBe(200);
 
     // Create and surge with 2 more users
     for (let i = 1; i <= 2; i++) {
@@ -131,7 +131,7 @@ test.describe('Ping Lifecycle E2E', () => {
       const surgeResponse = await request.post(`/api/pings/${testPing.id}/surge`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      expect(surgeResponse.status()).toBe(201);
+      expect(surgeResponse.status()).toBe(200);
     }
 
     // Verify surge count increased

@@ -126,7 +126,7 @@ test.describe('User Registration & Onboarding E2E', () => {
       }
     });
 
-    expect([200, 201]).toContain(surgeResponse.status());
+    expect(surgeResponse.status()).toBe(200);
     const surgeData = await surgeResponse.json();
     expect(surgeData).toHaveProperty('surged');
     expect(surgeData.surged).toBe(true);

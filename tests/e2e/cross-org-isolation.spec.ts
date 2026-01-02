@@ -293,7 +293,7 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
         'Authorization': `Bearer ${org1UserToken}`
       }
     });
-    expect([200, 201]).toContain(surgeResponse.status());
+    expect(surgeResponse.status()).toBe(200);
 
     // Step 6: Org1 user can see the surge count
     const pingWithSurgeResponse = await request.get(`/api/pings/${newPing.id}`, {
