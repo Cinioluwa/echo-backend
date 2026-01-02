@@ -9,6 +9,9 @@ import {
      getPingsByLevel,
     getUserByIdAsAdmin,
     updatePingProgressStatus,
+    acknowledgePing,
+    resolvePing,
+    getResponseTimeAnalytics,
 
     } from '../controllers/adminController.js';
 import { 
@@ -23,7 +26,7 @@ import { validate } from '../middleware/validationMiddleware.js';
 import { paginationWithFiltersSchema } from '../schemas/paginationSchema.js';
 import { pingIdSchema } from '../schemas/pingSchemas.js';
 import { userIdParamSchema } from '../schemas/userSchemas.js';
-import { updateUserRoleSchema } from '../schemas/adminSchemas.js';
+import { responseTimeAnalyticsSchema, updateUserRoleSchema } from '../schemas/adminSchemas.js';
 import { 
     createAnnouncementSchema, 
     updateAnnouncementSchema 
@@ -43,6 +46,9 @@ router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationM
 router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, getPingStatsByCategory);
 router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
 router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, organizationMiddleware, updatePingProgressStatus);
+router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), acknowledgePing);
+router.post('/pings/:id/resolve', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), resolvePing);
+router.get('/analytics/response-times', authMiddleware, adminMiddleware, organizationMiddleware, validate(responseTimeAnalyticsSchema), getResponseTimeAnalytics);
 
 export default router;
 

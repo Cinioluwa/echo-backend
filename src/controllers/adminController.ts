@@ -252,3 +252,219 @@ export const updatePingProgressStatus = async (req: AuthRequest, res: Response, 
         return next(error);
     }
 };
+
+export const acknowledgePing = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const pingId = parseInt(id);
+
+        const ping = await prisma.ping.findFirst({
+            where: {
+                id: pingId,
+                organizationId: req.organizationId!,
+            },
+            select: {
+                id: true,
+                acknowledgedAt: true,
+                progressStatus: true,
+                progressUpdatedAt: true,
+            }
+        });
+
+        if (!ping) {
+            return res.status(404).json({ error: 'Ping not found' });
+        }
+
+        if (ping.acknowledgedAt) {
+            return res.status(200).json(ping);
+        }
+
+        const now = new Date();
+        const shouldBumpProgress = ping.progressStatus === ProgressStatus.NONE;
+
+        const updated = await prisma.ping.update({
+            where: { id: pingId },
+            data: {
+                acknowledgedAt: now,
+                ...(shouldBumpProgress
+                    ? { progressStatus: ProgressStatus.ACKNOWLEDGED, progressUpdatedAt: now }
+                    : {}),
+            },
+            select: {
+                id: true,
+                acknowledgedAt: true,
+                progressStatus: true,
+                progressUpdatedAt: true,
+            }
+        });
+
+        return res.status(200).json(updated);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const resolvePing = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const pingId = parseInt(id);
+
+        const ping = await prisma.ping.findFirst({
+            where: {
+                id: pingId,
+                organizationId: req.organizationId!,
+            },
+            select: {
+                id: true,
+                resolvedAt: true,
+                progressStatus: true,
+                progressUpdatedAt: true,
+            }
+        });
+
+        if (!ping) {
+            return res.status(404).json({ error: 'Ping not found' });
+        }
+
+        if (ping.resolvedAt) {
+            return res.status(200).json(ping);
+        }
+
+        const now = new Date();
+
+        const updated = await prisma.$transaction(async (tx) => {
+            const updatedPing = await tx.ping.update({
+                where: { id: pingId },
+                data: {
+                    resolvedAt: now,
+                    progressStatus: ProgressStatus.RESOLVED,
+                    progressUpdatedAt: now,
+                },
+                select: {
+                    id: true,
+                    resolvedAt: true,
+                    progressStatus: true,
+                    progressUpdatedAt: true,
+                }
+            });
+
+            // Keep OfficialResponse in sync if it exists
+            await tx.officialResponse.updateMany({
+                where: { pingId },
+                data: { isResolved: true },
+            });
+
+            return updatedPing;
+        });
+
+        return res.status(200).json(updated);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getResponseTimeAnalytics = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const days = req.query.days ? parseInt(req.query.days as string) : 30;
+        const windowDays = Number.isFinite(days) && days > 0 ? Math.min(days, 365) : 30;
+        const from = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+
+        const pings = await prisma.ping.findMany({
+            where: {
+                organizationId: req.organizationId!,
+                createdAt: { gte: from },
+            },
+            select: {
+                id: true,
+                createdAt: true,
+                acknowledgedAt: true,
+                resolvedAt: true,
+                categoryId: true,
+                category: { select: { name: true } },
+            },
+        });
+
+        const calcAvg = (values: number[]) => {
+            if (!values.length) return null;
+            return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        };
+
+        const overallAck: number[] = [];
+        const overallResolve: number[] = [];
+
+        type Bucket = {
+            categoryId: number;
+            categoryName: string;
+            totalPings: number;
+            acknowledgedCount: number;
+            resolvedCount: number;
+            ackMs: number[];
+            resolveMs: number[];
+        };
+
+        const byCategory = new Map<number, Bucket>();
+
+        for (const ping of pings) {
+            const categoryId = ping.categoryId;
+            const categoryName = ping.category?.name ?? 'Unknown';
+
+            let bucket = byCategory.get(categoryId);
+            if (!bucket) {
+                bucket = {
+                    categoryId,
+                    categoryName,
+                    totalPings: 0,
+                    acknowledgedCount: 0,
+                    resolvedCount: 0,
+                    ackMs: [],
+                    resolveMs: [],
+                };
+                byCategory.set(categoryId, bucket);
+            }
+
+            bucket.totalPings += 1;
+
+            if (ping.acknowledgedAt) {
+                const ms = ping.acknowledgedAt.getTime() - ping.createdAt.getTime();
+                if (ms >= 0) {
+                    overallAck.push(ms);
+                    bucket.ackMs.push(ms);
+                }
+                bucket.acknowledgedCount += 1;
+            }
+
+            if (ping.resolvedAt) {
+                const ms = ping.resolvedAt.getTime() - ping.createdAt.getTime();
+                if (ms >= 0) {
+                    overallResolve.push(ms);
+                    bucket.resolveMs.push(ms);
+                }
+                bucket.resolvedCount += 1;
+            }
+        }
+
+        const byCategoryOut = Array.from(byCategory.values())
+            .map((b) => ({
+                categoryId: b.categoryId,
+                categoryName: b.categoryName,
+                totalPings: b.totalPings,
+                acknowledgedCount: b.acknowledgedCount,
+                resolvedCount: b.resolvedCount,
+                avgMsToAcknowledge: calcAvg(b.ackMs),
+                avgMsToResolve: calcAvg(b.resolveMs),
+            }))
+            .sort((a, b) => b.totalPings - a.totalPings);
+
+        return res.status(200).json({
+            windowDays,
+            totalPings: pings.length,
+            acknowledgedCount: overallAck.length,
+            resolvedCount: overallResolve.length,
+            avgMsToAcknowledge: calcAvg(overallAck),
+            avgMsToResolve: calcAvg(overallResolve),
+            byCategory: byCategoryOut,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
