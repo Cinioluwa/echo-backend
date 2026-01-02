@@ -3,6 +3,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import { appendFileSync } from 'fs';
 import { requestLogger } from './middleware/requestLogger.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
@@ -48,6 +49,10 @@ export function createApp(options: CreateAppOptions = {}) {
 
   app.use(express.json({ limit: '1mb' }));
   app.use(requestLogger);
+  app.use((req, res, next) => {
+    appendFileSync('server.log', `[DEBUG] Incoming request: ${req.method} ${req.url}\n`);
+    next();
+  });
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -98,7 +103,10 @@ export function createApp(options: CreateAppOptions = {}) {
 
   const writeLimiter = options.disableRateLimiting ? [] : [applyCreateLimiter];
 
-  app.use('/api/users', ...writeLimiter, userRoutes);
+  app.use('/api/users', (req, res, next) => {
+    console.log(`[DEBUG] Request to /api/users: ${req.method} ${req.url}`);
+    next();
+  }, ...writeLimiter, userRoutes);
   app.use('/api/auth', ...writeLimiter, authRoutes);
   app.use('/api/pings', ...writeLimiter, pingRoutes);
   app.use('/api/pings/:pingId/waves', ...writeLimiter, waveRoutes);

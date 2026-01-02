@@ -1,8 +1,10 @@
 import { PrismaClient } from '@prisma/test-client';
+import { writeFileSync } from 'fs';
 
 const PORT = process.env.PORT || 3000;
 
 console.log('E2E Server starting...');
+writeFileSync('startup.log', 'E2E Server starting...\n');
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
 const startServer = async () => {
@@ -24,7 +26,7 @@ const startServer = async () => {
         const { default: db } = await import('./config/db.js');
         const { default: logger } = await import('./config/logger.js');
 
-        const app = createApp();
+        const app = createApp({ disableRateLimiting: true });
 
         await db.$connect();
         logger.info('Database connected for E2E tests');

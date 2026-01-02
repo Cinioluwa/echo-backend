@@ -47,6 +47,31 @@ async function main() {
         },
     });
 
+    // Org2 + user used by cross-org isolation specs
+    const orgTest2 = await prisma.organization.upsert({
+        where: { name: 'Test Organization 2' },
+        update: {},
+        create: {
+            name: 'Test Organization 2',
+            domain: 'testorg2.edu',
+            status: 'ACTIVE',
+        },
+    });
+
+    await prisma.user.upsert({
+        where: { email_organizationId: { email: 'user@testorg2.edu', organizationId: orgTest2.id } },
+        update: {},
+        create: {
+            email: 'user@testorg2.edu',
+            password: hashedPassword,
+            firstName: 'Test',
+            lastName: 'User2',
+            role: 'USER',
+            status: 'ACTIVE',
+            organizationId: orgTest2.id,
+        },
+    });
+
     // --- Multitenancy Test Data (from setup-multitenancy-tests.js) ---
 
     // Create Covenant University organization

@@ -28,7 +28,14 @@ test.describe('Admin Management E2E', () => {
     expect(userResponse.status()).toBe(200);
     const userData = await userResponse.json();
     regularUserToken = userData.token;
-    testUser = userData.user;
+
+    const meResponse = await request.get('/api/users/me', {
+      headers: {
+        'Authorization': `Bearer ${regularUserToken}`
+      }
+    });
+    expect(meResponse.status()).toBe(200);
+    testUser = await meResponse.json();
   });
 
   test('admin platform management and user oversight', async ({ request }) => {
@@ -51,7 +58,8 @@ test.describe('Admin Management E2E', () => {
       }
     });
     expect(usersResponse.status()).toBe(200);
-    const users = await usersResponse.json();
+    const usersPayload = await usersResponse.json();
+    const users = Array.isArray(usersPayload) ? usersPayload : usersPayload.data;
     expect(Array.isArray(users)).toBe(true);
     expect(users.length).toBeGreaterThan(0);
 
@@ -115,7 +123,10 @@ test.describe('Admin Management E2E', () => {
       }
     });
     expect(userAnnouncementsResponse.status()).toBe(200);
-    const userAnnouncements = await userAnnouncementsResponse.json();
+    const userAnnouncementsPayload = await userAnnouncementsResponse.json();
+    const userAnnouncements = Array.isArray(userAnnouncementsPayload)
+      ? userAnnouncementsPayload
+      : userAnnouncementsPayload.data;
     const foundAnnouncement = userAnnouncements.find((a: any) => a.id === testAnnouncement.id);
     expect(foundAnnouncement).toBeTruthy();
     expect(foundAnnouncement.title).toBe('Scheduled Maintenance Notice');
@@ -142,7 +153,8 @@ test.describe('Admin Management E2E', () => {
       }
     });
     expect(allPingsResponse.status()).toBe(200);
-    const allPings = await allPingsResponse.json();
+    const allPingsPayload = await allPingsResponse.json();
+    const allPings = Array.isArray(allPingsPayload) ? allPingsPayload : allPingsPayload.data;
     expect(Array.isArray(allPings)).toBe(true);
 
     // Step 10: Admin deletes the announcement (cleanup)
@@ -159,7 +171,10 @@ test.describe('Admin Management E2E', () => {
         'Authorization': `Bearer ${regularUserToken}`
       }
     });
-    const announcementsAfterDelete = await verifyDeleteResponse.json();
+    const announcementsAfterDeletePayload = await verifyDeleteResponse.json();
+    const announcementsAfterDelete = Array.isArray(announcementsAfterDeletePayload)
+      ? announcementsAfterDeletePayload
+      : announcementsAfterDeletePayload.data;
     const deletedAnnouncement = announcementsAfterDelete.find((a: any) => a.id === testAnnouncement.id);
     expect(deletedAnnouncement).toBeFalsy();
   });

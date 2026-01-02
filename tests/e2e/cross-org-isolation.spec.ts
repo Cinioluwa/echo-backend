@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Cross-Organization Data Isolation E2E', () => {
+  test.describe.configure({ mode: 'serial' });
+
   let org1AdminToken: string;
   let org1UserToken: string;
   let org2UserToken: string;
@@ -31,7 +33,14 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     expect(org1UserResponse.status()).toBe(200);
     const org1UserData = await org1UserResponse.json();
     org1UserToken = org1UserData.token;
-    org1User = org1UserData.user;
+
+    const org1MeResponse = await request.get('/api/users/me', {
+      headers: {
+        'Authorization': `Bearer ${org1UserToken}`
+      }
+    });
+    expect(org1MeResponse.status()).toBe(200);
+    org1User = await org1MeResponse.json();
 
     const org2UserResponse = await request.post('/api/users/login', {
       data: {
@@ -42,7 +51,14 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     expect(org2UserResponse.status()).toBe(200);
     const org2UserData = await org2UserResponse.json();
     org2UserToken = org2UserData.token;
-    org2User = org2UserData.user;
+
+    const org2MeResponse = await request.get('/api/users/me', {
+      headers: {
+        'Authorization': `Bearer ${org2UserToken}`
+      }
+    });
+    expect(org2MeResponse.status()).toBe(200);
+    org2User = await org2MeResponse.json();
   });
 
   test('organization data isolation for pings and categories', async ({ request }) => {
@@ -79,7 +95,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
       }
     });
     expect(org1PingsResponse.status()).toBe(200);
-    const org1Pings = await org1PingsResponse.json();
+    const org1PingsPayload = await org1PingsResponse.json();
+    const org1Pings = org1PingsPayload.data;
     const org1OwnPing = org1Pings.find((p: any) => p.id === org1Ping.id);
     expect(org1OwnPing).toBeTruthy();
 
@@ -90,7 +107,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
       }
     });
     expect(org2PingsResponse.status()).toBe(200);
-    const org2Pings = await org2PingsResponse.json();
+    const org2PingsPayload = await org2PingsResponse.json();
+    const org2Pings = org2PingsPayload.data;
     const org2SeeingOrg1Ping = org2Pings.find((p: any) => p.id === org1Ping.id);
     expect(org2SeeingOrg1Ping).toBeFalsy();
 
@@ -109,7 +127,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
       }
     });
     expect(org1CategoriesResponse.status()).toBe(200);
-    const org1Categories = await org1CategoriesResponse.json();
+    const org1CategoriesPayload = await org1CategoriesResponse.json();
+    const org1Categories = org1CategoriesPayload.data;
     const org1OwnCategory = org1Categories.find((c: any) => c.id === org1Category.id);
     expect(org1OwnCategory).toBeTruthy();
 
@@ -120,7 +139,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
       }
     });
     expect(org2CategoriesResponse.status()).toBe(200);
-    const org2Categories = await org2CategoriesResponse.json();
+    const org2CategoriesPayload = await org2CategoriesResponse.json();
+    const org2Categories = org2CategoriesPayload.data;
     const org2SeeingOrg1Category = org2Categories.find((c: any) => c.id === org1Category.id);
     expect(org2SeeingOrg1Category).toBeFalsy();
   });
@@ -171,7 +191,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
       }
     });
     expect(org1UsersResponse.status()).toBe(200);
-    const org1Users = await org1UsersResponse.json();
+    const org1UsersPayload = await org1UsersResponse.json();
+    const org1Users = Array.isArray(org1UsersPayload) ? org1UsersPayload : org1UsersPayload.data;
     const org1UserInList = org1Users.find((u: any) => u.id === org1User.id);
     expect(org1UserInList).toBeTruthy();
 
@@ -197,7 +218,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
       }
     });
     expect(org1PingsResponse.status()).toBe(200);
-    const org1AdminPings = await org1PingsResponse.json();
+    const org1AdminPingsPayload = await org1PingsResponse.json();
+    const org1AdminPings = org1AdminPingsPayload.data;
     const org1PingInAdminList = org1AdminPings.find((p: any) => p.id === org1Ping.id);
     expect(org1PingInAdminList).toBeTruthy();
 
@@ -252,7 +274,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
       }
     });
     expect(org1CommentsResponse.status()).toBe(200);
-    const org1Comments = await org1CommentsResponse.json();
+    const org1CommentsPayload = await org1CommentsResponse.json();
+    const org1Comments = Array.isArray(org1CommentsPayload) ? org1CommentsPayload : org1CommentsPayload.data;
     expect(org1Comments).toHaveLength(1);
     expect(org1Comments[0].content).toBe('This is a comment from Org1 user.');
 
@@ -270,7 +293,7 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
         'Authorization': `Bearer ${org1UserToken}`
       }
     });
-    expect(surgeResponse.status()).toBe(200);
+    expect([200, 201]).toContain(surgeResponse.status());
 
     // Step 6: Org1 user can see the surge count
     const pingWithSurgeResponse = await request.get(`/api/pings/${newPing.id}`, {

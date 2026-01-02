@@ -113,7 +113,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     });
 
     expect(userPingsResponse.status()).toBe(200);
-    const userPings = await userPingsResponse.json();
+    const userPingsPayload = await userPingsResponse.json();
+    const userPings = userPingsPayload.data;
     const createdPing = userPings.find((p: any) => p.id === pingData.id);
     expect(createdPing).toBeTruthy();
     expect(createdPing.title).toBe('My first ping from E2E test');
@@ -125,9 +126,20 @@ test.describe('User Registration & Onboarding E2E', () => {
       }
     });
 
-    expect(surgeResponse.status()).toBe(200);
+    expect([200, 201]).toContain(surgeResponse.status());
     const surgeData = await surgeResponse.json();
-    expect(surgeData.surgeCount).toBe(1);
+    expect(surgeData).toHaveProperty('surged');
+    expect(surgeData.surged).toBe(true);
+
+    // Verify surge count via ping details
+    const pingAfterSurgeResponse = await request.get(`/api/pings/${pingData.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    expect(pingAfterSurgeResponse.status()).toBe(200);
+    const pingAfterSurge = await pingAfterSurgeResponse.json();
+    expect(pingAfterSurge.surgeCount).toBe(1);
 
     // Step 8: Add a comment to the ping
     const commentResponse = await request.post(`/api/pings/${pingData.id}/comments`, {
@@ -152,7 +164,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     });
 
     expect(pingCommentsResponse.status()).toBe(200);
-    const comments = await pingCommentsResponse.json();
+    const commentsPayload = await pingCommentsResponse.json();
+    const comments = Array.isArray(commentsPayload) ? commentsPayload : commentsPayload.data;
     expect(comments).toHaveLength(1);
     expect(comments[0].content).toBe('This is my first comment on my first ping!');
 

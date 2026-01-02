@@ -5,12 +5,13 @@ import { AuthRequest } from '../types/AuthRequest.js';
 
 export const getPlatformStats = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const [totalUsers, totalPings, totalSurges, totalWaves, totalComments] = await prisma.$transaction([
+        const [totalUsers, totalPings, totalSurges, totalWaves, totalComments, totalOrganizations] = await prisma.$transaction([
             prisma.user.count({ where: { organizationId: req.organizationId! } }),
             prisma.ping.count({ where: { organizationId: req.organizationId! } }),
             prisma.surge.count({ where: { organizationId: req.organizationId! } }),
             prisma.wave.count({ where: { organizationId: req.organizationId! } }),
             prisma.comment.count({ where: { organizationId: req.organizationId! } }),
+            prisma.organization.count({ where: { id: req.organizationId! } }),
         ]);
 
         const stats = {
@@ -18,7 +19,8 @@ export const getPlatformStats = async (req: AuthRequest, res: Response, next: Ne
             totalPings,
             totalSurges,
             totalWaves,
-            totalComments
+            totalComments,
+            totalOrganizations,
         };
 
         res.status(200).json(stats);  

@@ -1,8 +1,10 @@
 import { execSync, spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import http from 'http';
+import { writeFileSync } from 'fs';
 
 let serverProcess: any;
+const E2E_SERVER_PID_FILE = '.e2e-server.pid';
 
 async function waitForServer(port: number, timeout = 10000): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -54,18 +56,25 @@ export default async function globalSetup() {
   process.env.E2E_DB_FILE = dbFile;
 
   // Generate Prisma client for test schema
-  // execSync('npx prisma generate --schema=prisma/test-schema.prisma', { stdio: 'inherit' });
+  execSync('npx prisma generate --schema=prisma/test-schema.prisma', { stdio: 'inherit' });
 
   // Push schema to SQLite
   execSync('npx prisma db push --schema=prisma/test-schema.prisma --accept-data-loss --skip-generate', { stdio: 'inherit' });
 
+  // Seed baseline orgs/users required by the E2E specs
+  execSync('npx tsx tests/e2e/seed.ts', { stdio: 'inherit', env: { ...process.env } });
+
   // Start the E2E server using tsx
   // Use npx to be cross-platform (works on Windows and Linux)
   serverProcess = spawn('npx', ['tsx', 'src/e2e-server.ts'], {
-    stdio: 'pipe', // Change to pipe to avoid conflicts
+    stdio: 'inherit', // Change to inherit to see output
     env: { ...process.env, NODE_ENV: 'test' },
     shell: true // Required for npx on Windows
   });
+
+  if (typeof serverProcess?.pid === 'number') {
+    writeFileSync(E2E_SERVER_PID_FILE, String(serverProcess.pid), 'utf8');
+  }
 
   // Wait for server to be ready
   try {

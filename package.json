@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --dir tests/unit",
     "test:integration": "vitest run",
+    "pretest:e2e": "npx prisma generate --schema=prisma/test-schema.prisma",
     "test:e2e": "playwright test"
   },
   "keywords": [],
