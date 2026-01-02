@@ -7,9 +7,12 @@ declare global {
   var __testPrismaClient: PrismaClient | undefined;
 }
 
-console.log('Loading src/config/db.ts');
-console.log('globalThis.__testPrismaClient is:', (globalThis as any).__testPrismaClient ? 'DEFINED' : 'UNDEFINED');
-console.log('process.env.DATABASE_URL in db.ts:', process.env.DATABASE_URL);
+if (process.env.DEBUG_DB_BOOTSTRAP === 'true') {
+  logger.debug('DB bootstrap', {
+    hasTestClient: (globalThis as any).__testPrismaClient ? 'DEFINED' : 'UNDEFINED',
+    hasDatabaseUrl: process.env.DATABASE_URL ? 'SET' : 'UNSET',
+  });
+}
 
 // Create a single, reusable Prisma Client instance with logging
 // Use test client if available (for testing), otherwise use production client

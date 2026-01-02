@@ -4,7 +4,8 @@ import logger from '../config/logger.js';
 
 const router = Router();
 
-router.get('/', async (req: Request, res: Response) => {
+// Deep health check (includes DB)
+router.get('/health', async (req: Request, res: Response) => {
   try {
     // Check database connection
     await prisma.$queryRaw`SELECT 1`;
@@ -26,6 +27,11 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
   }
+});
+
+// Shallow health check (no DB dependency)
+router.get('/healthz', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
 });
 
 export default router;

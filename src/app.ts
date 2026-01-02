@@ -3,8 +3,9 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import { appendFileSync } from 'fs';
+import { appendFileSync } from 'node:fs';
 import { requestLogger } from './middleware/requestLogger.js';
+import logger from './config/logger.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -28,6 +29,8 @@ export type CreateAppOptions = {
 // Builds an Express app without binding a listener; useful for tests.
 export function createApp(options: CreateAppOptions = {}) {
   const app = express();
+  const enableRequestFileLog = process.env.REQUEST_FILE_LOG === 'true';
+  const enableRouteDebugLog = process.env.DEBUG_ROUTE_LOG === 'true';
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
@@ -49,10 +52,12 @@ export function createApp(options: CreateAppOptions = {}) {
 
   app.use(express.json({ limit: '1mb' }));
   app.use(requestLogger);
-  app.use((req, res, next) => {
-    appendFileSync('server.log', `[DEBUG] Incoming request: ${req.method} ${req.url}\n`);
-    next();
-  });
+  if (enableRequestFileLog) {
+    app.use((req, _res, next) => {
+      appendFileSync('server.log', `[DEBUG] Incoming request: ${req.method} ${req.url}\n`);
+      next();
+    });
+  }
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -99,12 +104,14 @@ export function createApp(options: CreateAppOptions = {}) {
   }
 
   app.use(helmet());
-  app.use('/health', healthRoutes);
+  app.use(healthRoutes);
 
   const writeLimiter = options.disableRateLimiting ? [] : [applyCreateLimiter];
 
   app.use('/api/users', (req, res, next) => {
-    console.log(`[DEBUG] Request to /api/users: ${req.method} ${req.url}`);
+    if (enableRouteDebugLog) {
+      logger.debug('Route request', { prefix: '/api/users', method: req.method, url: req.url });
+    }
     next();
   }, ...writeLimiter, userRoutes);
   app.use('/api/auth', ...writeLimiter, authRoutes);
@@ -115,9 +122,6 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/waves/:waveId/comments', ...writeLimiter, waveCommentRouter);
   app.use('/api/pings/:pingId/surge', ...writeLimiter, pingSurgeRouter);
   app.use('/api/waves/:waveId/surge', ...writeLimiter, waveSurgeRouter);
-  app.get('/healthz', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
-  });
   app.use('/api/pings/:pingId/official-response', ...writeLimiter, officialResponseRoutes);
   app.use('/api/admin', ...writeLimiter, adminRoutes);
   app.use('/api/announcements', ...writeLimiter, announcementRoutes);

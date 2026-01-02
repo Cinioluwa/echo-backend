@@ -17,8 +17,6 @@ router.get(
   validate(paginationSchema),
   getSubmittedPings
 );
-
-export default router;
 // Additional representative endpoints
 router.get(
   '/waves/top',
@@ -35,3 +33,5 @@ router.post(
   organizationMiddleware,
   forwardWaves
 );
+
+export default router;

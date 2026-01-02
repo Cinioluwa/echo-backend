@@ -1,11 +1,11 @@
 import { PrismaClient } from '@prisma/test-client';
-import { writeFileSync } from 'fs';
 
 const PORT = process.env.PORT || 3000;
+const enableE2eBootstrapDebug = process.env.DEBUG_E2E_SERVER === 'true';
 
-console.log('E2E Server starting...');
-writeFileSync('startup.log', 'E2E Server starting...\n');
-console.log('DATABASE_URL:', process.env.DATABASE_URL);
+if (enableE2eBootstrapDebug) {
+    console.log('E2E Server starting...');
+}
 
 const startServer = async () => {
     try {
