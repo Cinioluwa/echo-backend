@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { 
+import {
     createPing,
     getAllPings,
     searchPings,
@@ -42,8 +42,8 @@ router.delete('/:id', authMiddleware, organizationMiddleware, validate(pingIdSch
 router.patch('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), validate(updatePingSchema), updatePing);
 
 // Update ping status (admin only) - with ID validation
-router.patch('/:id/status', authMiddleware, adminMiddleware, validate(pingIdSchema), updatePingStatus);
+router.patch('/:id/status', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), updatePingStatus);
 
-router.patch('/:id/submit', authMiddleware, representativeMiddleware, validate(pingIdSchema), submitPing);
+router.patch('/:id/submit', authMiddleware, representativeMiddleware, organizationMiddleware, validate(pingIdSchema), submitPing);
 
 export default router;

@@ -32,7 +32,7 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
     const { title, content, categoryId, hashtag, isAnonymous = false } = req.body;
     const authorId = req.user?.userId;
     const organizationId = req.user?.organizationId;
-    
+
     if (!authorId || !organizationId) {
       return res.status(401).json({ error: 'Unauthorized: User or organization context missing' });
     }
@@ -91,7 +91,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     const whereClause: any = {
       organizationId: organizationId,
     };
-    
+
     if (category) {
       whereClause.categoryId = parseInt(category as string);
     }
@@ -110,7 +110,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
         },
         include: {
           author: {
-            select: { 
+            select: {
               id: true,
               email: true,
               firstName: true,
@@ -127,7 +127,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
       }),
       prisma.ping.count({ where: whereClause }),
     ]);
-    
+
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalPings / limit);
 
@@ -209,7 +209,7 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 export const searchPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const { hashtag, q } = req.query;
   const organizationId = req.user?.organizationId; // Get organizationId from authenticated user
-  
+
   try {
     if (!hashtag && !q) {
       return res.status(400).json({ error: 'Please provide a search query (hashtag or q)' });
@@ -246,11 +246,11 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
         orderBy: { createdAt: 'desc' },
         include: {
           author: {
-            select: { 
+            select: {
               id: true,
-              email: true, 
-              firstName: true, 
-              lastName: true 
+              email: true,
+              firstName: true,
+              lastName: true
             },
           },
           _count: {
@@ -288,13 +288,13 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
     const organizationId = req.user?.organizationId; // Get organizationId from authenticated user
 
     const ping = await prisma.ping.findFirst({
-      where: { 
+      where: {
         id: parseInt(id),
         organizationId: organizationId,
       },
       include: {
         author: {
-          select: { 
+          select: {
             id: true,
             email: true,
             firstName: true,
@@ -388,11 +388,11 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
     const { id } = req.params;
     const userId = req.user?.userId;
     const organizationId = (req as any).organizationId;
-    
+
     if (!req.body) {
       return res.status(400).json({ error: 'Request body is required' });
     }
-    
+
     const { title, content, categoryId, hashtag, status, isAnonymous } = req.body;
 
     const ping = await prisma.ping.findUnique({
@@ -436,12 +436,25 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const organizationId = (req as any).organizationId;
 
     const validStatuses = ["POSTED", "UNDER_REVIEW", "APPROVED", "REJECTED"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status value' });
     }
-    
+
+    // Check if ping exists and belongs to organization
+    const ping = await prisma.ping.findFirst({
+      where: {
+        id: parseInt(id),
+        organizationId
+      }
+    });
+
+    if (!ping) {
+      return res.status(404).json({ error: 'Ping not found' });
+    }
+
     const updatedPing = await prisma.ping.update({
       where: { id: parseInt(id) },
       data: {
@@ -458,6 +471,19 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
 export const submitPing = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const organizationId = (req as any).organizationId;
+
+    // Check if ping exists and belongs to organization
+    const ping = await prisma.ping.findFirst({
+      where: {
+        id: parseInt(id),
+        organizationId
+      }
+    });
+
+    if (!ping) {
+      return res.status(404).json({ error: 'Ping not found' });
+    }
 
     const updatedPing = await prisma.ping.update({
       where: { id: parseInt(id) },

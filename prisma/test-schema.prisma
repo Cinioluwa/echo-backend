@@ -206,6 +206,7 @@ model OfficialResponse {
   id             Int      @id @default(autoincrement())
   content        String
   createdAt      DateTime @default(now())
+  isResolved     Boolean  @default(false)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int

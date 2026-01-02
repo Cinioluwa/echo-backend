@@ -1,4 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { PrismaClient } from '@prisma/test-client';
+
+const prisma = new PrismaClient({
+  datasources: {
+    testDb: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 test.describe('Ping Lifecycle E2E', () => {
   let userToken: string;
@@ -8,6 +17,8 @@ test.describe('Ping Lifecycle E2E', () => {
   let testPing: any;
 
   test.beforeAll(async ({ request }) => {
+    console.log('Test DATABASE_URL:', process.env.DATABASE_URL);
+
     // Setup: Create test user and admin, get tokens
     const userResponse = await request.post('/api/users/login', {
       data: {
@@ -15,6 +26,9 @@ test.describe('Ping Lifecycle E2E', () => {
         password: 'password123'
       }
     });
+    if (userResponse.status() !== 200) {
+      console.log('User Login Failed:', await userResponse.json());
+    }
     expect(userResponse.status()).toBe(200);
     const userData = await userResponse.json();
     userToken = userData.token;
@@ -26,6 +40,9 @@ test.describe('Ping Lifecycle E2E', () => {
         password: 'password123'
       }
     });
+    if (adminResponse.status() !== 200) {
+      console.log('Admin Login Failed:', await adminResponse.json());
+    }
     expect(adminResponse.status()).toBe(200);
     const adminData = await adminResponse.json();
     adminToken = adminData.token;
@@ -36,11 +53,16 @@ test.describe('Ping Lifecycle E2E', () => {
         'Authorization': `Bearer ${userToken}`
       },
       data: {
-        name: 'E2E Ping Lifecycle Category'
+        name: `E2E Ping Lifecycle Category ${Date.now()}`
       }
     });
+    if (categoryResponse.status() !== 201) {
+      console.log('Category Creation Failed:', await categoryResponse.json());
+    }
     expect(categoryResponse.status()).toBe(201);
     testCategory = await categoryResponse.json();
+    console.log('Test Category Assigned:', testCategory);
+    console.log('BeforeAll Completed');
   });
 
   test('complete ping lifecycle from creation to resolution', async ({ request }) => {
@@ -63,14 +85,53 @@ test.describe('Ping Lifecycle E2E', () => {
     expect(testPing.progressStatus).toBe('NONE');
 
     // Step 2: Multiple users surge the ping (simulate community support)
-    // Create additional users and have them surge
-    for (let i = 0; i < 3; i++) {
-      const surgeResponse = await request.post(`/api/pings/${testPing.id}/surge`, {
-        headers: {
-          'Authorization': `Bearer ${userToken}`
+    // Surge with the creator
+    const surgeResponse1 = await request.post(`/api/pings/${testPing.id}/surge`, {
+      headers: { 'Authorization': `Bearer ${userToken}` }
+    });
+    expect(surgeResponse1.status()).toBe(201);
+
+    // Create and surge with 2 more users
+    for (let i = 1; i <= 2; i++) {
+      const email = `surgeuser${i}@testorg1.edu`;
+      const password = 'password123';
+
+      // Register
+      const registerResponse = await request.post('/api/users/register', {
+        data: {
+          email,
+          password,
+          firstName: `Surge${i}`,
+          lastName: 'User',
+          level: 1
         }
       });
-      expect(surgeResponse.status()).toBe(200);
+      expect(registerResponse.status()).toBe(201);
+      const { user } = await registerResponse.json();
+
+      // Manually activate user
+      console.log(`Activating user ${user.id} (${email})...`);
+      const updateResult = await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'ACTIVE', isVerified: true }
+      });
+      console.log('Update Result:', updateResult);
+
+      // Login
+      const loginResponse = await request.post('/api/users/login', {
+        data: { email, password }
+      });
+      if (loginResponse.status() !== 200) {
+        console.log('Login Failed:', await loginResponse.json());
+      }
+      expect(loginResponse.status()).toBe(200);
+      const { token } = await loginResponse.json();
+
+      // Surge
+      const surgeResponse = await request.post(`/api/pings/${testPing.id}/surge`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      expect(surgeResponse.status()).toBe(201);
     }
 
     // Verify surge count increased

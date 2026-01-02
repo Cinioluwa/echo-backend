@@ -27,3 +27,6 @@ Thumbs.db
 
 # Test coverage
 *.db
+test_output*
+
+REVIEW.md

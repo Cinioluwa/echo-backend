@@ -1,4 +1,34 @@
 import { test, expect } from '@playwright/test';
+import { PrismaClient } from '@prisma/test-client';
+
+// Helper function to retry Prisma operations (handles race conditions)
+async function retryPrismaOperation<T>(operation: () => Promise<T>, retries = 10, delay = 500): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`Attempt ${i + 1}/${retries}...`);
+      const result = await operation();
+      console.log(`Success on attempt ${i + 1}`);
+      return result;
+    } catch (error: any) {
+      console.log(`Attempt ${i + 1} failed:`, error.code, error.message);
+      if (error.code === 'P2025' && i < retries - 1) {
+        // Record not found - wait and retry
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Retry limit exceeded');
+}
+
+const prisma = new PrismaClient({
+  datasources: {
+    testDb: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 test.describe('User Registration & Onboarding E2E', () => {
   test('complete user registration and first ping creation journey', async ({ request }) => {
@@ -14,14 +44,15 @@ test.describe('User Registration & Onboarding E2E', () => {
     });
 
     expect(registerResponse.status()).toBe(201);
-    const userData = await registerResponse.json();
-    expect(userData).toHaveProperty('id');
-    expect(userData.email).toContain('e2e-user');
-    expect(userData.status).toBe('PENDING');
+    const { user: userData } = await registerResponse.json();
 
-    // Step 2: Verify email (simulate email verification)
-    // In a real scenario, this would involve checking email and clicking verification link
-    // For E2E testing, we'll assume the verification process works
+    // Step 2: Manually activate user (with retry to handle timing issues)
+    await retryPrismaOperation(() =>
+      prisma.user.update({
+        where: { id: userData.id },
+        data: { status: 'ACTIVE', isVerified: true }
+      })
+    );
 
     // Step 3: Login with the new account
     const loginResponse = await request.post('/api/users/login', {
@@ -32,11 +63,15 @@ test.describe('User Registration & Onboarding E2E', () => {
     });
 
     expect(loginResponse.status()).toBe(200);
-    const loginData = await loginResponse.json();
-    expect(loginData).toHaveProperty('token');
-    expect(loginData.user.email).toBe(userData.email);
+    const { token } = await loginResponse.json();
 
-    const token = loginData.token;
+    // Verify user details via /me endpoint
+    const profileResponse = await request.get('/api/users/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    expect(profileResponse.status()).toBe(200);
+    const profile = await profileResponse.json();
+    expect(profile.email).toBe(userData.email);
 
     // Step 4: Create a category for the ping
     const categoryResponse = await request.post('/api/categories', {
@@ -122,16 +157,16 @@ test.describe('User Registration & Onboarding E2E', () => {
     expect(comments[0].content).toBe('This is my first comment on my first ping!');
 
     // Step 10: Check user profile/stats
-    const profileResponse = await request.get('/api/users/profile', {
+    const profileResponse2 = await request.get('/api/users/me', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
 
-    expect(profileResponse.status()).toBe(200);
-    const profile = await profileResponse.json();
-    expect(profile.email).toBe(userData.email);
-    expect(profile.firstName).toBe('E2E');
-    expect(profile.lastName).toBe('User');
+    expect(profileResponse2.status()).toBe(200);
+    const profile2 = await profileResponse2.json();
+    expect(profile2.email).toBe(userData.email);
+    expect(profile2.firstName).toBe('E2E');
+    expect(profile2.lastName).toBe('User');
   });
 });

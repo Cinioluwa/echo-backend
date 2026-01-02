@@ -54,10 +54,10 @@ export default async function globalSetup() {
   process.env.E2E_DB_FILE = dbFile;
 
   // Generate Prisma client for test schema
-  execSync('npx prisma generate --schema=prisma/test-schema.prisma', { stdio: 'inherit' });
+  // execSync('npx prisma generate --schema=prisma/test-schema.prisma', { stdio: 'inherit' });
 
   // Push schema to SQLite
-  execSync('npx prisma db push --schema=prisma/test-schema.prisma --accept-data-loss', { stdio: 'inherit' });
+  execSync('npx prisma db push --schema=prisma/test-schema.prisma --accept-data-loss --skip-generate', { stdio: 'inherit' });
 
   // Start the E2E server using tsx
   // Use npx to be cross-platform (works on Windows and Linux)

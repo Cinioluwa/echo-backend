@@ -28,6 +28,12 @@ jobs:
     - name: Generate Prisma Test Client
       run: npx prisma generate --schema=prisma/test-schema.prisma
 
+    - name: Lint
+      run: npm run lint
+
+    - name: Build
+      run: npm run build
+
     - name: Run Integration Tests
       run: npm run test:integration
       env:

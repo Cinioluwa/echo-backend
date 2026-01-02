@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { createOfficialResponse } from '../controllers/officialResponseController.js';
+import { createOfficialResponse, updateOfficialResponse } from '../controllers/officialResponseController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import representativeMiddleware from '../middleware/representativeMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { createOfficialResponseSchema } from '../schemas/officialResponseSchemas.js';
+import { createOfficialResponseSchema, updateOfficialResponseSchema } from '../schemas/officialResponseSchemas.js';
 
-const router = Router({mergeParams: true});
+const router = Router({ mergeParams: true });
 
 router.post(
     '/',
@@ -13,6 +13,14 @@ router.post(
     representativeMiddleware,
     validate(createOfficialResponseSchema),
     createOfficialResponse
+);
+
+router.patch(
+    '/',
+    authMiddleware,
+    representativeMiddleware,
+    validate(updateOfficialResponseSchema),
+    updateOfficialResponse
 );
 
 export default router;

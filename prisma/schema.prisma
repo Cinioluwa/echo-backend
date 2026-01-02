@@ -212,6 +212,7 @@ model OfficialResponse {
   pingId         Int          @unique
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
+  isResolved     Boolean      @default(false)
 }
 
 model Announcement {
