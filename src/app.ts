@@ -29,6 +29,17 @@ export type CreateAppOptions = {
 // Builds an Express app without binding a listener; useful for tests.
 export function createApp(options: CreateAppOptions = {}) {
   const app = express();
+  // Railway (and most hosted platforms) sit behind a reverse proxy that sets X-Forwarded-For.
+  // express-rate-limit validates this header and expects Express trust proxy to be enabled.
+  // Default to enabled in production, with an escape hatch for local dev/testing.
+  const trustProxyEnv = process.env.TRUST_PROXY;
+  const shouldTrustProxy = trustProxyEnv
+    ? trustProxyEnv === 'true' || trustProxyEnv === '1'
+    : process.env.NODE_ENV === 'production';
+  if (shouldTrustProxy) {
+    app.set('trust proxy', 1);
+  }
+
   const enableRequestFileLog = process.env.REQUEST_FILE_LOG === 'true';
   const enableRouteDebugLog = process.env.DEBUG_ROUTE_LOG === 'true';
   const allowedOrigins = [
