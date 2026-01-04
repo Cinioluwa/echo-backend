@@ -1,9 +1,17 @@
 // src/server.ts
 import 'dotenv/config';
+import { setDefaultResultOrder } from 'node:dns';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import logger from './config/logger.js';
 import { connectDatabase } from './config/db.js';
+
+// Prefer IPv4 over IPv6 for outbound connections (helps with SMTP providers in some hosted environments).
+try {
+  setDefaultResultOrder('ipv4first');
+} catch {
+  // Ignore if not supported by the current Node runtime.
+}
 
 const app = createApp();
 const PORT = env.PORT;

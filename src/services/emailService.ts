@@ -30,10 +30,15 @@ const getTransporter = () => {
 		host: env.SMTP_HOST,
 		port: env.SMTP_PORT,
 		secure: Number(env.SMTP_PORT) === 465,
+		// On 587 we expect STARTTLS.
+		requireTLS: Number(env.SMTP_PORT) === 587,
 		// Avoid requests hanging for ~1min+ if SMTP is unreachable/misconfigured.
 		connectionTimeout: 10_000,
 		greetingTimeout: 10_000,
 		socketTimeout: 15_000,
+		tls: {
+			servername: env.SMTP_HOST,
+		},
 		auth: {
 			user: env.SMTP_USER,
 			pass: env.SMTP_PASS,
