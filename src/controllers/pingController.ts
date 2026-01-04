@@ -40,6 +40,22 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(400).json({ error: 'Title, content and categoryId are required' });
     }
 
+    // Ensure the category exists and belongs to the caller's organization.
+    const category = await prisma.category.findFirst({
+      where: {
+        id: categoryId,
+        organizationId,
+      },
+      select: { id: true },
+    });
+
+    if (!category) {
+      return res.status(400).json({
+        error: 'Invalid categoryId for this organization',
+        code: 'CATEGORY_NOT_FOUND',
+      });
+    }
+
     const newPing = await prisma.ping.create({
       data: {
         title,

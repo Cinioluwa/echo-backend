@@ -9,7 +9,7 @@ export const createPingSchema = z.object({
     content: z.string({
       message: 'Content is required',
     }).min(1, 'Content cannot be empty').max(5000),
-    categoryId: z.number().int().positive({
+    categoryId: z.coerce.number().int().positive({
       message: 'Valid category ID is required',
     }),
     hashtag: z.string().max(50).optional().nullable(),
@@ -21,7 +21,7 @@ export const updatePingSchema = z.object({
   body: z.object({
     title: z.string().min(1, 'Title cannot be empty').max(200).optional(),
     content: z.string().min(1, 'Content cannot be empty').max(5000).optional(),
-    categoryId: z.number().int().positive().optional(),
+    categoryId: z.coerce.number().int().positive().optional(),
     hashtag: z.string().max(50).optional().nullable(),
     status: z.enum(['POSTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED']).optional(),
     isAnonymous: z.boolean().optional(),
