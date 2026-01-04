@@ -25,6 +25,33 @@ export default function errorHandler(err: unknown, req: Request, res: Response, 
   // Check if it's a Prisma error
   const isPrismaError = typeof err === 'object' && err !== null && (err as any).code;
 
+  // Prisma client errors that don't carry a `.code`
+  if (err instanceof Error) {
+    if (err.name === 'PrismaClientValidationError') {
+      // e.g. wrong types passed to Prisma (string instead of int)
+      return res.status(400).json({
+        error: 'Invalid request data.',
+        code: 'PRISMA_VALIDATION_ERROR',
+        requestId,
+      });
+    }
+    if (err.name === 'PrismaClientInitializationError') {
+      // e.g. DB unreachable / bad connection string / migrations not applied
+      return res.status(503).json({
+        error: 'Database is temporarily unavailable. Please try again shortly.',
+        code: 'PRISMA_INITIALIZATION_ERROR',
+        requestId,
+      });
+    }
+    if (err.name === 'PrismaClientRustPanicError') {
+      return res.status(500).json({
+        error: 'Database engine error. Please try again later.',
+        code: 'PRISMA_RUST_PANIC',
+        requestId,
+      });
+    }
+  }
+
   if (isPrismaError) {
     const prismaError = err as any;
     
@@ -43,6 +70,15 @@ export default function errorHandler(err: unknown, req: Request, res: Response, 
       return res.status(404).json({ 
         error: 'The requested resource was not found.',
         code: 'PRISMA_P2025',
+        requestId,
+      });
+    }
+
+    // Table/column missing (usually migrations not applied) (P2021/P2022)
+    if (prismaError.code === 'P2021' || prismaError.code === 'P2022') {
+      return res.status(500).json({
+        error: 'Server database schema is not ready for this request.',
+        code: prismaError.code === 'P2021' ? 'PRISMA_P2021' : 'PRISMA_P2022',
         requestId,
       });
     }
