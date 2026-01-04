@@ -103,4 +103,24 @@ describe('Google Auth Integration', () => {
     expect(res.body).toHaveProperty('error');
     expect(res.body.error).toContain('No organization found');
   });
+
+  it('should reject consumer email domains (gmail.com)', async () => {
+    const request = await buildTestClient({ disableRateLimiting: true });
+
+    vi.mocked(verifyGoogleToken).mockResolvedValue({
+      email: 'tomi@gmail.com',
+      emailVerified: true,
+      firstName: 'Tomi',
+      lastName: 'Dev',
+      googleId: 'consumer-123',
+    });
+
+    const res = await request
+      .post('/api/auth/google')
+      .send({ token: googleToken });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+    expect(res.body.error).toContain('Consumer email domains are not allowed');
+  });
 });
