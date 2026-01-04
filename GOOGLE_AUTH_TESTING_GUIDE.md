@@ -8,7 +8,8 @@ This guide explains how to test the Google OAuth authentication endpoint in your
    - Create a project at https://console.cloud.google.com/
    - Enable Google+ API
    - Create OAuth 2.0 credentials (Web application)
-   - Add authorized redirect URIs (e.g., `http://localhost:3000`)
+  - Add authorized redirect URIs (e.g., `http://localhost:3000`)
+  - If your frontend runs on Vite, also add Authorized JavaScript origin: `http://localhost:5173`
 
 2. **Environment Configuration**
    Add to your `.env` file:

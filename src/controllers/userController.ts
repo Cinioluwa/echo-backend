@@ -425,6 +425,7 @@ export const verifyEmail = async (
       let organizationActivated = false;
 
       if (
+        env.ORG_ONBOARDING_AUTO_ACTIVATE &&
         updatedUser.role === 'ADMIN' &&
         updatedUser.organization?.status !== 'ACTIVE'
       ) {

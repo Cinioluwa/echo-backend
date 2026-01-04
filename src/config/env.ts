@@ -19,6 +19,9 @@ const envSchema = z.object({
   // OAuth
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required for Google auth').optional(),
 
+  // Onboarding
+  ORG_ONBOARDING_AUTO_ACTIVATE: z.coerce.boolean().default(true),
+
   // Email
   SMTP_HOST: z.string().min(1, 'SMTP_HOST must not be empty').optional(),
   SMTP_PORT: z.coerce.number().int().positive('SMTP_PORT must be a positive integer').optional(),

@@ -21,6 +21,7 @@ import {
  } from '../controllers/announcementController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
+import superAdminMiddleware from '../middleware/superAdminMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { paginationWithFiltersSchema } from '../schemas/paginationSchema.js';
@@ -31,10 +32,21 @@ import {
     createAnnouncementSchema, 
     updateAnnouncementSchema 
 } from '../schemas/announcementSchemas.js';
+import {
+    approveOrganizationRequest,
+    listOrganizationRequests,
+    rejectOrganizationRequest,
+} from '../controllers/organizationRequestController.js';
 
 const router = Router();
 
 router.get('/stats', authMiddleware, adminMiddleware, organizationMiddleware, getPlatformStats);
+
+// Platform-wide onboarding requests (SUPER_ADMIN only)
+router.get('/organization-requests', authMiddleware, superAdminMiddleware, listOrganizationRequests);
+router.post('/organization-requests/:id/approve', authMiddleware, superAdminMiddleware, approveOrganizationRequest);
+router.post('/organization-requests/:id/reject', authMiddleware, superAdminMiddleware, rejectOrganizationRequest);
+
 router.get('/pings', authMiddleware, adminMiddleware, validate(paginationWithFiltersSchema), getAllPingsAsAdmin);
 router.delete('/pings/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), deleteAnyPing);
 router.get('/users', authMiddleware, adminMiddleware, organizationMiddleware, getAllUsers);

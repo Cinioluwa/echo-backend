@@ -11,6 +11,9 @@
    - Enter your Google Client ID
    - Enter your Google Client Secret
 
+  If you're testing with a Vite frontend (common for React), make sure your Google OAuth Client has this origin allowed:
+  - `http://localhost:5173`
+
 3. **Select Scopes** (left panel):
    - `https://www.googleapis.com/auth/userinfo.email`
    - `https://www.googleapis.com/auth/userinfo.profile`

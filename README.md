@@ -182,6 +182,38 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `GET /api/users/me/surges` — My surges (auth)
 - `GET /api/users/me/comments` — My comments (auth)
 
+### Organization onboarding (waitlist → approval → sign-in)
+
+Echo is **organization-scoped**. Users can only sign in with email domains that map to an `ACTIVE` organization.
+
+**Flow (recommended for production):**
+1. User submits an onboarding request: `POST /api/users/organization-waitlist`
+  - Creates `Organization` (status `PENDING`), an `ADMIN` user (status `PENDING`), and an `OrganizationRequest` (status `PENDING`).
+  - Sends an email verification link to the requester.
+2. User verifies email: `POST /api/users/verify-email`
+  - Always activates the user.
+  - Organization activation depends on `ORG_ONBOARDING_AUTO_ACTIVATE`.
+3. Platform approves the request (SUPER_ADMIN):
+  - `GET /api/admin/organization-requests?status=PENDING`
+  - `POST /api/admin/organization-requests/:id/approve` (sets org `ACTIVE`)
+  - `POST /api/admin/organization-requests/:id/reject`
+
+**Dev/Staging convenience:**
+- To auto-activate orgs on admin email verification (easy dev): set `ORG_ONBOARDING_AUTO_ACTIVATE=true`.
+- To require manual approval (prod-style gating): set `ORG_ONBOARDING_AUTO_ACTIVATE=false`.
+
+**Seed/activate specific org domains (staging):**
+Run the script to upsert known orgs as `ACTIVE`:
+
+```powershell
+node scripts/upsert-school-orgs.mjs
+```
+
+### Frontend integration notes (CORS + Google)
+
+- Local frontend origins allowed by default include `http://localhost:3000`, `http://localhost:3001`, and `http://localhost:5173` (Vite).
+- In Google Console (OAuth client), include `http://localhost:5173` in Authorized JavaScript origins if the frontend is using Vite.
+
 ### Pings — `/api/pings`
 - `GET /` — List pings with optional filters: `category`, `status`, plus pagination
 - `GET /search` — Search by `hashtag` or `q` (text), plus pagination
