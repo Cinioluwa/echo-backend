@@ -3,7 +3,7 @@ import { Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { verifyGoogleToken } from '../services/googleAuthService.js';
-import { extractDomainFromEmail, isConsumerEmailDomain } from '../utils/domainUtils.js';
+import { extractDomainFromEmail, getDomainCandidates, isConsumerEmailDomain } from '../utils/domainUtils.js';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { env } from '../config/env.js';
@@ -55,9 +55,20 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     }
 
     // Step 3: Lookup organization by domain
-    const organization = await prisma.organization.findUnique({
-      where: { domain },
-    });
+    let organization = null as Awaited<
+      ReturnType<typeof prisma.organization.findUnique>
+    >;
+
+    for (const candidate of getDomainCandidates(domain)) {
+      // eslint-disable-next-line no-await-in-loop
+      const found = await prisma.organization.findUnique({
+        where: { domain: candidate },
+      });
+      if (found) {
+        organization = found;
+        break;
+      }
+    }
 
     if (!organization) {
       return res.status(404).json({

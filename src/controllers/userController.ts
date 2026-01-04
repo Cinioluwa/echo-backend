@@ -21,6 +21,7 @@ import {
 } from '../services/tokenService.js';
 import {
   extractDomainFromEmail,
+  getDomainCandidates,
   isConsumerEmailDomain,
 } from '../utils/domainUtils.js';
 import { env } from '../config/env.js';
@@ -83,7 +84,18 @@ export const registerUser = async (
       });
     }
 
-    const organization = await prisma.organization.findUnique({ where: { domain } });
+    let organization = null as Awaited<
+      ReturnType<typeof prisma.organization.findUnique>
+    >;
+
+    for (const candidate of getDomainCandidates(domain)) {
+      // eslint-disable-next-line no-await-in-loop
+      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
+      if (found) {
+        organization = found;
+        break;
+      }
+    }
 
     if (!organization) {
       logger.info('Registration attempt for unknown domain', {
@@ -193,7 +205,18 @@ export const loginUser = async (
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const organization = await prisma.organization.findUnique({ where: { domain } });
+    let organization = null as Awaited<
+      ReturnType<typeof prisma.organization.findUnique>
+    >;
+
+    for (const candidate of getDomainCandidates(domain)) {
+      // eslint-disable-next-line no-await-in-loop
+      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
+      if (found) {
+        organization = found;
+        break;
+      }
+    }
 
     if (!organization) {
       logger.warn('Login attempt for unknown organization domain', {
@@ -312,7 +335,18 @@ export const loginWithGoogle = async (
       return res.status(400).json({ error: 'Google email is invalid' });
     }
 
-    const organization = await prisma.organization.findUnique({ where: { domain } });
+    let organization = null as Awaited<
+      ReturnType<typeof prisma.organization.findUnique>
+    >;
+
+    for (const candidate of getDomainCandidates(domain)) {
+      // eslint-disable-next-line no-await-in-loop
+      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
+      if (found) {
+        organization = found;
+        break;
+      }
+    }
 
     if (!organization) {
       return res.status(404).json({
@@ -493,7 +527,18 @@ export const requestPasswordReset = async (
       });
     }
 
-    const organization = await prisma.organization.findUnique({ where: { domain } });
+    let organization = null as Awaited<
+      ReturnType<typeof prisma.organization.findUnique>
+    >;
+
+    for (const candidate of getDomainCandidates(domain)) {
+      // eslint-disable-next-line no-await-in-loop
+      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
+      if (found) {
+        organization = found;
+        break;
+      }
+    }
 
     if (!organization) {
       return res.status(200).json({
