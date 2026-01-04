@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import logger from '../config/logger.js';
 import { env } from '../config/env.js';
 
@@ -10,6 +11,20 @@ type EmailPayload = {
 };
 
 let transporter: Transporter | null = null;
+let resendClient: Resend | null = null;
+
+const isResendConfigured = () => Boolean(env.RESEND_API_KEY);
+
+const getResendClient = () => {
+	if (!isResendConfigured()) {
+		return null;
+	}
+	if (resendClient) {
+		return resendClient;
+	}
+	resendClient = new Resend(env.RESEND_API_KEY);
+	return resendClient;
+};
 
 const isSmtpConfigured = () =>
 	Boolean(
@@ -49,6 +64,29 @@ const getTransporter = () => {
 };
 
 export const sendEmail = async ({ to, subject, html, text }: EmailPayload) => {
+	const resend = getResendClient();
+	if (resend) {
+		try {
+			await resend.emails.send({
+				from: env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev',
+				to,
+				subject,
+				html,
+				text,
+			});
+			logger.info('Email dispatched (resend)', { to, subject });
+			return;
+		} catch (error) {
+			const err = error as Error;
+			logger.error('Failed to send email (resend)', {
+				to,
+				subject,
+				message: err.message,
+			});
+			throw err;
+		}
+	}
+
 	const mailer = getTransporter();
 
 	if (!mailer) {
@@ -67,10 +105,10 @@ export const sendEmail = async ({ to, subject, html, text }: EmailPayload) => {
 			html,
 			text,
 		});
-		logger.info('Email dispatched', { to, subject });
+		logger.info('Email dispatched (smtp)', { to, subject });
 	} catch (error) {
 		const err = error as Error;
-		logger.error('Failed to send email', {
+		logger.error('Failed to send email (smtp)', {
 			to,
 			subject,
 			message: err.message,
