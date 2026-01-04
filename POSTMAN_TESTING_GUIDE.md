@@ -68,7 +68,7 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 **Body**:
 ```json
 {
-  "idToken": "<google-id-token>"
+  "token": "<google-id-token>"
 }
 ```
 **Notes**:
@@ -390,6 +390,57 @@ This guide provides comprehensive testing instructions for the Echo backend API 
   "progressStatus": "IN_PROGRESS"
 }
 ```
+
+---
+
+## End-to-End Journey (Postman rehearsal)
+
+This is the same “launch-day simulation” flow, but expressed as Postman steps.
+
+### Environment variables to create
+- `base_url`: `http://localhost:3000` (or your Railway URL)
+- `auth_token`: user JWT (set after login/google)
+- `super_admin_token`: SUPER_ADMIN JWT (only needed for manual approval)
+- `google_id_token`: Google ID token from the frontend or `test-google-auth.html`
+- `org_request_id`: set after listing pending org requests
+
+### A) CU “automatic access” (org already ACTIVE)
+
+1) Ensure CU org domain exists and is ACTIVE
+- Local dev: `node setup-multitenancy-tests.js` seeds test orgs.
+- Launch/staging: run `node scripts/upsert-school-orgs.mjs` against the target DB to activate CU domains.
+
+2) Google sign-in
+- Request: `POST {{base_url}}/api/auth/google`
+- Body:
+```json
+{ "token": "{{google_id_token}}" }
+```
+- Save the returned JWT into `auth_token`.
+
+3) Create a ping
+- Request: `POST {{base_url}}/api/pings`
+- Header: `Authorization: Bearer {{auth_token}}`
+
+### B) Non-CU waitlist → approval → access
+
+1) Submit waitlist request
+- Request: `POST {{base_url}}/api/users/organization-waitlist`
+- Expected: org created as `PENDING`.
+
+2) Verify email
+- Request: `POST {{base_url}}/api/users/verify-email`
+- Note: you’ll need the verification token from the email/logs.
+
+3) SUPER_ADMIN approves (production-style)
+- List pending: `GET {{base_url}}/api/admin/organization-requests?status=PENDING`
+  - Header: `Authorization: Bearer {{super_admin_token}}`
+  - Pick the relevant request `id` and store in `org_request_id`.
+- Approve: `POST {{base_url}}/api/admin/organization-requests/{{org_request_id}}/approve`
+  - Header: `Authorization: Bearer {{super_admin_token}}`
+
+4) Google sign-in + create ping
+- Repeat steps A2 and A3 (now the org is ACTIVE so Google auth succeeds).
 
 ## Testing Strategy
 

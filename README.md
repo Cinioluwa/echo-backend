@@ -154,6 +154,19 @@ Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 | SMTP_USER         | No       | SMTP username                                    | `your-email@gmail.com` |
 | SMTP_PASS         | No       | SMTP password                                    | `your-app-password` |
 
+### Recommended Railway settings (staging vs production)
+
+**Staging (fast onboarding/testing):**
+- `ORG_ONBOARDING_AUTO_ACTIVATE=true` (default)
+  - When the org admin verifies their email, the org becomes `ACTIVE` automatically.
+
+**Production (waitlist + manual approval):**
+- `ORG_ONBOARDING_AUTO_ACTIVATE=false`
+  - Email verification activates the user but keeps the organization `PENDING` until a SUPER_ADMIN approves.
+
+**Frontend local dev:**
+- If the frontend runs on Vite, allow origin `http://localhost:5173` (already in backend CORS allowlist) and add it in Google Console Authorized JavaScript origins.
+
 **📝 Note**: See `GOOGLE_AUTH_IMPLEMENTATION.md` and `GOOGLE_AUTH_TESTING_GUIDE.md` for Google OAuth setup. Email is optional but required for password resets and organization requests.
 
 ## Base URL and auth
