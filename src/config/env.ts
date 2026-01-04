@@ -28,6 +28,10 @@ const envSchema = z.object({
   SMTP_USER: z.string().min(1, 'SMTP_USER must not be empty').optional(),
   SMTP_PASS: z.string().min(1, 'SMTP_PASS must not be empty').optional(),
   EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email address').optional(),
+  PLATFORM_ADMIN_EMAIL: z
+    .string()
+    .email('PLATFORM_ADMIN_EMAIL must be a valid email address')
+    .optional(),
 
   // Transactional email providers
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY must not be empty').optional(),

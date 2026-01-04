@@ -763,13 +763,14 @@ export const requestOrganizationOnboarding = async (
         }
       );
 
-      if (env.EMAIL_FROM) {
+        const notifyTo = env.PLATFORM_ADMIN_EMAIL ?? env.EMAIL_FROM;
+        if (notifyTo) {
         const notification = buildOrganizationRequestEmail(
           organizationName,
           normalizedDomain
         );
 
-        sendEmail({ to: env.EMAIL_FROM, ...notification }).catch((notifyError) => {
+          sendEmail({ to: notifyTo, ...notification }).catch((notifyError) => {
           logger.warn('Failed to notify platform admins of new org request', {
             domain: normalizedDomain,
             message: (notifyError as Error).message,
