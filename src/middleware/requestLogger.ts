@@ -8,15 +8,22 @@ const generateRequestId = () => {
 };
 
 export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-  const requestId = generateRequestId();
+  const forwardedRequestId = req.get('x-request-id')
+    || req.get('x-correlation-id')
+    || req.get('x-railway-request-id');
+  const requestId = forwardedRequestId || generateRequestId();
   const startTime = Date.now();
 
   // Attach requestId to request object for use in other middlewares
   (req as any).requestId = requestId;
 
+  // Echo request id back so clients can report it with errors (and to correlate with proxy logs)
+  res.setHeader('x-request-id', requestId);
+
   // Log incoming request
   logger.info('Incoming request', {
     requestId,
+    forwardedRequestId: forwardedRequestId || undefined,
     method: req.method,
     url: req.url,
     ip: req.ip,

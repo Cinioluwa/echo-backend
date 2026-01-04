@@ -5,6 +5,11 @@ import logger from '../config/logger.js';
 export default function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   const requestId = (req as any).requestId;
 
+  // Ensure request id is visible to clients even on errors.
+  if (requestId) {
+    res.setHeader('x-request-id', requestId);
+  }
+
   // Log error with context
   logger.error('Error caught by error handler', {
     requestId,
