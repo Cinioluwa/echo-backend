@@ -30,6 +30,10 @@ const getTransporter = () => {
 		host: env.SMTP_HOST,
 		port: env.SMTP_PORT,
 		secure: Number(env.SMTP_PORT) === 465,
+		// Avoid requests hanging for ~1min+ if SMTP is unreachable/misconfigured.
+		connectionTimeout: 10_000,
+		greetingTimeout: 10_000,
+		socketTimeout: 15_000,
 		auth: {
 			user: env.SMTP_USER,
 			pass: env.SMTP_PASS,

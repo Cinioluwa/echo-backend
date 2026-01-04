@@ -753,30 +753,30 @@ export const requestOrganizationOnboarding = async (
       firstName
     );
 
-    try {
-      await sendEmail({ to: normalizeEmail(email), ...verificationEmail });
-    } catch (emailError) {
-      logger.error('Failed to dispatch onboarding verification email', {
-        email: normalizeEmail(email),
-        message: (emailError as Error).message,
-      });
-    }
-
-    if (env.EMAIL_FROM) {
-      const notification = buildOrganizationRequestEmail(
-        organizationName,
-        normalizedDomain
+    setImmediate(() => {
+      sendEmail({ to: normalizeEmail(email), ...verificationEmail }).catch(
+        (emailError) => {
+          logger.error('Failed to dispatch onboarding verification email', {
+            email: normalizeEmail(email),
+            message: (emailError as Error).message,
+          });
+        }
       );
 
-      try {
-        await sendEmail({ to: env.EMAIL_FROM, ...notification });
-      } catch (notifyError) {
-        logger.warn('Failed to notify platform admins of new org request', {
-          domain: normalizedDomain,
-          message: (notifyError as Error).message,
+      if (env.EMAIL_FROM) {
+        const notification = buildOrganizationRequestEmail(
+          organizationName,
+          normalizedDomain
+        );
+
+        sendEmail({ to: env.EMAIL_FROM, ...notification }).catch((notifyError) => {
+          logger.warn('Failed to notify platform admins of new org request', {
+            domain: normalizedDomain,
+            message: (notifyError as Error).message,
+          });
         });
       }
-    }
+    });
 
     logger.info('Organization onboarding requested', {
       organizationId: result.organization.id,
