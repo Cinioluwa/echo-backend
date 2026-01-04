@@ -67,20 +67,44 @@ export const sendEmail = async ({ to, subject, html, text }: EmailPayload) => {
 	const resend = getResendClient();
 	if (resend) {
 		try {
-			await resend.emails.send({
-				from: env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev',
+			const from = env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev';
+			const result = await resend.emails.send({
+				from,
 				to,
 				subject,
 				html,
 				text,
 			});
-			logger.info('Email dispatched (resend)', { to, subject });
+
+			// The SDK may return a structured { data, error } response.
+			const anyResult = result as any;
+			if (anyResult?.error) {
+				logger.error('Failed to send email (resend)', {
+					to,
+					subject,
+					from,
+					message:
+						anyResult.error?.message ??
+						JSON.stringify(anyResult.error),
+				});
+				throw new Error(
+					anyResult.error?.message ?? 'Resend email send failed'
+				);
+			}
+
+			logger.info('Email dispatched (resend)', {
+				to,
+				subject,
+				from,
+				resendId: anyResult?.data?.id,
+			});
 			return;
 		} catch (error) {
 			const err = error as Error;
 			logger.error('Failed to send email (resend)', {
 				to,
 				subject,
+				from: env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev',
 				message: err.message,
 			});
 			throw err;
