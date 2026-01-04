@@ -143,7 +143,7 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     logger.error('Google auth error', { error });
 
     if (error instanceof Error) {
-      if (error.message.includes('Invalid Google token')) {
+      if (error.message.includes('Invalid Google token') || error.message.includes('Invalid token payload')) {
         return res.status(401).json({ error: 'Invalid Google token' });
       }
       if (error.message.includes('Email not verified')) {

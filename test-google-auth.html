@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Auth Test</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <h1>Google Sign-In Test</h1>
+    <div id="g_id_onload"
+         data-client_id="431303927670-egehfr50trc2vk91o1abeidad47neffd.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+         data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="sign_in_with"
+         data-shape="rectangular"
+         data-logo_alignment="left">
+    </div>
+
+    <div id="output" style="margin-top: 20px; word-break: break-all; font-family: monospace;"></div>
+
+    <script>
+        function handleCredentialResponse(response) {
+            console.log("Encoded JWT ID token: " + response.credential);
+            document.getElementById("output").innerHTML = 
+                "<h3>Success! ID Token:</h3>" + response.credential + 
+                "<br><br><b>Next step:</b> Send this token to POST /api/auth/google";
+        }
+    </script>
+</body>
+</html>
