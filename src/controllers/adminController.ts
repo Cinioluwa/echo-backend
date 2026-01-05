@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
-import { ProgressStatus } from '@prisma/client';
+import { ProgressStatus, Status } from '@prisma/client';
 import { AuthRequest } from '../types/AuthRequest.js';
 
 export const getPlatformStats = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -464,6 +464,114 @@ export const getResponseTimeAnalytics = async (req: AuthRequest, res: Response, 
             avgMsToResolve: calcAvg(overallResolve),
             byCategory: byCategoryOut,
         });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getAllWavesAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+
+        const page = parseInt(req.query.page as string) || 1;
+        let limit = parseInt(req.query.limit as string) || 20;
+        if (limit > 100) limit = 100;
+        const skip = (page - 1) * limit;
+
+        const status = req.query.status as string | undefined;
+        const where: any = { organizationId };
+        if (status && (Object.values(Status) as string[]).includes(status)) {
+            where.status = status as Status;
+        }
+
+        const [waves, totalWaves] = await prisma.$transaction([
+            prisma.wave.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    ping: { select: { id: true, title: true, progressStatus: true } },
+                    flaggedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    _count: { select: { surges: true, comments: true } },
+                },
+            }),
+            prisma.wave.count({ where }),
+        ]);
+
+        const totalPages = Math.ceil(totalWaves / limit);
+
+        return res.status(200).json({
+            data: waves,
+            pagination: {
+                totalWaves,
+                totalPages,
+                currentPage: page,
+                limit,
+            },
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const waveId = parseInt(req.params.id);
+        const { status } = req.body as { status: Status };
+
+        if (!Object.values(Status).includes(status)) {
+            return res.status(400).json({ error: 'Invalid wave status' });
+        }
+
+        const wave = await prisma.wave.findFirst({
+            where: { id: waveId, organizationId },
+            select: { id: true, pingId: true, status: true },
+        });
+
+        if (!wave) {
+            return res.status(404).json({ error: 'Wave not found' });
+        }
+
+        const now = new Date();
+
+        const updated = await prisma.$transaction(async (tx) => {
+            const updatedWave = await tx.wave.update({
+                where: { id: waveId },
+                data: {
+                    status,
+                    flaggedForReview: status === Status.UNDER_REVIEW,
+                },
+                select: {
+                    id: true,
+                    pingId: true,
+                    status: true,
+                    flaggedForReview: true,
+                },
+            });
+
+            // Product rule: approving a wave resolves its parent ping.
+            if (status === Status.APPROVED) {
+                await tx.ping.updateMany({
+                    where: { id: updatedWave.pingId, organizationId },
+                    data: {
+                        resolvedAt: now,
+                        progressStatus: ProgressStatus.RESOLVED,
+                        progressUpdatedAt: now,
+                    },
+                });
+
+                await tx.officialResponse.updateMany({
+                    where: { pingId: updatedWave.pingId, organizationId },
+                    data: { isResolved: true },
+                });
+            }
+
+            return updatedWave;
+        });
+
+        return res.status(200).json(updated);
     } catch (error) {
         return next(error);
     }

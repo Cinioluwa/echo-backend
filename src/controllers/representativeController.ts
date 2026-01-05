@@ -103,7 +103,7 @@ export const forwardWaves = async (req: AuthRequest, res: Response, next: NextFu
                 id: { in: waveIds.map(Number).filter(Boolean) },
                 organizationId: req.organizationId!,
             },
-            data: { flaggedForReview: true, flaggedById },
+            data: { flaggedForReview: true, flaggedById, status: Status.UNDER_REVIEW },
         });
 
         return res.status(200).json({ message: 'Waves forwarded for review', count: updated.count });

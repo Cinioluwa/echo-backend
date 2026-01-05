@@ -126,6 +126,7 @@ model Ping {
 model Wave {
   id               Int      @id @default(autoincrement())
   solution         String
+  status           Status   @default(POSTED)
   viewCount        Int      @default(0)
   surgeCount       Int      @default(0)
   flaggedForReview Boolean  @default(false)
@@ -150,6 +151,7 @@ model Wave {
 
   // New performance indexes
   @@index([organizationId, pingId])
+  @@index([organizationId, status])
 }
 
 model Comment {

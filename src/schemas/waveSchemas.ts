@@ -49,3 +49,9 @@ export const updateWaveSchema = z.object({
     isAnonymous: z.boolean().optional(),
   }),
 });
+
+export const updateWaveStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['POSTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED']),
+  }),
+});

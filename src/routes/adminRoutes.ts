@@ -12,6 +12,8 @@ import {
     acknowledgePing,
     resolvePing,
     getResponseTimeAnalytics,
+    getAllWavesAsAdmin,
+    updateWaveStatusAsAdmin,
 
     } from '../controllers/adminController.js';
 import { 
@@ -25,9 +27,11 @@ import superAdminMiddleware from '../middleware/superAdminMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { paginationWithFiltersSchema } from '../schemas/paginationSchema.js';
+import { paginationSchema } from '../schemas/paginationSchema.js';
 import { pingIdSchema } from '../schemas/pingSchemas.js';
 import { userIdParamSchema } from '../schemas/userSchemas.js';
 import { responseTimeAnalyticsSchema, updateUserRoleSchema } from '../schemas/adminSchemas.js';
+import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
 import { 
     createAnnouncementSchema, 
     updateAnnouncementSchema 
@@ -61,6 +65,10 @@ router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, orga
 router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), acknowledgePing);
 router.post('/pings/:id/resolve', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), resolvePing);
 router.get('/analytics/response-times', authMiddleware, adminMiddleware, organizationMiddleware, validate(responseTimeAnalyticsSchema), getResponseTimeAnalytics);
+
+// Waves moderation (ADMIN)
+router.get('/waves', authMiddleware, adminMiddleware, organizationMiddleware, validate(paginationSchema), getAllWavesAsAdmin);
+router.patch('/waves/:id/status', authMiddleware, adminMiddleware, organizationMiddleware, validate(waveIdParamSchema), validate(updateWaveStatusSchema), updateWaveStatusAsAdmin);
 
 export default router;
 
