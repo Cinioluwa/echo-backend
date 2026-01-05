@@ -372,23 +372,50 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 **Purpose**: Get platform statistics
 **Auth**: Required (JWT) + Admin role
 
-#### GET /api/admin/stats/categories
+**Optional Query (weekly windows)**:
+- `weeks`: number of weeks (1–52)
+- `offsetWeeks`: number of weeks back from “now” (0 = current window)
+
+Example:
+`GET /api/admin/stats?weeks=1&offsetWeeks=0`
+
+#### GET /api/admin/analytics/by-category
 **Purpose**: Get ping stats by category
 **Auth**: Required (JWT) + Admin role
+**Optional Query (weekly windows)**: `weeks`, `offsetWeeks`
 
-#### GET /api/admin/stats/levels
+#### GET /api/admin/analytics/by-level
 **Purpose**: Get pings by user level
 **Auth**: Required (JWT) + Admin role
+**Optional Query (weekly windows)**: `weeks`, `offsetWeeks`
 
-#### PATCH /api/admin/pings/:id/progress
+#### GET /api/admin/analytics/active-users
+**Purpose**: Count distinct active users in a weekly window
+**Auth**: Required (JWT) + Admin role
+**Query**: `weeks`, `offsetWeeks`
+
+#### PATCH /api/admin/pings/:id/progress-status
 **Purpose**: Update ping progress status
 **Auth**: Required (JWT) + Admin role
 **Params**: id (ping ID)
 **Body**:
 ```json
 {
-  "progressStatus": "IN_PROGRESS"
+  "status": "IN_PROGRESS"
 }
+```
+
+#### GET /api/admin/waves
+**Purpose**: List waves for moderation
+**Auth**: Required (JWT) + Admin role
+**Query**: `page`, `limit`, optional `status`
+
+#### PATCH /api/admin/waves/:id/status
+**Purpose**: Update a wave status (approving a wave resolves its parent ping)
+**Auth**: Required (JWT) + Admin role
+**Body**:
+```json
+{ "status": "APPROVED" }
 ```
 
 ---

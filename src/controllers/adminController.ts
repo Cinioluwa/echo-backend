@@ -224,9 +224,13 @@ export const updateUserRole = async (req: AuthRequest, res: Response, next: Next
 
 export const getPingsByLevel = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+        const window = getWeekWindowFromQuery(req.query);
+        const createdAtFilter = window ? { createdAt: { gte: window.start, lt: window.end } } : undefined;
+
         const pings = await prisma.ping.findMany({
             where: {
                 organizationId: req.organizationId!,
+                ...(createdAtFilter ?? {}),
             },
             select: {
                 author: {
@@ -257,9 +261,13 @@ export const getPingsByLevel = async (req: AuthRequest, res: Response, next: Nex
 
 export const getPingStatsByCategory = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+        const window = getWeekWindowFromQuery(req.query);
+        const createdAtFilter = window ? { createdAt: { gte: window.start, lt: window.end } } : undefined;
+
     const stats = await prisma.ping.groupBy({
       where: {
         organizationId: req.organizationId!,
+                ...(createdAtFilter ?? {}),
       },
       by: ['categoryId'],
       _count: {

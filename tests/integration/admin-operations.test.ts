@@ -279,6 +279,16 @@ describe('Admin Operations', () => {
       expect(typeof res.body[0].value).toBe('number');
     });
 
+    it('should support weekly window analytics by level (previous week is empty in tests)', async () => {
+      const res = await client
+        .get('/api/admin/analytics/by-level?weeks=1&offsetWeeks=1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBe(0);
+    });
+
     it('should get ping stats by category', async () => {
       const res = await client
         .get('/api/admin/analytics/by-category')
@@ -290,6 +300,16 @@ describe('Admin Operations', () => {
       expect(res.body[0]).toHaveProperty('name');
       expect(res.body[0]).toHaveProperty('count');
       expect(typeof res.body[0].count).toBe('number');
+    });
+
+    it('should support weekly window analytics by category (previous week is empty in tests)', async () => {
+      const res = await client
+        .get('/api/admin/analytics/by-category?weeks=1&offsetWeeks=1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBe(0);
     });
 
     it('should get active users for the current week window', async () => {

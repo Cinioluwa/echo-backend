@@ -31,7 +31,7 @@ import { paginationWithFiltersSchema, paginationWithStatusSchema } from '../sche
 import { paginationSchema } from '../schemas/paginationSchema.js';
 import { pingIdSchema } from '../schemas/pingSchemas.js';
 import { userIdParamSchema } from '../schemas/userSchemas.js';
-import { analyticsWindowSchema, responseTimeAnalyticsSchema, updateUserRoleSchema } from '../schemas/adminSchemas.js';
+import { analyticsWindowOptionalSchema, analyticsWindowSchema, responseTimeAnalyticsSchema, updateUserRoleSchema } from '../schemas/adminSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
 import { 
     createAnnouncementSchema, 
@@ -59,8 +59,8 @@ router.patch('/users/:id/role', authMiddleware, adminMiddleware, organizationMid
 router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddleware, validate(createAnnouncementSchema), createAnnouncement);
 router.patch('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
 router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, deleteAnnouncement);
-router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, getPingsByLevel);
-router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, getPingStatsByCategory);
+router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), getPingsByLevel);
+router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), getPingStatsByCategory);
 router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getActiveUsersAnalytics);
 router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
 router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, organizationMiddleware, updatePingProgressStatus);

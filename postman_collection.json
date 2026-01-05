@@ -27,9 +27,21 @@
 							"path": [
 								"admin",
 								"stats"
+							],
+							"query": [
+								{
+									"key": "weeks",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "offsetWeeks",
+									"value": "0",
+									"disabled": true
+								}
 							]
 						},
-						"description": "Retrieves overall platform statistics. Requires admin privileges."
+						"description": "Retrieves overall platform statistics. Optional query params: weeks, offsetWeeks. Requires admin privileges."
 					},
 					"response": []
 				},
@@ -283,9 +295,21 @@
 								"admin",
 								"analytics",
 								"by-level"
+							],
+							"query": [
+								{
+									"key": "weeks",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "offsetWeeks",
+									"value": "0",
+									"disabled": true
+								}
 							]
 						},
-						"description": "Retrieves ping analytics grouped by user level. Requires admin privileges."
+						"description": "Retrieves ping analytics grouped by user level. Optional query params: weeks, offsetWeeks. Requires admin privileges."
 					},
 					"response": []
 				},
@@ -308,9 +332,56 @@
 								"admin",
 								"analytics",
 								"by-category"
+							],
+							"query": [
+								{
+									"key": "weeks",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "offsetWeeks",
+									"value": "0",
+									"disabled": true
+								}
 							]
 						},
-						"description": "Retrieves ping statistics grouped by category. Requires admin privileges."
+						"description": "Retrieves ping statistics grouped by category. Optional query params: weeks, offsetWeeks. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Users (Weekly Window)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/analytics/active-users?weeks=1&offsetWeeks=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"analytics",
+								"active-users"
+							],
+							"query": [
+								{
+									"key": "weeks",
+									"value": "1"
+								},
+								{
+									"key": "offsetWeeks",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Counts distinct active users in the requested window. Active means any activity (ping, comment, surge, official response) during the window. Requires admin privileges."
 					},
 					"response": []
 				},
@@ -361,7 +432,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"progressStatus\": \"IN_PROGRESS\"\n}"
+							"raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/admin/pings/:id/progress-status",
@@ -477,6 +548,85 @@
 							]
 						},
 						"description": "Retrieves response-time analytics for pings (acknowledge/resolve), optionally filtered by a lookback window in days. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Waves (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/waves?page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"waves"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "status",
+									"value": "UNDER_REVIEW",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lists waves for moderation (pagination + optional status filter). Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Wave Status (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"APPROVED\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/waves/:id/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"waves",
+								":id",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "wave_id"
+								}
+							]
+						},
+						"description": "Updates a wave status. Product rule: approving a wave resolves its parent ping. Requires admin privileges."
 					},
 					"response": []
 				}

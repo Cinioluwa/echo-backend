@@ -22,3 +22,10 @@ export const analyticsWindowSchema = z.object({
     offsetWeeks: z.coerce.number().int().min(0).max(520).default(0),
   }),
 });
+
+export const analyticsWindowOptionalSchema = z.object({
+  query: z.object({
+    weeks: z.coerce.number().int().min(1).max(52).optional(),
+    offsetWeeks: z.coerce.number().int().min(0).max(520).optional(),
+  }),
+});

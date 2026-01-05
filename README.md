@@ -271,7 +271,7 @@ node scripts/upsert-school-orgs.mjs
 - `POST /waves/forward` — Forward waves for admin review (rep-only)
 
 ### Admin — `/api/admin`
-- `GET /stats` — Platform stats (admin)
+- `GET /stats` — Platform stats (admin) (optional query: `weeks`, `offsetWeeks`)
 - `GET /pings` — List all pings with filters/pagination (admin)
 - `DELETE /pings/:id` — Delete any ping (admin)
 - `PATCH /pings/:id/progress-status` — Update ping progress status (admin)
@@ -280,9 +280,12 @@ node scripts/upsert-school-orgs.mjs
 - `GET /users` — List users (admin)
 - `GET /users/:id` — Get user by id (admin)
 - `PATCH /users/:id/role` — Update user role (ADMIN | REPRESENTATIVE | USER) (admin)
-- `GET /analytics/by-level` — Pings grouped by level (admin)
-- `GET /analytics/by-category` — Pings grouped by category (admin)
+- `GET /analytics/by-level` — Pings grouped by level (admin) (optional query: `weeks`, `offsetWeeks`)
+- `GET /analytics/by-category` — Pings grouped by category (admin) (optional query: `weeks`, `offsetWeeks`)
+- `GET /analytics/active-users` — Active users in window (admin) (query: `weeks`, `offsetWeeks`)
 - `GET /analytics/response-times` — Response-time analytics (admin) (query: `days`, default 30)
+- `GET /waves` — List waves for moderation (admin) (pagination + optional `status`)
+- `PATCH /waves/:id/status` — Update a wave status (admin) (body: `{ status }`)
 - `POST /announcements` — Create announcement (admin)
 - `PATCH /announcements/:id` — Update announcement (admin)
 - `DELETE /announcements/:id` — Delete announcement (admin)
