@@ -29,3 +29,11 @@ export const analyticsWindowOptionalSchema = z.object({
     offsetWeeks: z.coerce.number().int().min(0).max(520).optional(),
   }),
 });
+
+export const priorityPingsSchema = z.object({
+  query: z.object({
+    weeks: z.coerce.number().int().min(1).max(52).default(1),
+    offsetWeeks: z.coerce.number().int().min(0).max(520).default(0),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  }),
+});

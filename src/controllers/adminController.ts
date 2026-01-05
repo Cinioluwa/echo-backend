@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { ProgressStatus, Status } from '@prisma/client';
 import { AuthRequest } from '../types/AuthRequest.js';
+import Sentiment from 'sentiment';
 
 const DAYS_IN_WEEK = 7;
 const MS_IN_DAY = 24 * 60 * 60 * 1000;
@@ -694,6 +695,223 @@ export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, n
         });
 
         return res.status(200).json(updated);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getTrendingCategories = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+
+        const window =
+            getWeekWindowFromQuery(req.query) ??
+            (() => {
+                const now = Date.now();
+                const end = new Date(now);
+                const start = new Date(now - DAYS_IN_WEEK * MS_IN_DAY);
+                return { start, end, weeks: 1, offsetWeeks: 0 };
+            })();
+
+        const durationMs = window.end.getTime() - window.start.getTime();
+        const previousEnd = window.start;
+        const previousStart = new Date(previousEnd.getTime() - durationMs);
+
+        const createdAtCurrent = { gte: window.start, lt: window.end };
+        const createdAtPrevious = { gte: previousStart, lt: previousEnd };
+
+        const [currentRows, previousRows] = await prisma.$transaction([
+            prisma.ping.findMany({
+                where: { organizationId, createdAt: createdAtCurrent },
+                select: { categoryId: true },
+            }),
+            prisma.ping.findMany({
+                where: { organizationId, createdAt: createdAtPrevious },
+                select: { categoryId: true },
+            }),
+        ]);
+
+        const countByCategory = (rows: Array<{ categoryId: number }>) => {
+            const out = new Map<number, number>();
+            for (const row of rows) out.set(row.categoryId, (out.get(row.categoryId) ?? 0) + 1);
+            return out;
+        };
+
+        const currentMap = countByCategory(currentRows);
+        const previousMap = countByCategory(previousRows);
+
+        const categoryIds = Array.from(currentMap.keys());
+        const categories = categoryIds.length
+            ? await prisma.category.findMany({
+                  where: { id: { in: categoryIds } },
+                  select: { id: true, name: true },
+              })
+            : [];
+        const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
+
+        const data = categoryIds
+            .map((categoryId) => {
+                const currentCount = currentMap.get(categoryId) ?? 0;
+                const previousCount = previousMap.get(categoryId) ?? 0;
+                const delta = currentCount - previousCount;
+                const percentChange = previousCount === 0 ? null : (delta / previousCount) * 100;
+
+                return {
+                    categoryId,
+                    categoryName: categoryNameById.get(categoryId) ?? 'Unknown',
+                    currentCount,
+                    previousCount,
+                    delta,
+                    percentChange,
+                    isNew: previousCount === 0 && currentCount > 0,
+                };
+            })
+            .sort((a, b) => b.delta - a.delta || b.currentCount - a.currentCount);
+
+        return res.status(200).json({
+            window: {
+                weeks: window.weeks,
+                offsetWeeks: window.offsetWeeks,
+                start: window.start,
+                end: window.end,
+            },
+            comparisonWindow: {
+                start: previousStart,
+                end: previousEnd,
+            },
+            data,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getPriorityPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+
+        const weeks = clampInt(req.query.weeks, 1, 1, 52);
+        const offsetWeeks = clampInt(req.query.offsetWeeks, 0, 0, 520);
+        const limit = clampInt(req.query.limit, 20, 1, 100);
+
+        const now = Date.now();
+        const end = new Date(now - offsetWeeks * DAYS_IN_WEEK * MS_IN_DAY);
+        const start = new Date(end.getTime() - weeks * DAYS_IN_WEEK * MS_IN_DAY);
+
+        // Pull a slightly larger candidate set for scoring, then slice to requested limit.
+        const candidateTake = Math.min(100, Math.max(limit * 5, limit));
+
+        const candidates = await prisma.ping.findMany({
+            where: {
+                organizationId,
+                createdAt: { gte: start, lt: end },
+                progressStatus: { not: ProgressStatus.RESOLVED },
+            },
+            take: candidateTake,
+            orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+            include: {
+                category: { select: { id: true, name: true } },
+                author: { select: { email: true, firstName: true, lastName: true } },
+                _count: { select: { waves: true, comments: true, surges: true } },
+            },
+        });
+
+        const scored = candidates
+            .map((ping) => {
+                const waves = ping._count.waves;
+                const comments = ping._count.comments;
+                const surges = ping.surgeCount;
+
+                // MVP scoring: engagement-weighted. (No LLMs, no hidden heuristics.)
+                const priorityScore = surges * 3 + comments * 2 + waves;
+
+                return {
+                    ...ping,
+                    priorityScore,
+                };
+            })
+            .sort((a, b) => b.priorityScore - a.priorityScore || b.createdAt.getTime() - a.createdAt.getTime())
+            .slice(0, limit);
+
+        return res.status(200).json({
+            window: {
+                weeks,
+                offsetWeeks,
+                start,
+                end,
+            },
+            limit,
+            data: scored,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getPingSentimentAnalytics = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+
+        const weeks = clampInt(req.query.weeks, 1, 1, 52);
+        const offsetWeeks = clampInt(req.query.offsetWeeks, 0, 0, 520);
+
+        const now = Date.now();
+        const end = new Date(now - offsetWeeks * DAYS_IN_WEEK * MS_IN_DAY);
+        const start = new Date(end.getTime() - weeks * DAYS_IN_WEEK * MS_IN_DAY);
+
+        const pings = await prisma.ping.findMany({
+            where: {
+                organizationId,
+                createdAt: { gte: start, lt: end },
+            },
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                createdAt: true,
+            },
+        });
+
+        const sentiment = new Sentiment();
+
+        let positive = 0;
+        let neutral = 0;
+        let negative = 0;
+        let sumScore = 0;
+
+        for (const ping of pings) {
+            const text = `${ping.title}. ${ping.content}`;
+            const result = sentiment.analyze(text);
+            sumScore += result.score;
+
+            if (result.score > 0) positive += 1;
+            else if (result.score < 0) negative += 1;
+            else neutral += 1;
+        }
+
+        const total = pings.length;
+        const pct = (count: number) => (total === 0 ? 0 : (count / total) * 100);
+
+        return res.status(200).json({
+            window: {
+                weeks,
+                offsetWeeks,
+                start,
+                end,
+            },
+            totalPings: total,
+            averageScore: total === 0 ? 0 : sumScore / total,
+            counts: {
+                positive,
+                neutral,
+                negative,
+            },
+            percentages: {
+                positive: pct(positive),
+                neutral: pct(neutral),
+                negative: pct(negative),
+            },
+        });
     } catch (error) {
         return next(error);
     }

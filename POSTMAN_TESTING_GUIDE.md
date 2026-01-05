@@ -394,6 +394,21 @@ Example:
 **Auth**: Required (JWT) + Admin role
 **Query**: `weeks`, `offsetWeeks`
 
+#### GET /api/admin/analytics/trending
+**Purpose**: Category trending (current weekly window vs the previous window)
+**Auth**: Required (JWT) + Admin role
+**Query**: `weeks`, `offsetWeeks`
+
+#### GET /api/admin/analytics/sentiment
+**Purpose**: Ping sentiment breakdown (pings-only; deterministic lexicon scoring)
+**Auth**: Required (JWT) + Admin role
+**Query**: `weeks`, `offsetWeeks`
+
+#### GET /api/admin/pings/priority
+**Purpose**: Get priority-ranked pings for the window
+**Auth**: Required (JWT) + Admin role
+**Query**: `weeks`, `offsetWeeks`, optional `limit`
+
 #### PATCH /api/admin/pings/:id/progress-status
 **Purpose**: Update ping progress status
 **Auth**: Required (JWT) + Admin role

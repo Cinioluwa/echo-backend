@@ -273,6 +273,7 @@ node scripts/upsert-school-orgs.mjs
 ### Admin — `/api/admin`
 - `GET /stats` — Platform stats (admin) (optional query: `weeks`, `offsetWeeks`)
 - `GET /pings` — List all pings with filters/pagination (admin)
+- `GET /pings/priority` — Priority-ranked pings in window (admin) (query: `weeks`, `offsetWeeks`, optional `limit`)
 - `DELETE /pings/:id` — Delete any ping (admin)
 - `PATCH /pings/:id/progress-status` — Update ping progress status (admin)
 - `POST /pings/:id/acknowledge` — Mark ping as acknowledged (admin)
@@ -283,6 +284,8 @@ node scripts/upsert-school-orgs.mjs
 - `GET /analytics/by-level` — Pings grouped by level (admin) (optional query: `weeks`, `offsetWeeks`)
 - `GET /analytics/by-category` — Pings grouped by category (admin) (optional query: `weeks`, `offsetWeeks`)
 - `GET /analytics/active-users` — Active users in window (admin) (query: `weeks`, `offsetWeeks`)
+- `GET /analytics/trending` — Category trending (current window vs previous window) (admin) (query: `weeks`, `offsetWeeks`)
+- `GET /analytics/sentiment` — Ping sentiment breakdown (pings-only; deterministic) (admin) (query: `weeks`, `offsetWeeks`)
 - `GET /analytics/response-times` — Response-time analytics (admin) (query: `days`, default 30)
 - `GET /waves` — List waves for moderation (admin) (pagination + optional `status`)
 - `PATCH /waves/:id/status` — Update a wave status (admin) (body: `{ status }`)

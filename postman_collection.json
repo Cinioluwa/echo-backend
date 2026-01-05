@@ -386,6 +386,115 @@
 					"response": []
 				},
 				{
+					"name": "Get Trending Categories (Weekly Window)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/analytics/trending?weeks=1&offsetWeeks=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"analytics",
+								"trending"
+							],
+							"query": [
+								{
+									"key": "weeks",
+									"value": "1"
+								},
+								{
+									"key": "offsetWeeks",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Returns category trending for the window vs the previous window of the same duration. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ping Sentiment (Weekly Window)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/analytics/sentiment?weeks=1&offsetWeeks=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"analytics",
+								"sentiment"
+							],
+							"query": [
+								{
+									"key": "weeks",
+									"value": "1"
+								},
+								{
+									"key": "offsetWeeks",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Returns deterministic sentiment breakdown computed from ping title+content only (no LLM). Requires admin privileges."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Priority Pings (Weekly Window)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/pings/priority?weeks=1&offsetWeeks=0&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"pings",
+								"priority"
+							],
+							"query": [
+								{
+									"key": "weeks",
+									"value": "1"
+								},
+								{
+									"key": "offsetWeeks",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Returns pings ranked by a transparent engagement-based priority score in the requested weekly window. Excludes resolved pings. Requires admin privileges."
+					},
+					"response": []
+				},
+				{
 					"name": "Get User by ID (Admin)",
 					"request": {
 						"method": "GET",

@@ -15,6 +15,9 @@ import {
     getAllWavesAsAdmin,
     updateWaveStatusAsAdmin,
     getActiveUsersAnalytics,
+    getTrendingCategories,
+    getPingSentimentAnalytics,
+    getPriorityPings,
 
     } from '../controllers/adminController.js';
 import { 
@@ -31,7 +34,13 @@ import { paginationWithFiltersSchema, paginationWithStatusSchema } from '../sche
 import { paginationSchema } from '../schemas/paginationSchema.js';
 import { pingIdSchema } from '../schemas/pingSchemas.js';
 import { userIdParamSchema } from '../schemas/userSchemas.js';
-import { analyticsWindowOptionalSchema, analyticsWindowSchema, responseTimeAnalyticsSchema, updateUserRoleSchema } from '../schemas/adminSchemas.js';
+import {
+    analyticsWindowOptionalSchema,
+    analyticsWindowSchema,
+    priorityPingsSchema,
+    responseTimeAnalyticsSchema,
+    updateUserRoleSchema,
+} from '../schemas/adminSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
 import { 
     createAnnouncementSchema, 
@@ -62,7 +71,10 @@ router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizatio
 router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), getPingsByLevel);
 router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), getPingStatsByCategory);
 router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getActiveUsersAnalytics);
+router.get('/analytics/trending', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getTrendingCategories);
+router.get('/analytics/sentiment', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getPingSentimentAnalytics);
 router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
+router.get('/pings/priority', authMiddleware, adminMiddleware, organizationMiddleware, validate(priorityPingsSchema), getPriorityPings);
 router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, organizationMiddleware, updatePingProgressStatus);
 router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), acknowledgePing);
 router.post('/pings/:id/resolve', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), resolvePing);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { createUser, createOrganization, createCategory, createPing, cleanupTestData } from '../fixtures/index.js';
+import { createUser, createOrganization, createCategory, createPing, createComment, createWave, cleanupTestData } from '../fixtures/index.js';
 
 describe('Admin Operations', () => {
   let client: any;
@@ -330,6 +330,118 @@ describe('Admin Operations', () => {
         .expect(200);
 
       expect(res.body.activeUsers).toBe(0);
+    });
+
+    it('should get trending categories (current week vs previous week)', async () => {
+      // Ping 1 is deleted earlier in Ping Management tests, so create fresh pings here
+      // to guarantee both categories exist in the current window.
+      await createPing({
+        title: 'Trending Ping - Academic',
+        content: 'Academic trending ping',
+        categoryId: category1.id,
+        organizationId: org1.id,
+        authorId: regularUser.id,
+      });
+
+      await createPing({
+        title: 'Trending Ping - Administrative',
+        content: 'Administrative trending ping',
+        categoryId: category2.id,
+        organizationId: org1.id,
+        authorId: regularUser.id,
+      });
+
+      const res = await client
+        .get('/api/admin/analytics/trending?weeks=1&offsetWeeks=0')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body).toHaveProperty('data');
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+
+      const academic = res.body.data.find((row: any) => row.categoryId === category1.id);
+      const administrative = res.body.data.find((row: any) => row.categoryId === category2.id);
+      expect(academic).toBeDefined();
+      expect(administrative).toBeDefined();
+
+      expect(academic.currentCount).toBeGreaterThan(0);
+      expect(academic.previousCount).toBe(0);
+      expect(academic.delta).toBe(academic.currentCount);
+    });
+
+    it('should get ping sentiment analytics (pings-only) in current window', async () => {
+      await createPing({
+        title: 'I love this',
+        content: 'This is great and awesome',
+        categoryId: category1.id,
+        organizationId: org1.id,
+        authorId: regularUser.id,
+      });
+
+      await createPing({
+        title: 'I hate this',
+        content: 'This is terrible and awful',
+        categoryId: category2.id,
+        organizationId: org1.id,
+        authorId: regularUser.id,
+      });
+
+      const res = await client
+        .get('/api/admin/analytics/sentiment?weeks=1&offsetWeeks=0')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body).toHaveProperty('totalPings');
+      expect(res.body.totalPings).toBeGreaterThan(0);
+      expect(res.body).toHaveProperty('counts');
+      expect(res.body.counts).toHaveProperty('positive');
+      expect(res.body.counts).toHaveProperty('neutral');
+      expect(res.body.counts).toHaveProperty('negative');
+      expect(res.body.counts.positive + res.body.counts.neutral + res.body.counts.negative).toBe(res.body.totalPings);
+      expect(typeof res.body.averageScore).toBe('number');
+    });
+
+    it('should return priority pings ranked by engagement score', async () => {
+      const high = await createPing({
+        title: 'High Priority',
+        content: 'High engagement ping',
+        categoryId: category1.id,
+        organizationId: org1.id,
+        authorId: regularUser.id,
+        // @ts-expect-error allow extra field for tests
+        surgeCount: 10,
+      });
+
+      const low = await createPing({
+        title: 'Low Priority',
+        content: 'Low engagement ping',
+        categoryId: category2.id,
+        organizationId: org1.id,
+        authorId: regularUser.id,
+        // @ts-expect-error allow extra field for tests
+        surgeCount: 0,
+      });
+
+      await createComment({ pingId: low.id, authorId: regularUser.id, organizationId: org1.id, content: 'comment 1' });
+      await createComment({ pingId: low.id, authorId: regularUser.id, organizationId: org1.id, content: 'comment 2' });
+      await createWave({ pingId: low.id, organizationId: org1.id, solution: 'wave 1' });
+
+      const res = await client
+        .get('/api/admin/pings/priority?weeks=1&offsetWeeks=0&limit=10')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body).toHaveProperty('data');
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      expect(res.body.data[0]).toHaveProperty('priorityScore');
+
+      const highRow = res.body.data.find((row: any) => row.id === high.id);
+      const lowRow = res.body.data.find((row: any) => row.id === low.id);
+      expect(highRow).toBeDefined();
+      expect(lowRow).toBeDefined();
+      expect(highRow.priorityScore).toBeGreaterThan(lowRow.priorityScore);
     });
   });
 
