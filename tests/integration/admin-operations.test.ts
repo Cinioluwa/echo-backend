@@ -109,6 +109,23 @@ describe('Admin Operations', () => {
       expect(typeof res.body.totalComments).toBe('number');
     });
 
+    it('should support weekly window stats (previous week is empty in tests)', async () => {
+      const res = await client
+        .get('/api/admin/stats?weeks=1&offsetWeeks=1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.totalUsers).toBe(0);
+      expect(res.body.totalPings).toBe(0);
+      expect(res.body.totalSurges).toBe(0);
+      expect(res.body.totalWaves).toBe(0);
+      expect(res.body.totalComments).toBe(0);
+      expect(res.body.totalOrganizations).toBe(1);
+      expect(res.body).toHaveProperty('window');
+      expect(res.body.window).toHaveProperty('weeks', 1);
+      expect(res.body.window).toHaveProperty('offsetWeeks', 1);
+    });
+
     it('should reject non-admin access to stats', async () => {
       await client
         .get('/api/admin/stats')
@@ -273,6 +290,26 @@ describe('Admin Operations', () => {
       expect(res.body[0]).toHaveProperty('name');
       expect(res.body[0]).toHaveProperty('count');
       expect(typeof res.body[0].count).toBe('number');
+    });
+
+    it('should get active users for the current week window', async () => {
+      const res = await client
+        .get('/api/admin/analytics/active-users?weeks=1&offsetWeeks=0')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body).toHaveProperty('activeUsers');
+      expect(typeof res.body.activeUsers).toBe('number');
+      expect(res.body.activeUsers).toBeGreaterThan(0);
+    });
+
+    it('should return 0 active users for previous week window in tests', async () => {
+      const res = await client
+        .get('/api/admin/analytics/active-users?weeks=1&offsetWeeks=1')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.activeUsers).toBe(0);
     });
   });
 

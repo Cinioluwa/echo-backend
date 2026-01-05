@@ -15,3 +15,10 @@ export const responseTimeAnalyticsSchema = z.object({
     days: z.string().regex(/^\d+$/, 'days must be a positive number').optional(),
   }),
 });
+
+export const analyticsWindowSchema = z.object({
+  query: z.object({
+    weeks: z.coerce.number().int().min(1).max(52).default(1),
+    offsetWeeks: z.coerce.number().int().min(0).max(520).default(0),
+  }),
+});

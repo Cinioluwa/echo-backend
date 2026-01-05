@@ -3,14 +3,60 @@ import prisma from '../config/db.js';
 import { ProgressStatus, Status } from '@prisma/client';
 import { AuthRequest } from '../types/AuthRequest.js';
 
+const DAYS_IN_WEEK = 7;
+const MS_IN_DAY = 24 * 60 * 60 * 1000;
+
+type WeekWindow = {
+    start: Date;
+    end: Date;
+    weeks: number;
+    offsetWeeks: number;
+};
+
+const clampInt = (value: unknown, fallback: number, min: number, max: number) => {
+    const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    const asInt = Math.trunc(parsed);
+    if (asInt < min) return min;
+    if (asInt > max) return max;
+    return asInt;
+};
+
+const getWeekWindowFromQuery = (query: AuthRequest['query']): WeekWindow | null => {
+    const hasWeeks = query.weeks !== undefined;
+    const hasOffset = query.offsetWeeks !== undefined;
+
+    if (!hasWeeks && !hasOffset) return null;
+
+    const weeks = clampInt(query.weeks, 1, 1, 52);
+    const offsetWeeks = clampInt(query.offsetWeeks, 0, 0, 520);
+
+    const now = Date.now();
+    const endMs = now - offsetWeeks * DAYS_IN_WEEK * MS_IN_DAY;
+    const startMs = endMs - weeks * DAYS_IN_WEEK * MS_IN_DAY;
+
+    return {
+        start: new Date(startMs),
+        end: new Date(endMs),
+        weeks,
+        offsetWeeks,
+    };
+};
+
 export const getPlatformStats = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+        const window = getWeekWindowFromQuery(req.query);
+
+        const createdAtFilter = window
+            ? { createdAt: { gte: window.start, lt: window.end } }
+            : undefined;
+
         const [totalUsers, totalPings, totalSurges, totalWaves, totalComments, totalOrganizations] = await prisma.$transaction([
-            prisma.user.count({ where: { organizationId: req.organizationId! } }),
-            prisma.ping.count({ where: { organizationId: req.organizationId! } }),
-            prisma.surge.count({ where: { organizationId: req.organizationId! } }),
-            prisma.wave.count({ where: { organizationId: req.organizationId! } }),
-            prisma.comment.count({ where: { organizationId: req.organizationId! } }),
+            prisma.user.count({ where: { organizationId: req.organizationId!, ...(createdAtFilter ?? {}) } }),
+            prisma.ping.count({ where: { organizationId: req.organizationId!, ...(createdAtFilter ?? {}) } }),
+            prisma.surge.count({ where: { organizationId: req.organizationId!, ...(createdAtFilter ?? {}) } }),
+            prisma.wave.count({ where: { organizationId: req.organizationId!, ...(createdAtFilter ?? {}) } }),
+            prisma.comment.count({ where: { organizationId: req.organizationId!, ...(createdAtFilter ?? {}) } }),
             prisma.organization.count({ where: { id: req.organizationId! } }),
         ]);
 
@@ -23,7 +69,75 @@ export const getPlatformStats = async (req: AuthRequest, res: Response, next: Ne
             totalOrganizations,
         };
 
-        res.status(200).json(stats);  
+        res.status(200).json({
+            ...stats,
+            ...(window
+                ? {
+                      window: {
+                          weeks: window.weeks,
+                          offsetWeeks: window.offsetWeeks,
+                          start: window.start,
+                          end: window.end,
+                      },
+                  }
+                : {}),
+        });  
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getActiveUsersAnalytics = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+
+        // This route uses validation middleware (weeks/offsetWeeks are coerced),
+        // but keep safe defaults in case of direct calls.
+        const weeks = clampInt(req.query.weeks, 1, 1, 52);
+        const offsetWeeks = clampInt(req.query.offsetWeeks, 0, 0, 520);
+
+        const now = Date.now();
+        const end = new Date(now - offsetWeeks * DAYS_IN_WEEK * MS_IN_DAY);
+        const start = new Date(end.getTime() - weeks * DAYS_IN_WEEK * MS_IN_DAY);
+
+        const createdAt = { gte: start, lt: end };
+
+        const [pingAuthors, commentAuthors, surgeUsers, responseAuthors] = await prisma.$transaction([
+            prisma.ping.findMany({
+                where: { organizationId, createdAt },
+                select: { authorId: true },
+                distinct: ['authorId'],
+            }),
+            prisma.comment.findMany({
+                where: { organizationId, createdAt },
+                select: { authorId: true },
+                distinct: ['authorId'],
+            }),
+            prisma.surge.findMany({
+                where: { organizationId, createdAt },
+                select: { userId: true },
+                distinct: ['userId'],
+            }),
+            prisma.officialResponse.findMany({
+                where: { organizationId, createdAt },
+                select: { authorId: true },
+                distinct: ['authorId'],
+            }),
+        ]);
+
+        const activeUserIds = new Set<number>();
+        for (const row of pingAuthors) activeUserIds.add(row.authorId);
+        for (const row of commentAuthors) activeUserIds.add(row.authorId);
+        for (const row of surgeUsers) activeUserIds.add(row.userId);
+        for (const row of responseAuthors) activeUserIds.add(row.authorId);
+
+        return res.status(200).json({
+            weeks,
+            offsetWeeks,
+            start,
+            end,
+            activeUsers: activeUserIds.size,
+        });
     } catch (error) {
         return next(error);
     }

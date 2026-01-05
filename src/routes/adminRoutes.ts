@@ -14,6 +14,7 @@ import {
     getResponseTimeAnalytics,
     getAllWavesAsAdmin,
     updateWaveStatusAsAdmin,
+    getActiveUsersAnalytics,
 
     } from '../controllers/adminController.js';
 import { 
@@ -30,7 +31,7 @@ import { paginationWithFiltersSchema, paginationWithStatusSchema } from '../sche
 import { paginationSchema } from '../schemas/paginationSchema.js';
 import { pingIdSchema } from '../schemas/pingSchemas.js';
 import { userIdParamSchema } from '../schemas/userSchemas.js';
-import { responseTimeAnalyticsSchema, updateUserRoleSchema } from '../schemas/adminSchemas.js';
+import { analyticsWindowSchema, responseTimeAnalyticsSchema, updateUserRoleSchema } from '../schemas/adminSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
 import { 
     createAnnouncementSchema, 
@@ -60,6 +61,7 @@ router.patch('/announcements/:id', authMiddleware, adminMiddleware, organization
 router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, deleteAnnouncement);
 router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, getPingsByLevel);
 router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, getPingStatsByCategory);
+router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getActiveUsersAnalytics);
 router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
 router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, organizationMiddleware, updatePingProgressStatus);
 router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), acknowledgePing);
