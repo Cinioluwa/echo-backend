@@ -13,7 +13,7 @@ export const paginationWithFiltersSchema = z.object({
     page: z.string().regex(/^\d+$/, 'Page must be a positive number').optional(),
     limit: z.string().regex(/^\d+$/, 'Limit must be a positive number').optional(),
     categoryId: z.string().regex(/^\d+$/, 'Category ID must be a number').optional(),
-    status: z.enum(['POSTED', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED']).optional(),
+    status: z.enum(['POSTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED']).optional(),
   }),
 });
 
