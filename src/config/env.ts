@@ -35,6 +35,9 @@ const envSchema = z.object({
 
   // Transactional email providers
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY must not be empty').optional(),
+
+  // Redis (optional)
+  REDIS_URL: z.string().min(1, 'REDIS_URL must not be empty').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

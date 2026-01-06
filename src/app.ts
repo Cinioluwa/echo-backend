@@ -4,8 +4,10 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { appendFileSync } from 'node:fs';
+import { RedisStore } from 'rate-limit-redis';
 import { requestLogger } from './middleware/requestLogger.js';
 import logger from './config/logger.js';
+import { getRedisClient, isRedisConfigured } from './config/redis.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -73,12 +75,36 @@ export function createApp(options: CreateAppOptions = {}) {
     });
   }
 
+  const redisClient = !options.disableRateLimiting && isRedisConfigured() ? getRedisClient() : null;
+
+  const globalStore = redisClient
+    ? new RedisStore({
+        prefix: 'rl:global:',
+        sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      })
+    : undefined;
+
+  const authStore = redisClient
+    ? new RedisStore({
+        prefix: 'rl:auth:',
+        sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      })
+    : undefined;
+
+  const writeStore = redisClient
+    ? new RedisStore({
+        prefix: 'rl:write:',
+        sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      })
+    : undefined;
+
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 500,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    message: 'Too many requests from this IP, please try again after 15 minutes.'
+    message: 'Too many requests from this IP, please try again after 15 minutes.',
+    store: globalStore,
   });
 
   const authLimiter = rateLimit({
@@ -87,7 +113,8 @@ export function createApp(options: CreateAppOptions = {}) {
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: 'Too many authentication attempts. Please try again after 15 minutes.',
-    skipSuccessfulRequests: true
+    skipSuccessfulRequests: true,
+    store: authStore,
   });
 
   const createLimiter = rateLimit({
@@ -95,7 +122,8 @@ export function createApp(options: CreateAppOptions = {}) {
     max: 30,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    message: 'Too many create/update operations. Please slow down.'
+    message: 'Too many create/update operations. Please slow down.',
+    store: writeStore,
   });
 
   const applyCreateLimiter = (req: Request, res: Response, next: NextFunction) => {

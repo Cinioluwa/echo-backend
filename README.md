@@ -323,6 +323,7 @@ Email sending is best-effort and depends on SMTP/Resend configuration.
   - Global: 500 req / 15 min
   - Auth endpoints `/api/users/register`, `/api/users/login`: 5 attempts / 15 min (successful logins don't count)
   - Create/update operations (POST/PATCH/DELETE): 30 ops / 15 min
+  - Redis-backed store (multi-instance safe): set `REDIS_URL` (provided by Railway Redis)
 - Centralized error handler with safe logging
 - Multitenancy middleware: `organizationMiddleware` attaches `req.organizationId` from JWT
 
