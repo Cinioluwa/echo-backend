@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import logger from '../config/logger.js';
+import { sendEmail } from '../services/emailService.js';
+import { createNotification } from '../services/notificationService.js';
 
 export const createOfficialResponse = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -18,6 +20,12 @@ export const createOfficialResponse = async (req: AuthRequest, res: Response, ne
             where: {
                 id: parseInt(pingId),
                 organizationId: organizationId,
+            },
+            select: {
+                id: true,
+                title: true,
+                authorId: true,
+                author: { select: { email: true, firstName: true } },
             },
         });
         if (!ping) {
@@ -59,8 +67,32 @@ export const createOfficialResponse = async (req: AuthRequest, res: Response, ne
                 });
             }
 
+            // Notify ping author that an official response was posted.
+            await createNotification(tx as any, {
+                userId: ping.authorId,
+                organizationId,
+                type: 'OFFICIAL_RESPONSE_POSTED',
+                title: 'Official response posted',
+                body: `An official response was posted for: ${ping.title}`,
+                pingId: ping.id,
+            });
+
             return created;
         });
+
+        if (ping.author.email) {
+            const to = ping.author.email;
+            const subject = 'Official response posted on your Echo ping';
+            const html = `<p>Hi${ping.author.firstName ? ` ${ping.author.firstName}` : ''},</p>
+<p>An official response was posted for your ping:</p>
+<p><strong>${ping.title}</strong></p>
+<p>You can open Echo to read it.</p>`;
+            setImmediate(() => {
+                sendEmail({ to, subject, html }).catch(() => {
+                    // Best-effort.
+                });
+            });
+        }
 
         return res.status(201).json(newResponse);
     } catch (error) {

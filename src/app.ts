@@ -21,6 +21,7 @@ import publicRoutes from './routes/publicRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import representativeRoutes from './routes/representativeRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 export type CreateAppOptions = {
   disableRateLimiting?: boolean;
@@ -138,6 +139,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/pings/:pingId/official-response', ...writeLimiter, officialResponseRoutes);
   app.use('/api/admin', ...writeLimiter, adminRoutes);
   app.use('/api/announcements', ...writeLimiter, announcementRoutes);
+  app.use('/api/notifications', ...writeLimiter, notificationRoutes);
   app.use('/api/representatives', ...writeLimiter, representativeRoutes);
   app.use('/api/public', publicRoutes);
   app.use('/api/categories', ...writeLimiter, categoryRoutes);

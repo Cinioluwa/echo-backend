@@ -1,31 +1,45 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { createAnnouncementNotificationsForOrg } from '../services/notificationService.js';
 
 export const createAnnouncement = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { title, content, categoryIds } = req.body;
         const userId = req.user!.userId; // Non-null assertion since middleware validates this
+        const organizationId = req.organizationId!;
 
-        const newAnnouncement = await prisma.announcement.create({
-            data: {
-                title,
-                content,
-                authorId: userId,
-                organizationId: req.organizationId!,
-                categories: {
-                    connect: categoryIds?.map((id: number) => ({ id })) || [],
-                },
-            },
-            include: {
-                categories: true,
-                author: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
+        const newAnnouncement = await prisma.$transaction(async (tx) => {
+            const created = await tx.announcement.create({
+                data: {
+                    title,
+                    content,
+                    authorId: userId,
+                    organizationId,
+                    categories: {
+                        connect: categoryIds?.map((id: number) => ({ id })) || [],
                     },
                 },
-            },
+                include: {
+                    categories: true,
+                    author: {
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                        },
+                    },
+                },
+            });
+
+            await createAnnouncementNotificationsForOrg(tx as any, {
+                organizationId,
+                announcementId: created.id,
+                title: 'New announcement',
+                body: created.title,
+                excludeUserId: userId,
+            });
+
+            return created;
         });
 
         return res.status(201).json(newAnnouncement);

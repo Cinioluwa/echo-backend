@@ -200,6 +200,7 @@ export async function createComment(data: CreateCommentData = {}) {
 
 export async function cleanupTestData() {
   await getPrismaClient().$transaction([
+    getPrismaClient().notification.deleteMany(),
     getPrismaClient().surge.deleteMany(),
     getPrismaClient().comment.deleteMany(),
     getPrismaClient().wave.deleteMany(),

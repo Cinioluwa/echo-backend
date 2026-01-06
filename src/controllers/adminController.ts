@@ -3,6 +3,8 @@ import prisma from '../config/db.js';
 import { ProgressStatus, Status } from '@prisma/client';
 import { AuthRequest } from '../types/AuthRequest.js';
 import Sentiment from 'sentiment';
+import { sendEmail } from '../services/emailService.js';
+import { createNotification } from '../services/notificationService.js';
 
 const DAYS_IN_WEEK = 7;
 const MS_IN_DAY = 24 * 60 * 60 * 1000;
@@ -657,6 +659,19 @@ export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, n
             return res.status(404).json({ error: 'Wave not found' });
         }
 
+        const pingForNotify =
+            status === Status.APPROVED
+                ? await prisma.ping.findFirst({
+                      where: { id: wave.pingId, organizationId },
+                      select: {
+                          id: true,
+                          title: true,
+                          authorId: true,
+                          author: { select: { email: true, firstName: true } },
+                      },
+                  })
+                : null;
+
         const now = new Date();
 
         const updated = await prisma.$transaction(async (tx) => {
@@ -689,10 +704,36 @@ export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, n
                     where: { pingId: updatedWave.pingId, organizationId },
                     data: { isResolved: true },
                 });
+
+                if (pingForNotify) {
+                    await createNotification(tx as any, {
+                        userId: pingForNotify.authorId,
+                        organizationId,
+                        type: 'WAVE_APPROVED',
+                        title: 'Wave approved',
+                        body: `A wave was approved for: ${pingForNotify.title}`,
+                        pingId: pingForNotify.id,
+                        waveId: updatedWave.id,
+                    });
+                }
             }
 
             return updatedWave;
         });
+
+        if (status === Status.APPROVED && pingForNotify?.author?.email) {
+            const to = pingForNotify.author.email;
+            const subject = 'A wave was approved on your Echo ping';
+            const html = `<p>Hi${pingForNotify.author.firstName ? ` ${pingForNotify.author.firstName}` : ''},</p>
+<p>A wave was approved for your ping:</p>
+<p><strong>${pingForNotify.title}</strong></p>
+<p>You can open Echo to see the update.</p>`;
+            setImmediate(() => {
+                sendEmail({ to, subject, html }).catch(() => {
+                    // Best-effort.
+                });
+            });
+        }
 
         return res.status(200).json(updated);
     } catch (error) {

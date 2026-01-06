@@ -335,6 +335,28 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 }
 ```
 
+### Notification Routes (In-app)
+
+Notifications are **stored in the database** and can be consumed by the web frontend ("bell/inbox" pattern). Email sending is best-effort and depends on SMTP/Resend configuration.
+
+#### GET /api/notifications
+**Purpose**: List notifications for the current user
+**Auth**: Required (JWT)
+**Query**: `?page=1&limit=20` and optional `unreadOnly=true`
+
+#### GET /api/notifications/unread-count
+**Purpose**: Get unread notification count
+**Auth**: Required (JWT)
+
+#### PATCH /api/notifications/:id/read
+**Purpose**: Mark a notification as read (idempotent)
+**Auth**: Required (JWT)
+
+**How to generate test notifications**:
+- Approve a wave as admin (`PATCH /api/admin/waves/:id/status` with `{ "status": "APPROVED" }`) → creates `WAVE_APPROVED` for the ping author.
+- Post an official response as representative (`POST /api/pings/:pingId/official-response`) → creates `OFFICIAL_RESPONSE_POSTED` for the ping author.
+- Create an admin announcement (`POST /api/admin/announcements`) → creates `ANNOUNCEMENT_POSTED` for org users excluding the author.
+
 ### Admin Routes
 
 #### GET /api/admin/pings

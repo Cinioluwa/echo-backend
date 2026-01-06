@@ -259,6 +259,18 @@ node scripts/upsert-school-orgs.mjs
 - `GET /api/pings/:pingId/official-response` — Get official response for a ping
 - `POST /api/pings/:pingId/official-response` — Create official response (representative only)
 
+### Notifications — `/api/notifications`
+- `GET /api/notifications` — List notifications (auth) (query: `page`, `limit`, optional `unreadOnly=true`)
+- `GET /api/notifications/unread-count` — Unread count (auth)
+- `PATCH /api/notifications/:id/read` — Mark one notification as read (auth)
+
+**Notification events (MVP):**
+- `WAVE_APPROVED` — when an admin approves a wave (notifies the ping author)
+- `OFFICIAL_RESPONSE_POSTED` — when a representative posts an official response (notifies the ping author)
+- `ANNOUNCEMENT_POSTED` — when an admin posts an announcement (notifies org users excluding the author)
+
+Email sending is best-effort and depends on SMTP/Resend configuration.
+
 ### Announcements
 - `GET /api/announcements` — Public announcements with optional filters: `college`, `hall`, `level`, `gender`
 - `POST /api/admin/announcements` — Create announcement (admin only)

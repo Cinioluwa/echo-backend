@@ -26,6 +26,7 @@ model Organization {
   invitations Invitation[]
   categories  Category[] // An organization can have many custom categories
   requests    OrganizationRequest[]
+  notifications Notification[]
 }
 
 // User Model with Organization Link
@@ -56,6 +57,7 @@ model User {
   flaggedWaves       Wave[] @relation("WaveFlaggedBy")
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
+  notifications       Notification[]
 
   @@unique([email, organizationId]) // Email unique per org
   
@@ -105,6 +107,7 @@ model Ping {
   surges           Surge[]
   waves            Wave[]
   officialResponse OfficialResponse?
+  notifications    Notification[]
 
   // Database indexes for query performance
   @@index([authorId])                      // Used in getMyPings and foreign key joins
@@ -141,6 +144,7 @@ model Wave {
   surges           Surge[]
   flaggedBy        User?        @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
   flaggedById      Int?
+  notifications    Notification[]
 
   // Database indexes for query performance
   @@index([pingId])                  // Foreign key for getWavesForPing
@@ -233,9 +237,36 @@ model Announcement {
   // Announcements now target dynamic categories
   categories     Category[]
 
+  notifications  Notification[]
+
   // Database indexes for query performance
   @@index([organizationId])          // Multitenancy filter
   @@index([createdAt(sort: Desc)])   // Sort by newest announcements
+}
+
+model Notification {
+  id             Int              @id @default(autoincrement())
+  type           NotificationType
+  title          String
+  body           String
+  createdAt      DateTime         @default(now())
+  readAt         DateTime?
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  ping           Ping?            @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId         Int?
+  wave           Wave?            @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId         Int?
+  announcement   Announcement?    @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  announcementId Int?
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 // Invitation Model
@@ -317,4 +348,10 @@ enum ProgressStatus {
   ACKNOWLEDGED
   IN_PROGRESS
   RESOLVED
+}
+
+enum NotificationType {
+  WAVE_APPROVED
+  OFFICIAL_RESPONSE_POSTED
+  ANNOUNCEMENT_POSTED
 }
