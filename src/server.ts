@@ -14,13 +14,13 @@ try {
   // Ignore if not supported by the current Node runtime.
 }
 
-const app = createApp();
 const PORT = env.PORT;
 
 (async () => {
   try {
-    await connectRedis();
+    const redisClient = await connectRedis();
     await connectDatabase();
+    const app = createApp({ redisClient });
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server is listening on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);

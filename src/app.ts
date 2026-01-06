@@ -25,8 +25,10 @@ import representativeRoutes from './routes/representativeRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 
+import type { RedisClientType } from 'redis';
 export type CreateAppOptions = {
   disableRateLimiting?: boolean;
+  redisClient?: RedisClientType | null;
 };
 
 // Builds an Express app without binding a listener; useful for tests.
@@ -75,7 +77,11 @@ export function createApp(options: CreateAppOptions = {}) {
     });
   }
 
-  const redisClient = !options.disableRateLimiting && isRedisConfigured() ? getRedisClient() : null;
+
+  // Use the connected redisClient if provided, otherwise fallback to getRedisClient (legacy, for tests)
+  const redisClient = !options.disableRateLimiting && isRedisConfigured()
+    ? (options.redisClient ?? getRedisClient())
+    : null;
 
   const globalStore = redisClient
     ? new RedisStore({
