@@ -308,6 +308,7 @@ Email sending is best-effort and depends on SMTP/Resend configuration.
 ### Public
 - `GET /api/public/soundboard` — Public pings (organization-scoped)
 - `GET /api/public/stream` — Public waves (organization-scoped)
+- `GET /api/public/resolution-log` — Resolved pings feed (organization-scoped)
 
 ### Categories — `/api/categories`
 - `GET /api/categories` — Get all categories for user's organization (auth, optional search: `?q=text`)

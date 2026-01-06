@@ -21,7 +21,8 @@
     "pretest:e2e": "npx prisma generate --schema=prisma/test-schema.prisma",
     "test:e2e": "playwright test",
     "clean:e2e-artifacts": "node scripts/clean-e2e-artifacts.mjs",
-    "clean:e2e-artifacts:dry": "node scripts/clean-e2e-artifacts.mjs --dry-run"
+    "clean:e2e-artifacts:dry": "node scripts/clean-e2e-artifacts.mjs --dry-run",
+    "cleanup:stale-org-requests": "node scripts/cleanup-stale-org-requests.mjs --dry-run"
   },
   "keywords": [],
   "author": "",

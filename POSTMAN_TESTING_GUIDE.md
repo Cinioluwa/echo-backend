@@ -532,9 +532,9 @@ This is the same “launch-day simulation” flow, but expressed as Postman step
 3. Test pagination and filtering work correctly
 
 ### 5. Public Access Testing
-1. Test that public read routes work without authentication
+1. Test that “public” read routes work with authentication (they are organization-scoped)
 2. Verify public routes still respect organization boundaries
-3. Test search functionality within organization scope
+3. Test optional paging/sorting params (e.g., soundboard `sort=trending|new`, resolution log `days`, `top`)
 
 ## Expected Test Results
 
@@ -542,7 +542,7 @@ This is the same “launch-day simulation” flow, but expressed as Postman step
 - Users can access all data from their organization
 - Admins can perform admin operations within their organization
 - Representatives can create official responses within their organization
-- Public read access works for organization-scoped data
+- Public read access works for organization-scoped data (authenticated)
 
 ### ❌ Failed Operations (Expected)
 - Users cannot access data from other organizations (404 Not Found)
@@ -561,5 +561,4 @@ This is the same “launch-day simulation” flow, but expressed as Postman step
    - `ping_id_org_b`: ID of a ping created by Org B user
 
 3. Add tests to verify response codes and data isolation
-4. Use the test scripts to automatically set environment variables for created resources</content>
-<parameter name="filePath">c:\Users\USER\Desktop\C.I.A⚡\echo-backend\POSTMAN_TESTING_GUIDE.md
+4. Use the test scripts to automatically set environment variables for created resources

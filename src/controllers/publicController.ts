@@ -18,6 +18,78 @@ function parsePagination(req: Request) {
   return { page, limit, skip, top, sort, since };
 }
 
+// Resolution Log: resolved pings for the user's organization.
+export async function getPublicResolutionLog(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { limit, skip, top, since } = parsePagination(req);
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required.' });
+    }
+
+    const where: any = {
+      organizationId,
+      resolvedAt: { not: null },
+    };
+    if (since) {
+      where.resolvedAt = { gte: since };
+    }
+
+    const [items, total] = await Promise.all([
+      prisma.ping.findMany({
+        where,
+        orderBy: [{ resolvedAt: 'desc' as const }],
+        skip: top ? 0 : skip,
+        take: top ?? limit,
+        select: {
+          id: true,
+          title: true,
+          createdAt: true,
+          resolvedAt: true,
+          progressStatus: true,
+          category: { select: { id: true, name: true } },
+          officialResponse: { select: { id: true, content: true, createdAt: true } },
+          waves: {
+            where: { status: 'APPROVED' },
+            orderBy: [{ createdAt: 'desc' }],
+            take: 1,
+            select: { id: true, solution: true, createdAt: true },
+          },
+        },
+      }),
+      top ? Promise.resolve(0) : prisma.ping.count({ where }),
+    ]);
+
+    const data = items.map((ping) => {
+      const approvedWave = ping.waves?.[0] ?? null;
+      const resolvedAt = ping.resolvedAt ?? null;
+      const msToResolve = resolvedAt ? Math.max(0, resolvedAt.getTime() - ping.createdAt.getTime()) : null;
+
+      return {
+        id: ping.id,
+        title: ping.title,
+        category: ping.category,
+        progressStatus: ping.progressStatus,
+        createdAt: ping.createdAt,
+        resolvedAt,
+        msToResolve,
+        approvedWave,
+        officialResponse: ping.officialResponse ?? null,
+      };
+    });
+
+    return res.status(200).json({
+      data,
+      pagination: top
+        ? { top }
+        : { page: Math.floor(skip / limit) + 1, limit, total },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 // Soundboard: all pings for the user's organization, sortable by trending or new
 export async function getPublicPings(req: AuthRequest, res: Response, next: NextFunction) {
   try {

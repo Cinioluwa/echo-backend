@@ -1346,6 +1346,35 @@
 						"description": "Retrieves public waves for the stream."
 					},
 					"response": []
+				},
+				{
+					"name": "Get Resolution Log (Resolved Pings)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/public/resolution-log?days=30&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"public",
+								"resolution-log"
+							],
+							"query": [
+								{ "key": "days", "value": "30" },
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" }
+							]
+						},
+						"description": "Retrieves a feed of resolved pings for the organization (includes latest approved wave if present)."
+					},
+					"response": []
 				}
 			]
 		},
