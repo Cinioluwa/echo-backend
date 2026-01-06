@@ -2,6 +2,11 @@
 
 Backend server for the Echo application — a social feedback platform for university students with multitenancy support.
 
+## Related Repositories
+
+This is the backend API for the Echo platform. The frontend application can be found at:
+- **Frontend (Landing Page)**: [obasantomi/Echo-Landing-Page](https://github.com/obasantomi/Echo-Landing-Page) — React + TypeScript + Vite landing page
+
 ## What's inside
 - Auth with JWT (register, login, Google OAuth, profile management)
 - Multitenancy: Organization-scoped data isolation (pings, waves, comments, surges, announcements)
@@ -224,6 +229,7 @@ node scripts/upsert-school-orgs.mjs
 
 ### Frontend integration notes (CORS + Google)
 
+- The Echo frontend application is available at [obasantomi/Echo-Landing-Page](https://github.com/obasantomi/Echo-Landing-Page).
 - Local frontend origins allowed by default include `http://localhost:3000`, `http://localhost:3001`, and `http://localhost:5173` (Vite).
 - In Google Console (OAuth client), include `http://localhost:5173` in Authorized JavaScript origins if the frontend is using Vite.
 
