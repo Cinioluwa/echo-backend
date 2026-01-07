@@ -11,11 +11,14 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
     const { pingId } = req.params;
     const { solution, isAnonymous = false } = req.body;
     const organizationId = req.user?.organizationId; // From authMiddleware
+    const userId = req.user?.userId;
 
     if (!organizationId) {
       return res.status(400).json({ error: 'Bad Request: Organization context missing' });
     }
-
+    if (!userId) {
+      return res.status(400).json({ error: 'Bad Request: User context missing' });
+    }
     if (!solution) {
       return res.status(400).json({ error: 'Solution is required' });
     }
@@ -33,8 +36,19 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
       data: {
         solution,
         pingId: parseInt(pingId),
-        organizationId, // Add organizationId
+        organizationId,
         isAnonymous,
+        authorId: userId,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
     });
 
@@ -87,6 +101,14 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
           surgeCount: 'desc', // Most surged solutions first
         },
         include: {
+          author: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
           comments: {
             include: {
               author: {

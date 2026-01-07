@@ -54,6 +54,8 @@ model User {
   surges             Surge[]
   announcements      Announcement[]
   officialResponses  OfficialResponse[]
+  // Waves authored by this user
+  wavesAuthored      Wave[] @relation("Wave_author")
   // Waves flagged by this user (representative forwarding)
   flaggedWaves       Wave[] @relation("WaveFlaggedBy")
   emailVerificationTokens EmailVerificationToken[]
@@ -141,6 +143,9 @@ model Wave {
   organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId   Int
 
+  author           User         @relation("Wave_author", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId         Int
+
   comments         Comment[]
   surges           Surge[]
   flaggedBy        User?        @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
@@ -152,6 +157,7 @@ model Wave {
   @@index([organizationId])          // Multitenancy filter
   @@index([viewCount(sort: Desc)])   // Sort by most viewed waves
   @@index([createdAt(sort: Desc)])   // Sort by newest waves
+  @@index([authorId])                // For querying waves by author
 
   // New performance indexes
   @@index([organizationId, pingId])

@@ -154,10 +154,17 @@ export async function createWave(data: CreateWaveData = {}) {
     ...data,
   };
 
+  // Ensure pingId and organizationId are set
   if (!defaultData.pingId || !defaultData.organizationId) {
     const ping = await createPing();
     defaultData.pingId = ping.id;
     defaultData.organizationId = ping.organizationId;
+  }
+
+  // Ensure authorId is set
+  if (!defaultData.authorId) {
+    const user = await createUser({ organizationId: defaultData.organizationId });
+    defaultData.authorId = user.id;
   }
 
   return await getPrismaClient().wave.create({

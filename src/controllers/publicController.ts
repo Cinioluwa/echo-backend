@@ -161,6 +161,7 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
     const where: any = { organizationId };
     if (since) where.createdAt = { gte: since };
 
+    const userId = req.user?.userId;
     const [items, total] = await Promise.all([
       prisma.wave.findMany({
         where,
@@ -168,15 +169,47 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
         skip: top ? 0 : skip,
         take: top ?? limit,
         include: {
-          ping: { select: { id: true, title: true } },
+          author: {
+            select: { id: true, firstName: true, lastName: true }
+          },
+          ping: {
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              createdAt: true,
+              category: { select: { id: true, name: true } },
+              author: { select: { id: true, firstName: true, lastName: true } },
+              surges: userId ? { where: { userId }, select: { id: true } } : false,
+            }
+          },
+          surges: userId ? { where: { userId }, select: { id: true } } : false,
           _count: { select: { surges: true, comments: true } },
         },
       }),
       top ? Promise.resolve(0) : prisma.wave.count({ where }),
     ]);
 
+    // Add hasSurged and flatten ping fields
+    const data = items.map(wave => ({
+      ...wave,
+      hasSurged: userId ? (wave.surges && wave.surges.length > 0) : false,
+      author: wave.author,
+      ping: {
+        id: wave.ping.id,
+        title: wave.ping.title,
+        content: wave.ping.content,
+        createdAt: wave.ping.createdAt,
+        category: wave.ping.category,
+        author: wave.ping.author,
+        hasSurged: userId ? (wave.ping.surges && wave.ping.surges.length > 0) : false,
+      },
+      // Remove surges arrays from response for cleanliness
+      surges: undefined,
+    }));
+
     res.status(200).json({
-      data: items,
+      data,
       pagination: top
         ? { top, sort }
         : { page: Math.floor(skip / limit) + 1, limit, total, sort },
