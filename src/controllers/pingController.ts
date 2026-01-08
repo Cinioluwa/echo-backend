@@ -303,6 +303,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
     const { id } = req.params;
     const organizationId = req.user?.organizationId; // Get organizationId from authenticated user
 
+    const userId = req.user?.userId;
     const ping = await prisma.ping.findFirst({
       where: {
         id: parseInt(id),
@@ -346,6 +347,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
             },
           },
         },
+        surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
     });
 
@@ -356,6 +358,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
     const sanitizedPing = {
       ...sanitizePingAuthor(ping),
       comments: sanitizeComments(ping.comments),
+      hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
     };
 
     return res.status(200).json(sanitizedPing);

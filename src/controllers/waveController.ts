@@ -172,6 +172,7 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     // Fetch the wave with related data first
+    const userId = req.user?.userId;
     const wave = await prisma.wave.findFirst({
       where: { 
         id: waveId,
@@ -188,6 +189,7 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
                 lastName: true,
               },
             },
+            surges: userId ? { where: { userId }, select: { id: true } } : false,
           },
         },
         comments: {
@@ -203,6 +205,7 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
           },
         },
         _count: { select: { comments: true, surges: true } },
+        surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
     });
 
@@ -218,7 +221,15 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
     });
 
     // Return the previously fetched data with an adjusted viewCount to avoid an extra roundtrip
-    return res.status(200).json({ ...wave, viewCount: wave.viewCount + 1 });
+    return res.status(200).json({
+      ...wave,
+      viewCount: wave.viewCount + 1,
+      hasSurged: userId ? (wave.surges && wave.surges.length > 0) : false,
+      ping: wave.ping ? {
+        ...wave.ping,
+        hasSurged: userId ? (wave.ping.surges && wave.ping.surges.length > 0) : false,
+      } : undefined,
+    });
   } catch (error) {
     logger.error('Error fetching wave', { error, waveId: req.params.id });
     return next(error);

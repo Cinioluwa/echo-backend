@@ -36,6 +36,8 @@ export async function getPublicResolutionLog(req: AuthRequest, res: Response, ne
       where.resolvedAt = { gte: since };
     }
 
+
+    const userId = req.user?.userId;
     const [items, total] = await Promise.all([
       prisma.ping.findMany({
         where,
@@ -56,6 +58,7 @@ export async function getPublicResolutionLog(req: AuthRequest, res: Response, ne
             take: 1,
             select: { id: true, solution: true, createdAt: true },
           },
+          surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
       top ? Promise.resolve(0) : prisma.ping.count({ where }),
@@ -76,6 +79,7 @@ export async function getPublicResolutionLog(req: AuthRequest, res: Response, ne
         msToResolve,
         approvedWave,
         officialResponse: ping.officialResponse ?? null,
+        hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
       };
     });
 
@@ -108,6 +112,7 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
     const where: any = { organizationId };
     if (since) where.createdAt = { gte: since };
     
+    const userId = req.user?.userId;
     const [items, total] = await Promise.all([
       prisma.ping.findMany({
         where,
@@ -125,12 +130,16 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
           isAnonymous: true,
           author: { select: { id: true, firstName: true, lastName: true } },
           _count: { select: { waves: true, comments: true, surges: true } },
+          surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
       top ? Promise.resolve(0) : prisma.ping.count({ where }),
     ]);
 
-    const sanitizedItems = items.map(sanitizePublicPing);
+    const sanitizedItems = items.map((ping) => ({
+      ...sanitizePublicPing(ping),
+      hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
+    }));
 
     res.status(200).json({
       data: sanitizedItems,
