@@ -56,10 +56,10 @@ export default async function globalSetup() {
   process.env.E2E_DB_FILE = dbFile;
 
   // Generate Prisma client for test schema
-  execSync('npx prisma generate --schema=prisma/test-schema.prisma', { stdio: 'inherit' });
+  execSync('npx prisma generate --schema=prisma/test/test-schema.prisma', { stdio: 'inherit' });
 
   // Push schema to SQLite
-  execSync('npx prisma db push --schema=prisma/test-schema.prisma --accept-data-loss --skip-generate', { stdio: 'inherit' });
+  execSync('npx prisma db push --schema=prisma/test/test-schema.prisma --accept-data-loss --skip-generate', { stdio: 'inherit' });
 
   // Seed baseline orgs/users required by the E2E specs
   execSync('npx tsx tests/e2e/seed.ts', { stdio: 'inherit', env: { ...process.env } });
