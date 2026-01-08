@@ -55,7 +55,7 @@ jobs:
       run: npm ci
 
     - name: Generate Prisma Test Client
-      run: npx prisma generate --schema=prisma/test-schema.prisma
+      run: npx prisma generate --schema=prisma/test/test-schema.prisma
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
