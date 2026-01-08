@@ -170,6 +170,17 @@ describe('Wave CRUD Operations', () => {
       expect(res.body.data.length).toBeGreaterThan(0);
       expect(res.body.pagination).toBeDefined();
       expect(res.body.pagination.totalWaves).toBeGreaterThan(0);
+      // Assert hasSurged is present and boolean for each wave
+      res.body.data.forEach((wave: any) => {
+        expect(typeof wave.hasSurged).toBe('boolean');
+        // Should be false for a fresh user (no surges)
+        expect(wave.hasSurged).toBe(false);
+        // Also check nested ping.hasSurged if present
+        if (wave.ping) {
+          expect(typeof wave.ping.hasSurged).toBe('boolean');
+          expect(wave.ping.hasSurged).toBe(false);
+        }
+      });
     });
 
     it('should get specific wave by ID', async () => {
@@ -181,6 +192,13 @@ describe('Wave CRUD Operations', () => {
       expect(res.body.solution).toBe('Wave 1 solution');
       expect(res.body.pingId).toBe(ping1.id);
       expect(res.body.viewCount).toBe(1); // Should be incremented
+      // Assert hasSurged is present and boolean
+      expect(typeof res.body.hasSurged).toBe('boolean');
+      expect(res.body.hasSurged).toBe(false);
+      // Also check nested ping.hasSurged
+      expect(res.body.ping).toBeDefined();
+      expect(typeof res.body.ping.hasSurged).toBe('boolean');
+      expect(res.body.ping.hasSurged).toBe(false);
     });
 
     it('should return 404 for non-existent wave', async () => {

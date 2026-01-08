@@ -347,7 +347,7 @@ npx prisma studio
 - **Unit tests**: Logic in services, middleware, schemas (Vitest)
 - **Integration tests**: API endpoints with SQLite DB (Vitest + Supertest)
 - **E2E tests**: Full workflows via API (Playwright, API-only)
-- Run with seeded data for multitenancy tests. See `TEST_TODO.md` for coverage details.
+- Run with seeded data for multitenancy tests. 
 
 ## Logging
 - Human-readable colored logs in development

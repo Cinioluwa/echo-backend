@@ -157,6 +157,9 @@ describe('Ping CRUD Operations', () => {
       // Should only see org1 pings
       res.body.data.forEach((ping: any) => {
         expect(ping.organizationId).toBe(org1.id);
+        // Assert hasSurged is present and boolean
+        expect(typeof ping.hasSurged).toBe('boolean');
+        expect(ping.hasSurged).toBe(false);
       });
     });
 
@@ -170,6 +173,9 @@ describe('Ping CRUD Operations', () => {
       expect(res.body.title).toBe(ping1.title);
       expect(res.body.content).toBe(ping1.content);
       expect(res.body.organizationId).toBe(org1.id);
+      // Assert hasSurged is present and boolean
+      expect(typeof res.body.hasSurged).toBe('boolean');
+      expect(res.body.hasSurged).toBe(false);
     });
 
     it('should return 404 for non-existent ping', async () => {

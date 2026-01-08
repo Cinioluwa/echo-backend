@@ -17,7 +17,7 @@ export async function setupTestDb() {
   const testClientPath = join(process.cwd(), 'node_modules', '@prisma', 'test-client', 'index.d.ts');
   if (!existsSync(testClientPath)) {
     // Generate client for test schema only if not already generated
-    execSync('npx prisma generate --schema=prisma/test-schema.prisma', { stdio: 'inherit' });
+    execSync('npx prisma generate --schema=prisma/test/test-schema.prisma', { stdio: 'inherit' });
   }
 
   // Create Prisma client for test schema
@@ -27,7 +27,7 @@ export async function setupTestDb() {
   await prisma.$connect();
 
   // Push schema to SQLite (syncs without migrations)
-  execSync('npx prisma db push --schema=prisma/test-schema.prisma --accept-data-loss', { stdio: 'inherit' });
+  execSync('npx prisma db push --schema=prisma/test/test-schema.prisma --accept-data-loss', { stdio: 'inherit' });
 
   // Set global test client so the application uses it instead of the main client
   (globalThis as any).__testPrismaClient = prisma;

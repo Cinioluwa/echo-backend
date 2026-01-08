@@ -83,6 +83,10 @@ describe('Public Resolution Log', () => {
 
     expect(row.approvedWave).toBeTruthy();
     expect(row.approvedWave.solution).toBe(approvedWaveSolution);
+      // Assert hasSurged is present and boolean
+      expect(typeof row.hasSurged).toBe('boolean');
+      // Should be false for a fresh user (no surges)
+      expect(row.hasSurged).toBe(false);
   });
 
   it('supports top=N shortcut', async () => {

@@ -86,6 +86,7 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
     if (limit > 100) limit = 100; // Cap the limit to 100
     const skip = (page - 1) * limit;
 
+    const userId = req.user?.userId;
     const whereClause = {
       pingId: parseInt(pingId),
       organizationId: organizationId,
@@ -98,7 +99,7 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
         skip: skip,
         take: limit,
         orderBy: {
-          surgeCount: 'desc', // Most surged solutions first
+          surgeCount: 'desc',
         },
         include: {
           author: {
@@ -124,6 +125,7 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
           _count: {
             select: { comments: true, surges: true },
           },
+          surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
       prisma.wave.count({ where: whereClause }),
@@ -132,14 +134,21 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalWaves / limit);
 
-    // Sanitize anonymous waves and comments
-    const sanitizedWaves = waves.map(wave => ({
-      ...wave,
-      comments: wave.comments.map(comment => ({
-        ...comment,
-        author: comment.isAnonymous ? null : comment.author,
-      })),
-    }));
+    // Sanitize anonymous waves and comments, add hasSurged (always boolean)
+    const sanitizedWaves = waves.map(wave => {
+      let hasSurged = false;
+      if (userId) {
+        hasSurged = Array.isArray(wave.surges) ? wave.surges.length > 0 : false;
+      }
+      return {
+        ...wave,
+        hasSurged,
+        comments: wave.comments.map(comment => ({
+          ...comment,
+          author: comment.isAnonymous ? null : comment.author,
+        })),
+      };
+    });
 
     return res.status(200).json({
       data: sanitizedWaves,

@@ -43,6 +43,7 @@ export interface CreateWaveData {
   isAnonymous?: boolean;
   pingId?: number;
   organizationId?: number;
+  authorId?: number;
 }
 
 export interface CreateCommentData {

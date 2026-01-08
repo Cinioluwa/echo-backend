@@ -116,6 +116,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     // Run two queries in parallel: one for the data, one for the total count
+    const userId = req.user?.userId;
     const [pings, totalPings] = await prisma.$transaction([
       prisma.ping.findMany({
         where: whereClause,
@@ -134,11 +135,11 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
               level: true,
             },
           },
-          category: true, // Include category details
-          // Include counts of related items
+          category: true,
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
+          surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
       prisma.ping.count({ where: whereClause }),
@@ -147,8 +148,18 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalPings / limit);
 
-    // Sanitize anonymous pings
-    const sanitizedPings = pings.map(sanitizePingAuthor);
+    // Sanitize anonymous pings and add hasSurged (always boolean)
+    const sanitizedPings = pings.map(ping => {
+      const sanitized = sanitizePingAuthor(ping);
+      let hasSurged = false;
+      if (userId) {
+        hasSurged = Array.isArray(ping.surges) ? ping.surges.length > 0 : false;
+      }
+      return {
+        ...sanitized,
+        hasSurged,
+      };
+    });
 
     return res.status(200).json({
       data: sanitizedPings,
