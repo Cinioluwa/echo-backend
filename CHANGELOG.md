@@ -13,6 +13,8 @@
 
 ### Features
 
+* **export:** add admin csv export for pings (issue log)
+* **dx:** add seed-demo script for frontend content population
 * add acknowledge and resolve endpoints for pings, including response time analytics ([f603761](https://github.com/Cinioluwa/echo-backend/commit/f6037619754d506b008eb7fa698041f9005464d3))
 * add acknowledgedAt and resolvedAt timestamps to Ping model ([d674e79](https://github.com/Cinioluwa/echo-backend/commit/d674e7960897434a0ba173a3b75e05075e17802d))
 * add admin routes for platform stats and ping management ([2f400d8](https://github.com/Cinioluwa/echo-backend/commit/2f400d804018715c9d164e75fac47d253a70c6b8))

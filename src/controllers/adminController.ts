@@ -76,15 +76,15 @@ export const getPlatformStats = async (req: AuthRequest, res: Response, next: Ne
             ...stats,
             ...(window
                 ? {
-                      window: {
-                          weeks: window.weeks,
-                          offsetWeeks: window.offsetWeeks,
-                          start: window.start,
-                          end: window.end,
-                      },
-                  }
+                    window: {
+                        weeks: window.weeks,
+                        offsetWeeks: window.offsetWeeks,
+                        start: window.start,
+                        end: window.end,
+                    },
+                }
                 : {}),
-        });  
+        });
     } catch (error) {
         return next(error);
     }
@@ -152,7 +152,7 @@ export const deleteAnyPing = async (req: AuthRequest, res: Response, next: NextF
         const pingId = parseInt(id);
 
         const ping = await prisma.ping.findFirst({
-            where: { 
+            where: {
                 id: pingId,
                 organizationId: req.organizationId!,
             }
@@ -163,7 +163,7 @@ export const deleteAnyPing = async (req: AuthRequest, res: Response, next: NextF
         }
 
         await prisma.ping.deleteMany({
-            where: { 
+            where: {
                 id: pingId,
                 organizationId: req.organizationId!,
             }
@@ -193,7 +193,7 @@ export const getAllUsers = async (req: AuthRequest, res: Response, next: NextFun
         return res.status(200).json(users);
     } catch (error) {
         return next(error);
-    }  
+    }
 };
 
 export const updateUserRole = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -206,7 +206,7 @@ export const updateUserRole = async (req: AuthRequest, res: Response, next: Next
         }
 
         const updateResult = await prisma.user.updateMany({
-            where: { 
+            where: {
                 id: parseInt(id),
                 organizationId: req.organizationId!,
             },
@@ -254,7 +254,7 @@ export const getPingsByLevel = async (req: AuthRequest, res: Response, next: Nex
             name: `Level ${level}`,
             value: count,
         }));
-        
+
         return res.status(200).json(formattedStats);
     } catch (error) {
         return next(error);
@@ -263,49 +263,49 @@ export const getPingsByLevel = async (req: AuthRequest, res: Response, next: Nex
 
 
 export const getPingStatsByCategory = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
+    try {
         const window = getWeekWindowFromQuery(req.query);
         const createdAtFilter = window ? { createdAt: { gte: window.start, lt: window.end } } : undefined;
 
-    const stats = await prisma.ping.groupBy({
-      where: {
-        organizationId: req.organizationId!,
+        const stats = await prisma.ping.groupBy({
+            where: {
+                organizationId: req.organizationId!,
                 ...(createdAtFilter ?? {}),
-      },
-      by: ['categoryId'],
-      _count: {
-        id: true, 
-      },
-      orderBy: {
-        _count: {
-          id: 'desc',
-        },
-      },
-    });
+            },
+            by: ['categoryId'],
+            _count: {
+                id: true,
+            },
+            orderBy: {
+                _count: {
+                    id: 'desc',
+                },
+            },
+        });
 
-    // Get category names for the IDs
-    const categoryIds = stats.map(item => item.categoryId).filter(id => id !== null);
-    const categories = await prisma.category.findMany({
-      where: {
-        id: { in: categoryIds },
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-    });
+        // Get category names for the IDs
+        const categoryIds = stats.map(item => item.categoryId).filter(id => id !== null);
+        const categories = await prisma.category.findMany({
+            where: {
+                id: { in: categoryIds },
+            },
+            select: {
+                id: true,
+                name: true,
+            },
+        });
 
-    const categoryMap = new Map(categories.map(cat => [cat.id, cat.name]));
+        const categoryMap = new Map(categories.map(cat => [cat.id, cat.name]));
 
-    const formattedStats = stats.map(item => ({
-      name: item.categoryId ? categoryMap.get(item.categoryId) || 'Unknown' : 'No Category',
-      count: item._count.id,
-    }));
+        const formattedStats = stats.map(item => ({
+            name: item.categoryId ? categoryMap.get(item.categoryId) || 'Unknown' : 'No Category',
+            count: item._count.id,
+        }));
 
-    return res.status(200).json(formattedStats);
-  } catch (error) {
-    return next(error);
-  }
+        return res.status(200).json(formattedStats);
+    } catch (error) {
+        return next(error);
+    }
 };
 
 export const getUserByIdAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -313,7 +313,7 @@ export const getUserByIdAsAdmin = async (req: AuthRequest, res: Response, next: 
         const { id } = req.params;
         const userId = parseInt(id);
         const user = await prisma.user.findFirst({
-            where: { 
+            where: {
                 id: userId,
                 organizationId: req.organizationId!,
             },
@@ -359,7 +359,7 @@ export const updatePingProgressStatus = async (req: AuthRequest, res: Response, 
         }
 
         const updateResult = await prisma.ping.updateMany({
-            where: { 
+            where: {
                 id: parseInt(id),
                 organizationId: req.organizationId!,
             },
@@ -662,14 +662,14 @@ export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, n
         const pingForNotify =
             status === Status.APPROVED
                 ? await prisma.ping.findFirst({
-                      where: { id: wave.pingId, organizationId },
-                      select: {
-                          id: true,
-                          title: true,
-                          authorId: true,
-                          author: { select: { email: true, firstName: true } },
-                      },
-                  })
+                    where: { id: wave.pingId, organizationId },
+                    select: {
+                        id: true,
+                        title: true,
+                        authorId: true,
+                        author: { select: { email: true, firstName: true } },
+                    },
+                })
                 : null;
 
         const now = new Date();
@@ -784,9 +784,9 @@ export const getTrendingCategories = async (req: AuthRequest, res: Response, nex
         const categoryIds = Array.from(currentMap.keys());
         const categories = categoryIds.length
             ? await prisma.category.findMany({
-                  where: { id: { in: categoryIds } },
-                  select: { id: true, name: true },
-              })
+                where: { id: { in: categoryIds } },
+                select: { id: true, name: true },
+            })
             : [];
         const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
 
@@ -953,6 +953,63 @@ export const getPingSentimentAnalytics = async (req: AuthRequest, res: Response,
                 negative: pct(negative),
             },
         });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const exportPingsAsCsv = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const { startDate, endDate, status } = req.query;
+
+        const where: any = { organizationId };
+
+        if (status && Object.values(Status).includes(status as Status)) {
+            where.status = status as Status;
+        }
+
+        if (startDate || endDate) {
+            where.createdAt = {};
+            if (startDate) where.createdAt.gte = new Date(startDate as string);
+            if (endDate) where.createdAt.lte = new Date(endDate as string);
+        }
+
+        const pings = await prisma.ping.findMany({
+            where,
+            include: {
+                category: { select: { name: true } },
+                _count: { select: { surges: true } },
+                officialResponse: { select: { isResolved: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // Manual CSV Generation to avoid external deps for now
+        const header = 'ID,Date,Category,Title,Status,Surge Count,Days Open,Resolved\n';
+        const rows = pings.map(p => {
+            const date = p.createdAt.toISOString().split('T')[0];
+            const category = p.category.name.replace(/,/g, ' '); // simple escape
+            const title = p.title.replace(/,/g, ' ').replace(/\n/g, ' '); // simple escape
+            const surgeCount = p.surgeCount;
+
+            // Calc days open
+            const end = p.resolvedAt || new Date();
+            const diffTime = Math.abs(end.getTime() - p.createdAt.getTime());
+            const daysOpen = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            const isResolved = p.officialResponse?.isResolved || p.status === 'APPROVED'; // Loose check for example
+
+            return `${p.id},${date},${category},${title},${p.status},${surgeCount},${daysOpen},${isResolved}`;
+        }).join('\n');
+
+        const csvContent = header + rows;
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="pings_export_${new Date().toISOString().split('T')[0]}.csv"`);
+
+        return res.status(200).send(csvContent);
+
     } catch (error) {
         return next(error);
     }

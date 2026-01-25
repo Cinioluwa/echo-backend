@@ -103,6 +103,24 @@ npm run test:e2e
 - `npm run test:integration` — Run integration tests
 - `npm run test:e2e` — Run E2E tests (Playwright)
 
+## ⚡ Frontend Integration Quick Start
+
+**1. Populate Demo Data**
+Don't build with an empty DB! Run this to seed Users, Pings, Waves, and Resolved Issues:
+```bash
+node scripts/seed-demo.mjs
+```
+
+**2. Test Credentials** (Created by seed script)
+- **Admin:** `admin@cu.edu.ng` / `password123`
+- **Student:** `student@cu.edu.ng` / `password123`
+
+**3. Key API Routes**
+- **Login:** `POST /api/auth/login` (Returns `{ token }`)
+- **Feed:** `GET /api/pings?page=1`
+- **Create Ping:** `POST /api/pings`
+- **Admin Export:** `GET /api/admin/export/pings` (Streams CSV)
+
 ## Project structure
 
 ```

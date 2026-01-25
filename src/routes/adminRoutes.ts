@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { getAllPingsAsAdmin } from '../controllers/pingController.js';
 import {
-     getPlatformStats, 
-     deleteAnyPing,
-     getAllUsers,
-     updateUserRole,
-     getPingStatsByCategory,
-     getPingsByLevel,
+    getPlatformStats,
+    deleteAnyPing,
+    getAllUsers,
+    updateUserRole,
+    getPingStatsByCategory,
+    getPingsByLevel,
     getUserByIdAsAdmin,
     updatePingProgressStatus,
     acknowledgePing,
@@ -18,13 +18,14 @@ import {
     getTrendingCategories,
     getPingSentimentAnalytics,
     getPriorityPings,
+    exportPingsAsCsv,
 
-    } from '../controllers/adminController.js';
-import { 
+} from '../controllers/adminController.js';
+import {
     createAnnouncement,
     updateAnnouncement,
     deleteAnnouncement
- } from '../controllers/announcementController.js';
+} from '../controllers/announcementController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 import superAdminMiddleware from '../middleware/superAdminMiddleware.js';
@@ -42,9 +43,9 @@ import {
     updateUserRoleSchema,
 } from '../schemas/adminSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
-import { 
-    createAnnouncementSchema, 
-    updateAnnouncementSchema 
+import {
+    createAnnouncementSchema,
+    updateAnnouncementSchema
 } from '../schemas/announcementSchemas.js';
 import {
     approveOrganizationRequest,
@@ -79,6 +80,8 @@ router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, orga
 router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), acknowledgePing);
 router.post('/pings/:id/resolve', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), resolvePing);
 router.get('/analytics/response-times', authMiddleware, adminMiddleware, organizationMiddleware, validate(responseTimeAnalyticsSchema), getResponseTimeAnalytics);
+
+router.get('/export/pings', authMiddleware, adminMiddleware, organizationMiddleware, exportPingsAsCsv);
 
 // Waves moderation (ADMIN)
 router.get('/waves', authMiddleware, adminMiddleware, organizationMiddleware, validate(paginationWithStatusSchema), getAllWavesAsAdmin);
