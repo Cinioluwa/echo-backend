@@ -1,11 +1,31 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { setDefaultResultOrder } from 'node:dns';
+
+try {
+    setDefaultResultOrder('ipv4first');
+} catch { }
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
     console.log('🌱 Starting Demo Seed (Rich Content)...');
+
+    // Retry connection logic
+    let attempts = 0;
+    while (attempts < 5) {
+        try {
+            await prisma.$connect();
+            console.log('✅ Connected to DB');
+            break;
+        } catch (e) {
+            attempts++;
+            console.error(`❌ Connection Attempt ${attempts} failed: ${e.message}`);
+            if (attempts >= 5) throw e;
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
 
     // 1. Create Organization (Aligned with setup-multitenancy-tests.js)
     const orgDomain = 'cu.edu.ng'; // Changed from covenantuniversity.edu.ng to match test script
