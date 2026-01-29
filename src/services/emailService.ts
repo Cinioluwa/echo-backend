@@ -147,7 +147,7 @@ export const buildVerificationEmail = (
 	token: string,
 	recipientFirstName?: string | null
 ) => {
-	const verifyUrl = `${sanitizeAppUrl()}/verify-email?token=${token}`;
+	const verifyUrl = `${sanitizeAppUrl()}/login?token=${token}`;
 	const greeting = recipientFirstName ? `Hi ${recipientFirstName},` : 'Hi,';
 
 	return {
