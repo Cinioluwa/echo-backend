@@ -7,7 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
 
   // JWT
-  JWT_SECRET: z.string().min(4, 'JWT_SECRET must be at least 4 characters'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters for production security'),
 
   // Server
   PORT: z.coerce.number().int().positive().default(3000),
@@ -15,6 +15,9 @@ const envSchema = z.object({
 
   // App URLs
   APP_URL: z.string().url('APP_URL must be a valid URL').default('http://localhost:3000'),
+
+  // CORS
+  ALLOWED_ORIGINS: z.string().transform((val) => val.split(',').map((origin) => origin.trim())).optional(),
 
   // OAuth
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required for Google auth').optional(),

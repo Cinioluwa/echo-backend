@@ -8,6 +8,7 @@ import { RedisStore } from 'rate-limit-redis';
 import { requestLogger } from './middleware/requestLogger.js';
 import logger from './config/logger.js';
 import { getRedisClient, isRedisConfigured } from './config/redis.js';
+import { env } from './config/env.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -47,14 +48,18 @@ export function createApp(options: CreateAppOptions = {}) {
 
   const enableRequestFileLog = process.env.REQUEST_FILE_LOG === 'true';
   const enableRouteDebugLog = process.env.DEBUG_ROUTE_LOG === 'true';
-  const allowedOrigins = [
+
+  const defaultAllowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://echo-ng.com',
+    'https://www.echo-ng.com',
     'https://tryecho.online'
   ];
+
+  const allowedOrigins = env.ALLOWED_ORIGINS || defaultAllowedOrigins;
 
   app.use(cors({
     origin: (origin, callback) => {
@@ -85,23 +90,23 @@ export function createApp(options: CreateAppOptions = {}) {
 
   const globalStore = redisClient
     ? new RedisStore({
-        prefix: 'rl:global:',
-        sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-      })
+      prefix: 'rl:global:',
+      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    })
     : undefined;
 
   const authStore = redisClient
     ? new RedisStore({
-        prefix: 'rl:auth:',
-        sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-      })
+      prefix: 'rl:auth:',
+      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    })
     : undefined;
 
   const writeStore = redisClient
     ? new RedisStore({
-        prefix: 'rl:write:',
-        sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-      })
+      prefix: 'rl:write:',
+      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    })
     : undefined;
 
   const limiter = rateLimit({
