@@ -78,7 +78,7 @@ it('should return 200 OK', async () => {
 ## Common Pitfalls
 1.  **Unique Constraints:** If you use `beforeEach` to create users/orgs, you MUST use random strings for emails/domains, or you will hit "Unique constraint failed" errors on the second test. **Fix:** Use `beforeAll` or helper functions that randomize inputs.
 2.  **Prisma Client:** Never import the global `prisma` from `src/config/db.ts`. Always use `getPrisma()` from `./testContainer.ts`. The global one connects to the *production* DB (or fails if unreachable).
-3.  **Authentication:** Don't try to mock `req.user`. It's brittle. Just log in.
+3.  **Authentication:** Don't try to mock `req.user`. It's brittle. Just log in...
 
 ## Running Tests
 *   Run all: `npm run test`
