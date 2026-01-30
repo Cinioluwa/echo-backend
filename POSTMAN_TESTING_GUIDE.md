@@ -506,6 +506,36 @@ This is the same “launch-day simulation” flow, but expressed as Postman step
 4) Google sign-in + create ping
 - Repeat steps A2 and A3 (now the org is ACTIVE so Google auth succeeds).
 
+### Public Routes
+
+#### GET /api/public/soundboard
+**Purpose**: Fetch public pings for soundboard (organization-scoped)
+**Auth**: None required
+**Query**: ?page=1&limit=20&sort=trending&category=1
+**Notes**:
+- `sort`: 'trending' (surgeCount desc, then createdAt desc) or 'new' (createdAt desc). Default: 'new'.
+- `category`: Category ID from `GET /api/categories`. Omit for all categories.
+- Pagination: `page` (min 1), `limit` (max 100, default 20). Response includes pagination metadata.
+**Edge Cases**:
+- Invalid category ID: 400 Bad Request.
+- No pings: Empty data array.
+- Anonymous pings: Author field is null.
+- Cross-org access: Only returns org-scoped data (no explicit org param needed).
+
+#### GET /api/public/stream
+**Purpose**: Fetch public waves for stream (organization-scoped)
+**Auth**: None required
+**Query**: ?page=1&limit=20&sort=trending&category=1
+**Notes**: Same as soundboard, but for waves. Category filters via parent ping's category.
+**Edge Cases**: Same as soundboard. Waves without surges sort by createdAt.
+
+#### GET /api/public/resolution-log
+**Purpose**: Fetch resolved pings (organization-scoped)
+**Auth**: None required
+**Query**: ?page=1&limit=20&days=7
+**Notes**: `days`: 1-365 or 'all' (default 7). Filters by resolvedAt.
+**Edge Cases**: 'all' may be slow for large datasets; consider caching. No resolved pings: Empty array.
+
 ## Testing Strategy
 
 ### 1. Authentication Testing
@@ -534,7 +564,7 @@ This is the same “launch-day simulation” flow, but expressed as Postman step
 ### 5. Public Access Testing
 1. Test that “public” read routes work with authentication (they are organization-scoped)
 2. Verify public routes still respect organization boundaries
-3. Test optional paging/sorting params (e.g., soundboard `sort=trending|new`, resolution log `days`, `top`)
+3. Test optional paging/sorting params (e.g., soundboard `sort=trending|new`, `category=<id>`, resolution log `days`, `top`)
 
 ## Expected Test Results
 

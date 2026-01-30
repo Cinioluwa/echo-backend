@@ -121,6 +121,16 @@ node scripts/seed-demo.mjs
 - **Create Ping:** `POST /api/pings`
 - **Admin Export:** `GET /api/admin/export/pings` (Streams CSV)
 
+**4. Frontend Integration Notes**
+- **Category Handling**: Fetch categories once via `GET /api/categories` and cache them. Use IDs for filtering soundboard/stream. Hardcoding IDs breaks on seed changes—always fetch dynamically.
+- **Soundboard/Stream Flow**: For "All Categories", omit `category` param. For specific, include `category=<id>`. Handle pagination UI with `hasNextPage`.
+- **Edge Cases in Frontend**:
+  - Network errors: Retry fetches, show loading states.
+  - Empty results: Display "No content" message.
+  - Invalid category: Fallback to "All Categories".
+  - Auth expiry: Redirect to login on 401.
+  - Rate limits: Implement backoff on 429.
+
 ## Project structure
 
 ```
@@ -324,12 +334,26 @@ Email sending is best-effort and depends on SMTP/Resend configuration.
 - `DELETE /announcements/:id` — Delete announcement (admin)
 
 ### Public
-- `GET /api/public/soundboard` — Public pings (organization-scoped)
-- `GET /api/public/stream` — Public waves (organization-scoped)
+- `GET /api/public/soundboard` — Public pings (organization-scoped, sortable by trending/new, filterable by category)
+  - Query params: `?page=1&limit=20&sort=trending|new&category=<id>`
+  - Notes: 
+    - `sort`: Defaults to 'new' (by createdAt desc). 'trending' sorts by surgeCount desc, then createdAt desc.
+    - `category`: Optional category ID (from `GET /api/categories`). If omitted, returns all categories ("All Categories").
+    - Pagination: `page` starts at 1, `limit` max 100 (default 20). Returns `totalPages`, `currentPage`, `hasNextPage`, `hasPreviousPage`.
+    - Edge cases: Invalid `category` ID returns 400. No auth required but organization-scoped (inferred from request context). Anonymous pings hide author details.
+- `GET /api/public/stream` — Public waves (organization-scoped, sortable by trending/new, filterable by category)
+  - Query params: `?page=1&limit=20&sort=trending|new&category=<id>`
+  - Notes: Same as soundboard, but for waves. 'trending' uses surgeCount.
+  - Edge cases: Same as soundboard. Waves are linked to pings, so category filters waves via their parent ping's category.
 - `GET /api/public/resolution-log` — Resolved pings feed (organization-scoped)
+  - Query params: `?page=1&limit=20&days=7`
+  - Notes: `days`: Number (1-365) or 'all' (default 7). Filters by resolvedAt within the last N days.
+  - Edge cases: No resolved pings returns empty array. 'all' includes all resolved pings.
 
 ### Categories — `/api/categories`
 - `GET /api/categories` — Get all categories for user's organization (auth, optional search: `?q=text`)
+  - Notes: Returns `{id, name}` array. Cache on app load/soundboard entry. No pagination.
+  - Edge cases: No auth returns 401. Organization not found returns 404. Search `q` is case-insensitive partial match on name.
 
 ### Health check
 - `GET /healthz` — `{ status: "ok" }`
