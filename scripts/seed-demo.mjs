@@ -40,14 +40,31 @@ async function main() {
     });
     console.log(`✅ Upserted Org: ${org.name} (${org.id})`);
 
-    // 2. Create Categories
-    const categories = ['Facilities', 'Academics', 'Student Welfare', 'Security'];
-    for (const catName of categories) {
-        await prisma.category.upsert({
-            where: { name_organizationId: { name: catName, organizationId: org.id } },
-            create: { name: catName, organizationId: org.id },
-            update: {},
+    // 2. Update Categories for cu.edu.ng
+    // First, delete pings associated with old categories to avoid foreign key constraints
+    const oldCategories = ['Facilities', 'Student Welfare', 'Security', 'Academic', 'Campus Life']; // Include all old categories
+    for (const catName of oldCategories) {
+      const category = await prisma.category.findFirst({
+        where: { name: catName, organizationId: org.id },
+      });
+      if (category) {
+        await prisma.ping.deleteMany({
+          where: { categoryId: category.id },
         });
+        await prisma.category.delete({
+          where: { id: category.id },
+        });
+      }
+    }
+
+    // Then, upsert the new categories
+    const newCategories = ['General', 'Academics', 'Chapel', 'Finance', 'Hall', 'Sport', 'Welfare'];
+    for (const catName of newCategories) {
+      await prisma.category.upsert({
+        where: { name_organizationId: { name: catName, organizationId: org.id } },
+        create: { name: catName, organizationId: org.id },
+        update: {},
+      });
     }
 
     // 3. Create Users
@@ -87,7 +104,7 @@ async function main() {
     });
 
     // 4. Create Rich Content (Pings & Waves)
-    const facilityCat = await prisma.category.findFirst({ where: { name: 'Facilities', organizationId: org.id } });
+    const hallCat = await prisma.category.findFirst({ where: { name: 'Hall', organizationId: org.id } });
     const academicCat = await prisma.category.findFirst({ where: { name: 'Academics', organizationId: org.id } });
 
     // Ping 1: Active with high surges
@@ -97,7 +114,7 @@ async function main() {
             content: 'The AC in Hall 2 has been making a loud noise and not cooling for 3 days.',
             authorId: student.id,
             organizationId: org.id,
-            categoryId: facilityCat.id,
+            categoryId: hallCat.id,
             status: 'POSTED',
             surgeCount: 12,
             waves: {
@@ -120,7 +137,7 @@ async function main() {
             content: 'We need HDMI cables in the lab.',
             authorId: student.id,
             organizationId: org.id,
-            categoryId: facilityCat.id,
+            categoryId: hallCat.id,
             status: 'APPROVED',
             progressStatus: 'RESOLVED',
             resolvedAt: new Date(),

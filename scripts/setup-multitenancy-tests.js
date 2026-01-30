@@ -171,19 +171,19 @@ async function createTestCategories(cuOrg, org1, org2) {
 
   // Categories for Covenant University
   const cuCat1 = await prisma.category.upsert({
-    where: { name_organizationId: { name: 'Academic', organizationId: cuOrg.id } },
+    where: { name_organizationId: { name: 'Academics', organizationId: cuOrg.id } },
     update: {},
     create: {
-      name: 'Academic',
+      name: 'Academics',
       organizationId: cuOrg.id,
     },
   });
 
   const cuCat2 = await prisma.category.upsert({
-    where: { name_organizationId: { name: 'Campus Life', organizationId: cuOrg.id } },
+    where: { name_organizationId: { name: 'General', organizationId: cuOrg.id } },
     update: {},
     create: {
-      name: 'Campus Life',
+      name: 'General',
       organizationId: cuOrg.id,
     },
   });

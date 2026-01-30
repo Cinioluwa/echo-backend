@@ -209,14 +209,14 @@ async function main() {
 
     // Categories
     await prisma.category.upsert({
-        where: { name_organizationId: { name: 'Academic', organizationId: cuOrg.id } },
+        where: { name_organizationId: { name: 'Academics', organizationId: cuOrg.id } },
         update: {},
-        create: { name: 'Academic', organizationId: cuOrg.id },
+        create: { name: 'Academics', organizationId: cuOrg.id },
     });
     await prisma.category.upsert({
-        where: { name_organizationId: { name: 'Campus Life', organizationId: cuOrg.id } },
+        where: { name_organizationId: { name: 'General', organizationId: cuOrg.id } },
         update: {},
-        create: { name: 'Campus Life', organizationId: cuOrg.id },
+        create: { name: 'General', organizationId: cuOrg.id },
     });
 
     await prisma.category.upsert({

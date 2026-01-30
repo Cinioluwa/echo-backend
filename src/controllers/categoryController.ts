@@ -24,8 +24,15 @@ export const getCategories = async (req: AuthRequest, res: Response, next: NextF
           }
           : {}),
       },
-      orderBy: { name: 'asc' },
+      orderBy: { id: 'asc' }, // Temporary, will sort in code
       select: { id: true, name: true },
+    });
+
+    // Sort with 'General' first, then alphabetical
+    categories.sort((a, b) => {
+      if (a.name === 'General') return -1;
+      if (b.name === 'General') return 1;
+      return a.name.localeCompare(b.name);
     });
 
     return res.status(200).json({ data: categories });
