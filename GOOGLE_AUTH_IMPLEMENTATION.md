@@ -200,4 +200,79 @@ See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 
 **Implementation Status**: ✅ **READY FOR TESTING**
 
-Start your server and follow the testing guide to verify the integration!
+
+---
+
+## 💻 Frontend Integration Guide
+
+This backend is designed to work with **Google Identity Services (GIS)**.
+
+### 1. Prerequisite: Client ID
+The frontend implementation **requires** the same `GOOGLE_CLIENT_ID` used in the backend.
+- **Backend**: Set in `.env`
+- **Frontend**: Set in frontend environment variables (e.g., `NEXT_PUBLIC_GOOGLE_CLIENT_ID`)
+
+### 2. Integration Flow
+1.  **Frontend**: Uses Google SDK to get an `id_token`.
+2.  **Frontend**: POSTs `id_token` to `/api/auth/google`.
+3.  **Backend**: Validates token, creates/logs in user, returns JWT.
+
+### 3. Next.js Production Setup (TypeScript)
+
+For a production Next.js app, we recommend using **`@react-oauth/google`**.
+
+#### Installation
+```bash
+npm install @react-oauth/google
+```
+
+#### Provider Setup (`app/layout.tsx`)
+```tsx
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
+          {children}
+        </GoogleOAuthProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+#### Login Component Example
+```tsx
+'use client';
+import { GoogleLogin } from '@react-oauth/google';
+
+export default function GoogleLoginButton() {
+  const handleSuccess = async (credentialResponse: any) => {
+    // 1. Get the ID token from Google (Step 1)
+    const idToken = credentialResponse.credential;
+
+    // 2. Send the ID token to your backend (Step 2)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: idToken }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+        localStorage.setItem('token', data.token); // Store JWT
+        // Redirect to dashboard...
+    }
+  };
+
+  return <GoogleLogin onSuccess={handleSuccess} onError={() => console.log('Login Failed')} />;
+}
+```
+
+### 4. ⚠️ Production Checklist for Frontend
+1.  **HTTPS**: Google OAuth **requires** HTTPS in production.
+2.  **Allowed Origins**: Add your production frontend domain (e.g., `https://app.yourcompany.com`) to **"Authorized JavaScript Origins"** in Google Cloud Console.
+3.  **Allowed Redirects**: Add your production domain to **"Authorized Redirect URIs"** in Google Cloud Console.
+4.  **CORS**: Ensure your backend `.env` includes the frontend domain in `ALLOWED_ORIGINS`.
