@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getCategories, createCategory } from '../controllers/categoryController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
+import { cache } from '../middleware/cacheMiddleware.js';
 
 const router = Router();
 
@@ -61,8 +62,8 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-// GET /api/categories?q=
-router.get('/', authMiddleware, organizationMiddleware, getCategories);
+// GET /api/categories?q= - cached for 5 minutes (categories rarely change)
+router.get('/', authMiddleware, organizationMiddleware, cache(300), getCategories);
 router.post('/', authMiddleware, organizationMiddleware, createCategory);
 
 export default router;

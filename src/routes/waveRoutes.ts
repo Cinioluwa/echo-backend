@@ -7,6 +7,7 @@ import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { createWaveSchema, pingParamSchema } from '../schemas/waveSchemas.js';
+import { cache } from '../middleware/cacheMiddleware.js';
 
 // { mergeParams: true } is crucial for accessing :pingId from parent router
 const router = Router({ mergeParams: true });
@@ -14,8 +15,8 @@ const router = Router({ mergeParams: true });
 // POST /api/pings/:pingId/waves - Create a wave for a ping
 router.post('/', authMiddleware, organizationMiddleware, validate(createWaveSchema), createWave);
 
-// GET /api/pings/:pingId/waves - Get all waves for a ping
-router.get('/', authMiddleware, organizationMiddleware, validate(pingParamSchema), getWavesForPing);
+// GET /api/pings/:pingId/waves - Get all waves for a ping - cached for 60s
+router.get('/', authMiddleware, organizationMiddleware, validate(pingParamSchema), cache(60), getWavesForPing);
 
 // Standalone wave-by-id route will be mounted separately at /api/waves/:id
 
