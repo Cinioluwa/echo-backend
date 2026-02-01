@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAllPingsAsAdmin } from '../controllers/pingController.js';
+import cache from '../middleware/cacheMiddleware.js';
 import {
     getPlatformStats,
     deleteAnyPing,
@@ -55,7 +56,7 @@ import {
 
 const router = Router();
 
-router.get('/stats', authMiddleware, adminMiddleware, organizationMiddleware, getPlatformStats);
+router.get('/stats', authMiddleware, adminMiddleware, organizationMiddleware, cache(60), getPlatformStats);
 
 // Platform-wide onboarding requests (SUPER_ADMIN only)
 router.get('/organization-requests', authMiddleware, superAdminMiddleware, listOrganizationRequests);
@@ -69,11 +70,11 @@ router.patch('/users/:id/role', authMiddleware, adminMiddleware, organizationMid
 router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddleware, validate(createAnnouncementSchema), createAnnouncement);
 router.patch('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
 router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, deleteAnnouncement);
-router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), getPingsByLevel);
-router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), getPingStatsByCategory);
-router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getActiveUsersAnalytics);
-router.get('/analytics/trending', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getTrendingCategories);
-router.get('/analytics/sentiment', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), getPingSentimentAnalytics);
+router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), cache(120), getPingsByLevel);
+router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), cache(120), getPingStatsByCategory);
+router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), cache(120), getActiveUsersAnalytics);
+router.get('/analytics/trending', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), cache(120), getTrendingCategories);
+router.get('/analytics/sentiment', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), cache(120), getPingSentimentAnalytics);
 router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
 router.get('/pings/priority', authMiddleware, adminMiddleware, organizationMiddleware, validate(priorityPingsSchema), getPriorityPings);
 router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, organizationMiddleware, updatePingProgressStatus);

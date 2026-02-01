@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getPublicPings, getPublicWaves, getPublicResolutionLog } from '../controllers/publicController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
+import cache from '../middleware/cacheMiddleware.js';
 
 const router = Router();
 
@@ -88,7 +89,7 @@ const router = Router();
  *         description: Internal server error
  */
 // Soundboard (Pings) - now requires auth
-router.get('/soundboard', authMiddleware, organizationMiddleware, getPublicPings);
+router.get('/soundboard', authMiddleware, organizationMiddleware, cache(30), getPublicPings);
 
 /**
  * @openapi
@@ -143,7 +144,7 @@ router.get('/soundboard', authMiddleware, organizationMiddleware, getPublicPings
  *         description: Internal server error
  */
 // Stream (Waves) - now requires auth
-router.get('/stream', authMiddleware, organizationMiddleware, getPublicWaves);
+router.get('/stream', authMiddleware, organizationMiddleware, cache(30), getPublicWaves);
 
 /**
  * @openapi
@@ -201,6 +202,6 @@ router.get('/stream', authMiddleware, organizationMiddleware, getPublicWaves);
  *         description: Internal server error
  */
 // Resolution Log (resolved pings) - now requires auth
-router.get('/resolution-log', authMiddleware, organizationMiddleware, getPublicResolutionLog);
+router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60), getPublicResolutionLog);
 
 export default router;
