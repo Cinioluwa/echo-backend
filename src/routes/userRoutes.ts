@@ -58,7 +58,10 @@ router.get('/verify-email',
     const originalJson = res.json.bind(res);
     res.json = function(body: unknown) {
       const isSuccess = res.statusCode >= 200 && res.statusCode < 300;
-      const redirectUrl = `${env.APP_URL}/login?verified=${isSuccess}`;
+      // Redirect to clean login URL (frontend doesn't need the query param)
+      const redirectUrl = isSuccess 
+        ? `${env.APP_URL}/login`
+        : `${env.APP_URL}/login`;  // Could redirect to an error page if needed
       return res.redirect(redirectUrl);
     } as typeof res.json;
 
