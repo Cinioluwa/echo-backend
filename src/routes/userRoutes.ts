@@ -60,8 +60,8 @@ router.get('/verify-email',
       const isSuccess = res.statusCode >= 200 && res.statusCode < 300;
       // Redirect to clean login URL (frontend doesn't need the query param)
       const redirectUrl = isSuccess 
-        ? `${env.APP_URL}/login`
-        : `${env.APP_URL}/login`;  // Could redirect to an error page if needed
+        ? `${env.APP_URL}`
+        : `${env.APP_URL}`;  // Could redirect to an error page if needed
       return res.redirect(redirectUrl);
     } as typeof res.json;
 
