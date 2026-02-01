@@ -147,7 +147,10 @@ export const buildVerificationEmail = (
 	token: string,
 	recipientFirstName?: string | null
 ) => {
-	const verifyUrl = `${sanitizeAppUrl()}/login?token=${token}`;
+	// Use API_URL if set, otherwise fallback to APP_URL
+	// This points directly to the backend API route for browser click verification
+	const apiUrl = (process.env.API_URL || env.APP_URL).replace(/\/$/, '');
+	const verifyUrl = `${apiUrl}/api/users/verify-email?token=${token}`;
 	const greeting = recipientFirstName ? `Hi ${recipientFirstName},` : 'Hi,';
 
 	return {
