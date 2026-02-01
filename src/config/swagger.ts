@@ -238,7 +238,7 @@ All data is scoped to your organization (determined by email domain). Users can 
       },
       {
         name: 'Public',
-        description: 'Public endpoints (no auth required)',
+        description: 'Public-facing endpoints (authentication required for organization context)',
       },
       {
         name: 'Admin',
