@@ -25,6 +25,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import representativeRoutes from './routes/representativeRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import swaggerRoutes from './routes/swaggerRoutes.js';
 
 import type { RedisClientType } from 'redis';
 export type CreateAppOptions = {
@@ -159,6 +160,7 @@ export function createApp(options: CreateAppOptions = {}) {
 
   app.use(helmet());
   app.use(healthRoutes);
+  app.use(swaggerRoutes);
 
   const writeLimiter = options.disableRateLimiting ? [] : [applyCreateLimiter];
 
