@@ -39,7 +39,7 @@ All data is scoped to your organization (determined by email domain). Users can 
       `,
       contact: {
         name: 'Echo API Support',
-        email: 'support@echo-ng.com',
+        email: 'covenant@echo-ng.com',
       },
       license: {
         name: 'Private and Proprietary',
