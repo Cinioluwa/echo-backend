@@ -223,6 +223,35 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 - `GET /api/users/me/surges` — My surges (auth)
 - `GET /api/users/me/comments` — My comments (auth)
 
+### Logout
+
+**Approach**: Stateless JWT (frontend-managed)
+
+Since Echo uses stateless JWT tokens, logout is handled entirely on the frontend:
+
+1. **Client-side logout**: Remove the JWT token from localStorage, sessionStorage, or cookies
+2. **No server endpoint**: Tokens remain valid until expiry (no server-side invalidation)
+3. **Security note**: For immediate revocation (e.g., compromised accounts), implement token blacklisting
+
+**Frontend implementation**:
+```javascript
+// Logout function
+function logout() {
+  // Remove token from storage
+  localStorage.removeItem('authToken');
+  // Or sessionStorage.removeItem('authToken');
+  // Or delete cookie
+  
+  // Redirect to login page
+  window.location.href = '/login';
+}
+```
+
+**Optional: Server-side logout** (if needed for security):
+- Add `POST /api/users/logout` endpoint with token blacklisting
+- Store invalidated tokens in Redis/database
+- Check blacklist in `authMiddleware`
+
 ### Organization onboarding (waitlist → approval → sign-in)
 
 Echo is **organization-scoped**. Users can only sign in with email domains that map to an `ACTIVE` organization.

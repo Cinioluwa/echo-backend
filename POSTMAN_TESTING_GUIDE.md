@@ -106,6 +106,26 @@ This guide provides comprehensive testing instructions for the Echo backend API 
 }
 ```
 
+#### Logout
+**Purpose**: Sign out user (frontend-managed)
+**Auth**: Stateless JWT - no server endpoint required
+**Implementation**: Remove JWT token from client storage (localStorage/sessionStorage/cookies)
+
+**Frontend Example**:
+```javascript
+// Logout function
+function logout() {
+  localStorage.removeItem('authToken');
+  // Redirect to login
+  window.location.href = '/login';
+}
+```
+
+**Notes**: 
+- No `POST /api/users/logout` endpoint exists
+- Tokens remain valid until expiry
+- For server-side invalidation, implement token blacklisting
+
 #### POST /api/users/organization-waitlist
 **Purpose**: Request onboarding for a new organization (creates pending org + admin user)
 **Auth**: None required
