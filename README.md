@@ -9,6 +9,7 @@ Backend server for the Echo application — a social feedback platform for unive
 - Roles: USER, REPRESENTATIVE, ADMIN with protected routes
 - Security: Validation (Zod), rate limiting, CORS, Helmet, structured logging
 - Testing: Unit, integration, and E2E suites (Vitest, Supertest, Playwright)
+- **API Documentation**: Interactive Swagger/OpenAPI docs at `/docs`
 
 ## Tech stack
 - Runtime: Node.js + TypeScript (ES modules)
@@ -18,6 +19,7 @@ Backend server for the Echo application — a social feedback platform for unive
 - Dev tooling: tsx watch, ESLint (flat), Prettier, Nodemon
 - Testing: Vitest (unit/integration), Playwright (E2E)
 - Container: Dockerfile (optional for app image)
+- **API Documentation**: Swagger UI (swagger-ui-express) + OpenAPI 3.0 (swagger-jsdoc)
 
 ## Quick start (local)
 
@@ -196,6 +198,111 @@ Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 - If the frontend runs on Vite, allow origin `http://localhost:5173` (already in backend CORS allowlist) and add it in Google Console Authorized JavaScript origins.
 
 **📝 Note**: See `GOOGLE_AUTH_IMPLEMENTATION.md` and `GOOGLE_AUTH_TESTING_GUIDE.md` for Google OAuth setup. Email is optional but required for password resets and organization requests.
+
+## 📚 API Documentation (Swagger/OpenAPI)
+
+Echo provides professional, interactive API documentation powered by Swagger UI and OpenAPI 3.0.
+
+### Accessing the API Docs
+
+Once the server is running, visit:
+
+- **Interactive Swagger UI**: `http://localhost:3000/docs`
+- **Raw OpenAPI JSON**: `http://localhost:3000/docs/json`
+
+The Swagger UI provides:
+- Interactive API explorer with "Try it out" functionality
+- Complete request/response schemas
+- Authentication support (JWT bearer tokens)
+- Example requests and responses
+- Organized by tags (Authentication, Pings, Waves, etc.)
+
+### Using Swagger UI
+
+1. **Try endpoints without authentication**: Health check endpoints (`/health`, `/healthz`) work immediately
+2. **For protected endpoints**:
+   - First, authenticate using `POST /api/auth/google` or login endpoint
+   - Copy the JWT token from the response
+   - Click the "Authorize" button (lock icon) at the top
+   - Enter: `Bearer <your-token>`
+   - Click "Authorize" and "Close"
+   - Now you can try protected endpoints
+
+### Updating API Documentation
+
+Documentation is automatically generated from JSDoc comments in route files. To document a new endpoint:
+
+1. **Add JSDoc with OpenAPI annotations** above the route handler in `src/routes/*.ts`:
+
+```typescript
+/**
+ * @openapi
+ * /api/your-endpoint:
+ *   post:
+ *     summary: Brief description
+ *     description: Detailed description with examples
+ *     tags:
+ *       - YourTag
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               field:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Success response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/YourSchema'
+ */
+router.post('/your-endpoint', authMiddleware, yourHandler);
+```
+
+2. **Add reusable schemas** in `src/config/swagger.ts` under `components.schemas`
+3. **Restart the dev server** — changes are picked up automatically
+4. **Refresh `/docs`** to see your updates
+
+### Production Considerations
+
+**Default behavior**: Swagger docs are publicly accessible (no authentication required).
+
+**To restrict in production**, add authentication middleware to Swagger routes in `src/routes/swaggerRoutes.ts`:
+
+```typescript
+import authMiddleware from '../middleware/authMiddleware.js';
+import adminMiddleware from '../middleware/adminMiddleware.js';
+
+// Restrict to authenticated users only
+router.use('/docs', authMiddleware, swaggerUi.serve);
+
+// OR restrict to admins only
+router.use('/docs', authMiddleware, adminMiddleware, swaggerUi.serve);
+```
+
+Alternatively, use environment-based conditional mounting in `src/app.ts`:
+
+```typescript
+// Only serve docs in development
+if (process.env.NODE_ENV !== 'production') {
+  app.use(swaggerRoutes);
+}
+```
+
+### Importing OpenAPI Spec
+
+The raw OpenAPI specification is available at `/docs/json`. Import it into:
+- **Postman**: Import → Link → `http://localhost:3000/docs/json`
+- **Insomnia**: Import → From URL → `http://localhost:3000/docs/json`
+- **Code generation tools**: OpenAPI Generator, Swagger Codegen
+
+**Note**: The existing Postman collection (`echo_postman_collection.json`) remains available, but Swagger/OpenAPI is now the primary API contract.
 
 ## Base URL and auth
 
