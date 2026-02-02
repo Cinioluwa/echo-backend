@@ -28,6 +28,7 @@ model Organization {
   categories  Category[] // An organization can have many custom categories
   requests    OrganizationRequest[]
   notifications Notification[]
+  media       Media[]
 }
 
 // User Model with Organization Link
@@ -61,6 +62,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
   notifications       Notification[]
+  media               Media[]
 
   @@unique([email, organizationId]) // Email unique per org
 
@@ -111,6 +113,7 @@ model Ping {
   waves            Wave[]
   officialResponse OfficialResponse?
   notifications    Notification[]
+  media            Media[]
 
   // Database indexes for query performance
   @@index([authorId])                      // Used in getMyPings and foreign key joins
@@ -151,6 +154,7 @@ model Wave {
   flaggedBy        User?        @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
   flaggedById      Int?
   notifications    Notification[]
+  media            Media[]
 
   // Database indexes for query performance
   @@index([pingId])                  // Foreign key for getWavesForPing
@@ -361,4 +365,33 @@ enum NotificationType {
   WAVE_APPROVED
   OFFICIAL_RESPONSE_POSTED
   ANNOUNCEMENT_POSTED
+}
+
+// Media/Attachment Model for file uploads
+model Media {
+  id             Int      @id @default(autoincrement())
+  url            String   // Cloudinary URL
+  publicId       String   // Cloudinary public ID for deletion
+  filename       String   // Original filename
+  mimeType       String   // MIME type (image/jpeg, video/mp4, etc.)
+  size           Int      // File size in bytes
+  width          Int?     // Image/video width in pixels
+  height         Int?     // Image/video height in pixels
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  // Polymorphic relations - only one should be set
+  ping           Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId         Int?
+  wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId         Int?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int?
+
+  @@index([organizationId])
+  @@index([pingId])
+  @@index([waveId])
+  @@index([userId])
 }
