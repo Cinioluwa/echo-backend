@@ -61,6 +61,48 @@ const router = Router();
  *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *   post:
+ *     summary: Create a new category
+ *     description: |
+ *       Create a new category for the organization.
+ *       Categories help organize pings and waves by topic.
+ *       
+ *       **Authentication required**: User must be logged in.
+ *       **Note**: In some deployments, this may be admin-only.
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Category name (must be unique within organization)
+ *                 example: Transportation
+ *     responses:
+ *       201:
+ *         description: Category created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Category'
+ *       400:
+ *         description: Invalid input or category already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 // GET /api/categories?q= - cached for 5 minutes (categories rarely change)
 router.get('/', authMiddleware, organizationMiddleware, cache(300), getCategories);
