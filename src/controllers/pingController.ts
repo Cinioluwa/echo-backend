@@ -29,7 +29,7 @@ const sanitizeComments = (comments: any[] = []) =>
 
 export const createPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { title, content, categoryId, hashtag, isAnonymous = false } = req.body;
+    const { title, content, categoryId, hashtag, isAnonymous = false, mediaIds } = req.body;
     const authorId = req.user?.userId;
     const organizationId = req.user?.organizationId;
 
@@ -80,8 +80,24 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+        },
       },
     });
+
+    // Attach media if mediaIds provided
+    if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
+      await prisma.media.updateMany({
+        where: {
+          id: { in: mediaIds },
+          organizationId,
+          pingId: null, // Only unattached media
+          waveId: null,
+        },
+        data: { pingId: newPing.id },
+      });
+    }
 
     // Sanitize anonymous ping
     const sanitizedPing = sanitizePingAuthor(newPing);

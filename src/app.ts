@@ -26,6 +26,7 @@ import representativeRoutes from './routes/representativeRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import swaggerRoutes from './routes/swaggerRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 import type { RedisClientType } from 'redis';
 export type CreateAppOptions = {
@@ -185,6 +186,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/representatives', ...writeLimiter, representativeRoutes);
   app.use('/api/public', publicRoutes);
   app.use('/api/categories', ...writeLimiter, categoryRoutes);
+  app.use('/api/uploads', ...writeLimiter, uploadRoutes);
 
   app.use(errorHandler);
   return app;

@@ -9,7 +9,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 export const createWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
-    const { solution, isAnonymous = false } = req.body;
+    const { solution, isAnonymous = false, mediaIds } = req.body;
     const organizationId = req.user?.organizationId; // From authMiddleware
     const userId = req.user?.userId;
 
@@ -49,8 +49,24 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
             lastName: true,
           },
         },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+        },
       },
     });
+
+    // Attach media if mediaIds provided
+    if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
+      await prisma.media.updateMany({
+        where: {
+          id: { in: mediaIds },
+          organizationId,
+          pingId: null, // Only unattached media
+          waveId: null,
+        },
+        data: { waveId: newWave.id },
+      });
+    }
 
     return res.status(201).json(newWave);
   } catch (error) {

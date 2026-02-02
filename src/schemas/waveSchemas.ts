@@ -21,6 +21,7 @@ export const createWaveSchema = z.object({
       .min(3, 'Solution must be at least 3 characters')
       .max(10000, 'Solution is too long'),
     isAnonymous: z.boolean().optional().default(false),
+    mediaIds: z.array(z.coerce.number().int().positive()).max(5, 'Maximum 5 media files allowed').optional(),
   }),
 });
 

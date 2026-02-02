@@ -183,6 +183,10 @@ Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 | SMTP_PORT         | No       | SMTP port                                        | `587` |
 | SMTP_USER         | No       | SMTP username                                    | `your-email@gmail.com` |
 | SMTP_PASS         | No       | SMTP password                                    | `your-app-password` |
+| CLOUDINARY_CLOUD_NAME | No   | Cloudinary cloud name (for file uploads)         | `your-cloud-name` |
+| CLOUDINARY_API_KEY    | No   | Cloudinary API key                               | `123456789012345` |
+| CLOUDINARY_API_SECRET | No   | Cloudinary API secret                            | `your-api-secret` |
+| MAX_FILE_SIZE_MB      | No   | Max upload size in MB (default 10)               | `10` |
 
 ### Recommended Railway settings (staging vs production)
 
@@ -227,6 +231,67 @@ The Swagger UI provides:
    - Enter: `Bearer <your-token>`
    - Click "Authorize" and "Close"
    - Now you can try protected endpoints
+
+## 📁 File Uploads (Cloudinary)
+
+Echo supports file/media uploads for pings, waves, and user profile pictures via Cloudinary.
+
+### Supported File Types
+
+| Type | Formats | Max Size |
+|------|---------|----------|
+| Images | JPEG, PNG, GIF, WebP | 5 MB |
+| Videos | MP4, WebM, QuickTime | 50 MB |
+| Documents | PDF | 10 MB |
+
+### Upload Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/uploads` | Upload multiple files (max 5) |
+| POST | `/api/uploads/profile` | Upload profile picture (auto-cropped) |
+| POST | `/api/uploads/attach` | Attach media to ping/wave |
+| DELETE | `/api/uploads/:id` | Delete a media file |
+| GET | `/api/uploads/ping/:pingId` | Get media for a ping |
+| GET | `/api/uploads/wave/:waveId` | Get media for a wave |
+
+### Usage Example
+
+**1. Upload files first:**
+```bash
+curl -X POST http://localhost:3000/api/uploads \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "files=@photo1.jpg" \
+  -F "files=@photo2.jpg"
+# Returns: { "media": [{ "id": 1, "url": "..." }, { "id": 2, "url": "..." }] }
+```
+
+**2. Create a ping with media:**
+```bash
+curl -X POST http://localhost:3000/api/pings \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Issue", "content": "Description", "categoryId": 1, "mediaIds": [1, 2]}'
+```
+
+**Or attach media to existing ping/wave:**
+```bash
+curl -X POST http://localhost:3000/api/uploads/attach \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"mediaIds": [1, 2], "entityType": "ping", "entityId": 42}'
+```
+
+### Setup
+
+Add Cloudinary credentials to your `.env`:
+```env
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+Files are stored in organization-scoped folders: `echo-uploads/org-{id}/{pings|waves|profiles}/`
 
 ### Updating API Documentation
 

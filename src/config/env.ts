@@ -41,6 +41,14 @@ const envSchema = z.object({
 
   // Redis (optional)
   REDIS_URL: z.string().min(1, 'REDIS_URL must not be empty').optional(),
+
+  // Cloudinary (file uploads)
+  CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME must not be empty').optional(),
+  CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY must not be empty').optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET must not be empty').optional(),
+
+  // Upload settings
+  MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;

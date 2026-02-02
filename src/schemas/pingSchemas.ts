@@ -14,6 +14,7 @@ export const createPingSchema = z.object({
     }),
     hashtag: z.string().max(50).optional().nullable(),
     isAnonymous: z.boolean().optional().default(false),
+    mediaIds: z.array(z.coerce.number().int().positive()).max(5, 'Maximum 5 media files allowed').optional(),
   }),
 });
 
