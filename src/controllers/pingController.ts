@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 
 const sanitizePingAuthor = (ping: any) => {
   if (!ping) return ping;
@@ -101,6 +102,9 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
 
     // Sanitize anonymous ping
     const sanitizedPing = sanitizePingAuthor(newPing);
+
+    // Invalidate cache so new ping appears in feeds
+    await invalidateCacheAfterMutation(organizationId);
 
     return res.status(201).json(sanitizedPing);
   } catch (error) {
@@ -422,6 +426,9 @@ export const deletePing = async (req: AuthRequest, res: Response, next: NextFunc
       where: { id: parseInt(id) },
     });
 
+    // Invalidate cache after deletion
+    await invalidateCacheAfterMutation(organizationId);
+
     return res.status(204).send();
   } catch (error) {
     logger.error('Error deleting ping', { error, pingId: req.params.id, userId: req.user?.userId });
@@ -471,6 +478,9 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
       data: updateData,
     });
 
+    // Invalidate cache after update
+    await invalidateCacheAfterMutation(organizationId);
+
     return res.status(200).json(sanitizePingAuthor(updatedPing));
   } catch (error) {
     logger.error('Error updating ping', { error, pingId: req.params.id, userId: req.user?.userId });
@@ -507,6 +517,10 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
         status: status,
       },
     });
+
+    // Invalidate cache after status update
+    await invalidateCacheAfterMutation(organizationId);
+
     return res.status(200).json(sanitizePingAuthor(updatedPing));
   } catch (error) {
     logger.error('Error updating ping status', { error, pingId: req.params.id });
@@ -535,6 +549,9 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
       where: { id: parseInt(id) },
       data: { status: 'UNDER_REVIEW' },
     });
+
+    // Invalidate cache after submit
+    await invalidateCacheAfterMutation(organizationId);
 
     return res.status(200).json(sanitizePingAuthor(updatedPing));
   } catch (error) {

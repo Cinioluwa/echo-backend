@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 
 // GET /api/categories?q=Academic
 export const getCategories = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -59,6 +60,9 @@ export const createCategory = async (req: AuthRequest, res: Response, next: Next
         organizationId,
       },
     });
+
+    // Invalidate cache after creating category
+    await invalidateCacheAfterMutation(organizationId);
 
     return res.status(201).json(category);
   } catch (error) {

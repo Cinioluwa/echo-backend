@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 // @desc    Toggle surge on a ping
 // @route   POST /api/pings/:pingId/surge
 // @access  Private
@@ -51,6 +52,8 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
         } 
       });
       await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
+      // Invalidate cache after surge toggle
+      await invalidateCacheAfterMutation(req.organizationId);
       return res.status(200).json({ message: 'Surge removed from ping', surged: false, surgeCount: count });
     }
 
@@ -79,6 +82,8 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
       } 
     });
     await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
+    // Invalidate cache after surge toggle
+    await invalidateCacheAfterMutation(req.organizationId);
     return res.status(200).json({ message: 'Ping surged', surged: true, surgeCount: count });
   } catch (error) {
     logger.error('Error toggling surge on ping', { error, pingId: req.params.pingId, userId: req.user?.userId });
@@ -131,6 +136,8 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
         } 
       });
       await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
+      // Invalidate cache after surge toggle
+      await invalidateCacheAfterMutation(req.organizationId);
       return res.status(200).json({ message: 'Surge removed from wave', surged: false, surgeCount: count });
     }
 
@@ -156,6 +163,8 @@ export const toggleSurgeOnWave = async (req: AuthRequest, res: Response, next: N
       } 
     });
     await prisma.wave.update({ where: { id: waveIdInt }, data: { surgeCount: count } });
+    // Invalidate cache after surge toggle
+    await invalidateCacheAfterMutation(req.organizationId);
     return res.status(200).json({ message: 'Wave surged', surged: true, surgeCount: count });
   } catch (error) {
     logger.error('Error toggling surge on wave', { error, waveId: req.params.waveId, userId: req.user?.userId });

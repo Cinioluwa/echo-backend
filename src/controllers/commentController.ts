@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 
 const sanitizeComment = (comment: any) => {
   if (!comment) return comment;
@@ -62,6 +63,9 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
     });
 
     const sanitizedComment = sanitizeComment(newComment);
+
+    // Invalidate cache after creating comment
+    await invalidateCacheAfterMutation(organizationId);
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {
@@ -200,6 +204,9 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     });
 
     const sanitizedComment = sanitizeComment(newComment);
+
+    // Invalidate cache after creating comment on wave
+    await invalidateCacheAfterMutation(organizationId);
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {

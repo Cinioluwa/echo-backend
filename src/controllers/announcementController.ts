@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { createAnnouncementNotificationsForOrg } from '../services/notificationService.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 
 export const createAnnouncement = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -41,6 +42,9 @@ export const createAnnouncement = async (req: AuthRequest, res: Response, next: 
 
             return created;
         });
+
+        // Invalidate cache after creating announcement
+        await invalidateCacheAfterMutation(organizationId);
 
         return res.status(201).json(newAnnouncement);
     } catch (error) {
@@ -112,6 +116,9 @@ export const updateAnnouncement = async (req: AuthRequest, res: Response, next: 
             },
         });
 
+        // Invalidate cache after update
+        await invalidateCacheAfterMutation(req.organizationId);
+
         return res.status(200).json(updatedAnnouncement);
     }
     catch (error) {
@@ -128,6 +135,10 @@ export const deleteAnnouncement = async (req: AuthRequest, res: Response, next: 
                 organizationId: req.organizationId!, // Ensure it belongs to the user's org
             },
         });
+
+        // Invalidate cache after deletion
+        await invalidateCacheAfterMutation(req.organizationId);
+
         return res.status(204).send();
     }
     catch (error) {

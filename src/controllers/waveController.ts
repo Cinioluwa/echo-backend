@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 
 // @desc    Create a new wave (solution) for a ping
 // @route   POST /api/pings/:pingId/waves
@@ -67,6 +68,9 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
         data: { waveId: newWave.id },
       });
     }
+
+    // Invalidate cache after creating wave
+    await invalidateCacheAfterMutation(organizationId);
 
     return res.status(201).json(newWave);
   } catch (error) {
@@ -335,6 +339,9 @@ export const updateWave = async (req: AuthRequest, res: Response, next: NextFunc
       },
     });
 
+    // Invalidate cache after update
+    await invalidateCacheAfterMutation(organizationId);
+
     return res.status(200).json(updatedWave);
   } catch (error) {
     logger.error('Error updating wave', { error, waveId: req.params.id, userId: req.user?.userId });
@@ -377,6 +384,9 @@ export const deleteWave = async (req: AuthRequest, res: Response, next: NextFunc
     await prisma.wave.delete({
       where: { id: parseInt(id) },
     });
+
+    // Invalidate cache after deletion
+    await invalidateCacheAfterMutation(organizationId);
 
     return res.status(204).send();
   } catch (error) {

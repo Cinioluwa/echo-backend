@@ -4,6 +4,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 import logger from '../config/logger.js';
 import { sendEmail } from '../services/emailService.js';
 import { createNotification } from '../services/notificationService.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 
 export const createOfficialResponse = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -94,6 +95,9 @@ export const createOfficialResponse = async (req: AuthRequest, res: Response, ne
             });
         }
 
+        // Invalidate cache after creating official response
+        await invalidateCacheAfterMutation(organizationId);
+
         return res.status(201).json(newResponse);
     } catch (error) {
         // Remove direct handling of P2002, let errorHandler middleware handle it
@@ -165,6 +169,9 @@ export const updateOfficialResponse = async (req: AuthRequest, res: Response, ne
 
             return updated;
         });
+
+        // Invalidate cache after update
+        await invalidateCacheAfterMutation(organizationId);
 
         return res.status(200).json(updatedResponse);
     } catch (error) {
