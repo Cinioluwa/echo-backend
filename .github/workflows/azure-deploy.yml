@@ -52,9 +52,6 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'echo-backend-api'  # <--- REPLACE WITH YOUR EXACT AZURE APP NAME
-          slot-name: 'Production'
+          app-name: 'echo-backend-api'  # <--- MAKE SURE THIS MATCHES YOUR AZURE APP NAME 100%
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }} 
-          # ^^^ CHECK YOUR GITHUB SECRETS. Azure usually created one with a long name. 
-          # If you don't see a secret in GitHub Settings, tell me.
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
