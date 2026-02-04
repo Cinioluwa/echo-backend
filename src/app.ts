@@ -160,6 +160,17 @@ export function createApp(options: CreateAppOptions = {}) {
   }
 
   app.use(helmet());
+  
+  // Disable browser/CDN caching for API routes
+  // Our Redis cache handles server-side caching; we don't want stale responses at edge/browser level
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store'); // For CDNs like Railway
+    next();
+  });
+  
   app.use(healthRoutes);
   app.use(swaggerRoutes);
 
