@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { verifyGoogleToken } from '../services/googleAuthService.js';
 import { extractDomainFromEmail, getDomainCandidates, isConsumerEmailDomain } from '../utils/domainUtils.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { env } from '../config/env.js';
@@ -136,6 +137,9 @@ export async function googleAuth(req: AuthRequest, res: Response) {
 
     // Step 6: Issue JWT token (same as regular login)
     const jwtToken = issueJwtForUser(user);
+
+    // Invalidate cache to ensure fresh data on login
+    await invalidateCacheAfterMutation(user.organizationId);
 
     return res.status(200).json({
       message: 'Google authentication successful',

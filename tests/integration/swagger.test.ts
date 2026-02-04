@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { buildTestClient } from './appClient.js';
-import type { Test } from 'supertest';
 
 describe('Swagger/OpenAPI Documentation', () => {
-  let client: ReturnType<typeof buildTestClient>;
+  let client: Awaited<ReturnType<typeof buildTestClient>>;
 
   beforeAll(async () => {
     client = await buildTestClient();

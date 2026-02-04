@@ -25,6 +25,7 @@ import {
   isConsumerEmailDomain,
 } from '../utils/domainUtils.js';
 import { env } from '../config/env.js';
+import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import type { Role } from '@prisma/client';
 
 const googleClient = env.GOOGLE_CLIENT_ID
@@ -285,6 +286,9 @@ export const loginUser = async (
 
     const token = issueJwtForUser(user);
 
+    // Invalidate cache to ensure fresh data on login
+    await invalidateCacheAfterMutation(user.organizationId);
+
     logger.info('User logged in', {
       userId: user.id,
       email: normalizedEmail,
@@ -400,6 +404,9 @@ export const loginWithGoogle = async (
     }
 
     const token = issueJwtForUser(user);
+
+    // Invalidate cache to ensure fresh data on login
+    await invalidateCacheAfterMutation(user.organizationId);
 
     logger.info('User logged in via Google', {
       userId: user.id,
