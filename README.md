@@ -547,8 +547,8 @@ Email sending is best-effort and depends on SMTP/Resend configuration.
   - Notes: Same as soundboard, but for waves. 'trending' uses surgeCount.
   - Edge cases: Same as soundboard. Waves are linked to pings, so category filters waves via their parent ping's category.
 - `GET /api/public/resolution-log` — Resolved pings feed (organization-scoped)
-  - Query params: `?page=1&limit=20&days=7`
-  - Notes: `days`: Number (1-365) or 'all' (default 7). Filters by resolvedAt within the last N days.
+  - Query params: `?page=1&limit=20&days=all`
+  - Notes: `days`: Number (e.g. 7, 30) or 'all' (default 'all'). Filters by resolvedAt within the last N days.
   - Edge cases: No resolved pings returns empty array. 'all' includes all resolved pings.
 
 ### Categories — `/api/categories`

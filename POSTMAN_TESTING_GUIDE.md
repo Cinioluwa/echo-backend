@@ -552,8 +552,8 @@ This is the same “launch-day simulation” flow, but expressed as Postman step
 #### GET /api/public/resolution-log
 **Purpose**: Fetch resolved pings (organization-scoped)
 **Auth**: None required
-**Query**: ?page=1&limit=20&days=7
-**Notes**: `days`: 1-365 or 'all' (default 7). Filters by resolvedAt.
+**Query**: ?page=1&limit=20&days=all
+**Notes**: `days`: Number (e.g. 7, 30) or 'all' (default 'all'). Filters by resolvedAt.
 **Edge Cases**: 'all' may be slow for large datasets; consider caching. No resolved pings: Empty array.
 
 ## Testing Strategy

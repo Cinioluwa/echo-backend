@@ -13,8 +13,11 @@ function parsePagination(req: Request) {
   const skip = (page - 1) * limit;
   const top = req.query.top ? Math.max(1, Math.min(50, Number(req.query.top))) : undefined; // e.g., top=3
   const sort = (req.query.sort as string) === 'new' ? 'new' : 'trending'; // trending|new
-  const days = req.query.days === 'all' ? 'all' : Number(req.query.days ?? 7);
-  const since = days === 'all' ? undefined : new Date(Date.now() - (Number.isFinite(days) ? (days as number) : 7) * 24 * 60 * 60 * 1000);
+  const daysParam = req.query.days;
+  const days = (!daysParam || daysParam === 'all') ? 'all' : Number(daysParam);
+  const since = days === 'all' || !Number.isFinite(days) 
+    ? undefined 
+    : new Date(Date.now() - (days as number) * 24 * 60 * 60 * 1000);
   return { page, limit, skip, top, sort, since };
 }
 
