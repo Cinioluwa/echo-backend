@@ -167,7 +167,7 @@ export const registerUser = async (
           lastName: normalizeName(lastName),
           level: typeof level === 'number' ? level : null,
           organizationId: organization.id,
-          status: effectiveJoinPolicy === 'REQUIRES_APPROVAL' ? 'PENDING' : 'PENDING',
+          status: 'PENDING',
         },
       });
 
