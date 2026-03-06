@@ -417,6 +417,8 @@ export const loginWithGoogle = async (
       });
     }
 
+    const effectiveJoinPolicy = getEffectiveJoinPolicy(organization);
+
     const normalizedEmail = normalizeEmail(email);
 
     let user = await prisma.user.findUnique({
