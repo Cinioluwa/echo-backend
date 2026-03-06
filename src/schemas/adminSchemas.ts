@@ -61,3 +61,21 @@ export const rejectOrganizationJoinRequestSchema = z.object({
     reason: z.string().max(500).optional(),
   }),
 });
+
+export const listOrganizationClaimsSchema = z.object({
+  query: z.object({
+    status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+  }),
+});
+
+export const organizationClaimIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'Claim ID must be a number'),
+  }),
+});
+
+export const rejectOrganizationClaimSchema = z.object({
+  body: z.object({
+    reason: z.string().max(500).optional(),
+  }),
+});

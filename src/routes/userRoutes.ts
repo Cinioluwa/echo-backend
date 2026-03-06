@@ -9,6 +9,7 @@ import {
   requestPasswordReset,
   resetPassword,
   requestOrganizationOnboarding,
+  submitOrganizationClaim,
   deleteCurrentUser, 
   updateCurrentUser, 
   getCurrentUser,
@@ -27,6 +28,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   organizationWaitlistSchema,
+  organizationClaimSchema,
 } from '../schemas/userSchemas.js';
 
 const router = Router();
@@ -497,6 +499,76 @@ router.post(
   '/organization-waitlist',
   validate(organizationWaitlistSchema),
   requestOrganizationOnboarding
+);
+
+/**
+ * @openapi
+ * /api/users/organizations/{id}/claim:
+ *   post:
+ *     summary: Submit leadership claim for a preseeded organization
+ *     description: |
+ *       Submit a claim request to become the verified organization leader/admin
+ *       for a preseeded organization.
+ *
+ *       **Guardrails:**
+ *       - Request email domain must exactly match the organization's configured domain.
+ *       - Open-domain organizations are not claimable through this endpoint.
+ *       - Duplicate pending claims from the same user are rejected.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Organization ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - firstName
+ *               - lastName
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: staff@cu.edu.ng
+ *               firstName:
+ *                 type: string
+ *                 example: Ada
+ *               lastName:
+ *                 type: string
+ *                 example: Okafor
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 example: Password123!
+ *               metadata:
+ *                 type: object
+ *                 additionalProperties: true
+ *     responses:
+ *       201:
+ *         description: Claim submitted successfully
+ *       400:
+ *         description: Invalid payload or unsupported claim target
+ *       403:
+ *         description: Claim email domain does not match organization domain
+ *       404:
+ *         description: Organization not found
+ *       409:
+ *         description: Organization already claimed or duplicate pending claim
+ */
+
+router.post(
+  '/organizations/:id/claim',
+  validate(organizationClaimSchema),
+  submitOrganizationClaim
 );
 
 /**

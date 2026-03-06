@@ -19,6 +19,7 @@ import {
   markEmailVerificationTokenUsed,
   markPasswordResetTokenUsed,
 } from '../services/tokenService.js';
+import { ensureOrganizationDefaultCategories } from '../services/organizationCategoryService.js';
 import {
   extractDomainFromEmail,
   getDomainCandidates,
@@ -822,8 +823,12 @@ export const requestOrganizationOnboarding = async (
           name: organizationName.trim(),
           domain: normalizedDomain,
           status: 'PENDING',
+          categoryCustomizationLocked: false,
+          isClaimVerified: true,
         },
       });
+
+      await ensureOrganizationDefaultCategories(tx, organization.id);
 
       const adminUser = await tx.user.create({
         data: {
@@ -896,6 +901,178 @@ export const requestOrganizationOnboarding = async (
       message: 'Organization request received. Check your email to verify the admin account.',
       organizationId: result.organization.id,
       organizationStatus: 'PENDING',
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const submitOrganizationClaim = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const organizationId = Number(req.params.id);
+    if (Number.isNaN(organizationId)) {
+      return res.status(400).json({ error: 'Invalid organization id' });
+    }
+
+    const { email, firstName, lastName, password, metadata } = req.body;
+
+    let requesterDomain: string;
+    try {
+      requesterDomain = extractDomainFromEmail(email);
+    } catch {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        id: true,
+        name: true,
+        domain: true,
+        isClaimVerified: true,
+      },
+    });
+
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    if (!organization.domain) {
+      return res.status(400).json({
+        error: 'This organization cannot be claimed through domain verification.',
+        code: 'ORG_CLAIM_NOT_SUPPORTED',
+      });
+    }
+
+    if (organization.isClaimVerified) {
+      return res.status(409).json({
+        error: 'This organization already has verified leadership.',
+        code: 'ORG_ALREADY_CLAIMED',
+      });
+    }
+
+    if (requesterDomain !== organization.domain.toLowerCase()) {
+      return res.status(403).json({
+        error: 'Claim email domain does not match the organization domain.',
+        code: 'ORG_CLAIM_DOMAIN_MISMATCH',
+      });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const claimResult = await prisma.$transaction(async (tx) => {
+      const orgForUpdate = await tx.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true, isClaimVerified: true },
+      });
+
+      if (!orgForUpdate) {
+        return { kind: 'org_not_found' as const };
+      }
+
+      if (orgForUpdate.isClaimVerified) {
+        return { kind: 'already_claimed' as const };
+      }
+
+      let user = await tx.user.findUnique({
+        where: {
+          email_organizationId: {
+            email: normalizedEmail,
+            organizationId,
+          },
+        },
+      });
+
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            email: normalizedEmail,
+            password: hashedPassword,
+            firstName: normalizeName(firstName),
+            lastName: normalizeName(lastName),
+            organizationId,
+            role: 'ADMIN',
+            status: 'PENDING',
+          },
+        });
+      }
+
+      const existingPendingClaim = await tx.organizationClaim.findFirst({
+        where: {
+          organizationId,
+          userId: user.id,
+          status: 'PENDING',
+        },
+      });
+
+      if (existingPendingClaim) {
+        return { kind: 'duplicate_pending' as const };
+      }
+
+      const claim = await tx.organizationClaim.create({
+        data: {
+          organizationId,
+          userId: user.id,
+          requesterEmail: normalizedEmail,
+          metadata: metadata ?? undefined,
+        },
+      });
+
+      const verificationToken = await createEmailVerificationToken(tx, user.id);
+
+      return {
+        kind: 'created' as const,
+        claim,
+        user,
+        verificationToken: verificationToken.token,
+      };
+    });
+
+    if (claimResult.kind === 'org_not_found') {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    if (claimResult.kind === 'already_claimed') {
+      return res.status(409).json({
+        error: 'This organization already has verified leadership.',
+        code: 'ORG_ALREADY_CLAIMED',
+      });
+    }
+
+    if (claimResult.kind === 'duplicate_pending') {
+      return res.status(409).json({
+        error: 'You already have a pending claim for this organization.',
+        code: 'ORG_CLAIM_ALREADY_PENDING',
+      });
+    }
+
+    const verificationEmail = buildVerificationEmail(
+      claimResult.verificationToken,
+      firstName
+    );
+
+    try {
+      await sendEmail({ to: normalizedEmail, ...verificationEmail });
+    } catch (emailError) {
+      logger.error('Failed to dispatch claim verification email', {
+        email: normalizedEmail,
+        message: (emailError as Error).message,
+      });
+    }
+
+    return res.status(201).json({
+      message: 'Claim submitted. Verify your email to continue review.',
+      code: 'ORG_CLAIM_SUBMITTED',
+      claim: {
+        id: claimResult.claim.id,
+        status: claimResult.claim.status,
+        organizationId: claimResult.claim.organizationId,
+      },
     });
   } catch (error) {
     return next(error);

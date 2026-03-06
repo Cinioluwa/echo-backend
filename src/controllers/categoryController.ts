@@ -6,7 +6,7 @@ import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 // GET /api/categories?q=Academic
 export const getCategories = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const organizationId = req.user?.organizationId ?? (req as any).organizationId;
+    const organizationId = (req as any).organizationId ?? req.user?.organizationId;
     if (!organizationId) {
       return res.status(400).json({ error: 'Organization context missing' });
     }
@@ -45,13 +45,40 @@ export const getCategories = async (req: AuthRequest, res: Response, next: NextF
 export const createCategory = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { name } = req.body;
-    const organizationId = req.user?.organizationId ?? (req as any).organizationId;
+    const organizationId = (req as any).organizationId ?? req.user?.organizationId;
+    const role = req.user?.role;
 
     if (!organizationId) {
       return res.status(400).json({ error: 'Organization context missing' });
     }
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
+    }
+
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      return res.status(403).json({
+        error: 'Only organization leadership can customize categories.',
+        code: 'CATEGORY_CUSTOMIZATION_FORBIDDEN',
+      });
+    }
+
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        isClaimVerified: true,
+        categoryCustomizationLocked: true,
+      },
+    });
+
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    if (!organization.isClaimVerified || organization.categoryCustomizationLocked) {
+      return res.status(403).json({
+        error: 'Category customization is locked until organization leadership is verified.',
+        code: 'ORG_CLAIM_VERIFICATION_REQUIRED',
+      });
     }
 
     const category = await prisma.category.create({

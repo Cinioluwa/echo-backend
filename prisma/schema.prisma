@@ -14,6 +14,8 @@ model Organization {
   domain      String?      @unique // Null indicates open-domain organizations
   joinPolicy  JoinPolicy   @default(OPEN)
   isDomainLocked Boolean   @default(false)
+  isClaimVerified Boolean  @default(true)
+  categoryCustomizationLocked Boolean @default(false)
   status      String       @default("PENDING") // PENDING, ACTIVE
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -29,6 +31,7 @@ model Organization {
   categories  Category[] // An organization can have many custom categories
   requests    OrganizationRequest[]
   joinRequests OrganizationJoinRequest[]
+  claims      OrganizationClaim[]
   notifications Notification[]
   media       Media[]
 }
@@ -65,6 +68,8 @@ model User {
   passwordResetTokens      PasswordResetToken[]
   organizationJoinRequests OrganizationJoinRequest[] @relation("JoinRequestUser")
   reviewedOrganizationJoinRequests OrganizationJoinRequest[] @relation("JoinRequestReviewer")
+  organizationClaims OrganizationClaim[] @relation("OrganizationClaimUser")
+  reviewedOrganizationClaims OrganizationClaim[] @relation("OrganizationClaimReviewer")
   notifications       Notification[]
   media               Media[]
 
@@ -366,6 +371,31 @@ model OrganizationJoinRequest {
   @@index([userId])
 }
 
+model OrganizationClaim {
+  id             Int          @id @default(autoincrement())
+  requesterEmail String
+  status         ClaimStatus  @default(PENDING)
+  reason         String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  reviewedAt     DateTime?
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  user           User         @relation("OrganizationClaimUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+
+  reviewedBy     User?        @relation("OrganizationClaimReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById   Int?
+
+  // Concurrency for pending claims is handled in service/controller logic.
+  @@index([organizationId, userId])
+  @@index([organizationId, status])
+  @@index([requesterEmail])
+}
+
 // Enums
 enum Role {
   USER
@@ -400,6 +430,12 @@ enum JoinPolicy {
 }
 
 enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ClaimStatus {
   PENDING
   APPROVED
   REJECTED

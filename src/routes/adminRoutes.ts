@@ -39,9 +39,12 @@ import { userIdParamSchema } from '../schemas/userSchemas.js';
 import {
     analyticsWindowOptionalSchema,
     analyticsWindowSchema,
+    listOrganizationClaimsSchema,
     listOrganizationJoinRequestsSchema,
+    organizationClaimIdSchema,
     organizationJoinRequestIdSchema,
     priorityPingsSchema,
+    rejectOrganizationClaimSchema,
     rejectOrganizationJoinRequestSchema,
     responseTimeAnalyticsSchema,
     updateOrganizationJoinPolicySchema,
@@ -54,7 +57,10 @@ import {
 } from '../schemas/announcementSchemas.js';
 import {
     approveOrganizationRequest,
+    approveOrganizationClaim,
+    listOrganizationClaims,
     listOrganizationRequests,
+    rejectOrganizationClaim,
     rejectOrganizationRequest,
 } from '../controllers/organizationRequestController.js';
 import {
@@ -213,6 +219,126 @@ router.post('/organization-requests/:id/approve', authMiddleware, superAdminMidd
  *         description: Super Admin access required
  */
 router.post('/organization-requests/:id/reject', authMiddleware, superAdminMiddleware, rejectOrganizationRequest);
+
+/**
+ * @openapi
+ * /api/admin/organization-claims:
+ *   get:
+ *     summary: List organization leadership claims
+ *     description: |
+ *       List leadership claims for preseeded organizations.
+ *
+ *       **Super Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, APPROVED, REJECTED]
+ *     responses:
+ *       200:
+ *         description: Organization claims retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Super Admin access required
+ */
+router.get(
+    '/organization-claims',
+    authMiddleware,
+    superAdminMiddleware,
+    validate(listOrganizationClaimsSchema),
+    listOrganizationClaims
+);
+
+/**
+ * @openapi
+ * /api/admin/organization-claims/{id}/approve:
+ *   post:
+ *     summary: Approve an organization leadership claim
+ *     description: |
+ *       Approves a pending leadership claim.
+ *       This marks leadership as verified, unlocks category customization,
+ *       and grants organization admin authority to the claimant.
+ *
+ *       **Super Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Claim approved successfully
+ *       400:
+ *         description: Claimant email not verified
+ *       404:
+ *         description: Claim not found
+ *       409:
+ *         description: Claim not pending or organization already claimed
+ */
+router.post(
+    '/organization-claims/:id/approve',
+    authMiddleware,
+    superAdminMiddleware,
+    validate(organizationClaimIdSchema),
+    approveOrganizationClaim
+);
+
+/**
+ * @openapi
+ * /api/admin/organization-claims/{id}/reject:
+ *   post:
+ *     summary: Reject an organization leadership claim
+ *     description: |
+ *       Rejects a pending leadership claim.
+ *
+ *       **Super Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 maxLength: 500
+ *     responses:
+ *       200:
+ *         description: Claim rejected successfully
+ *       404:
+ *         description: Claim not found
+ *       409:
+ *         description: Claim not pending
+ */
+router.post(
+    '/organization-claims/:id/reject',
+    authMiddleware,
+    superAdminMiddleware,
+    validate(organizationClaimIdSchema),
+    validate(rejectOrganizationClaimSchema),
+    rejectOrganizationClaim
+);
 
 router.get(
     '/organization/settings',

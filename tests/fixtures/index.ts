@@ -10,6 +10,8 @@ export interface CreateOrganizationData {
   status?: string;
   joinPolicy?: JoinPolicy;
   isDomainLocked?: boolean;
+  isClaimVerified?: boolean;
+  categoryCustomizationLocked?: boolean;
 }
 
 export interface CreateUserData {
@@ -20,6 +22,7 @@ export interface CreateUserData {
   password?: string;
   role?: Role;
   status?: string;
+  isVerified?: boolean;
   organizationId?: number;
 }
 
@@ -67,6 +70,8 @@ export async function createOrganization(data: CreateOrganizationData = {}) {
     status: 'ACTIVE',
     joinPolicy: 'OPEN' as JoinPolicy,
     isDomainLocked: false,
+    isClaimVerified: true,
+    categoryCustomizationLocked: false,
     ...data,
   };
 
@@ -87,6 +92,7 @@ export async function createUser(data: CreateUserData = {}) {
     password: await bcrypt.hash('Password123!', 10), // Hash the default password
     role: Role.USER,
     status: 'ACTIVE',
+    isVerified: true,
     ...data,
   };
 
@@ -219,6 +225,9 @@ export async function cleanupTestData() {
     getPrismaClient().ping.deleteMany(),
     getPrismaClient().announcement.deleteMany(),
     getPrismaClient().category.deleteMany(),
+    getPrismaClient().organizationClaim.deleteMany(),
+    getPrismaClient().organizationJoinRequest.deleteMany(),
+    getPrismaClient().organizationRequest.deleteMany(),
     getPrismaClient().user.deleteMany(),
     getPrismaClient().organization.deleteMany(),
   ]);

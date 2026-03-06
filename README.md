@@ -126,12 +126,45 @@ node scripts/seed-demo.mjs
 **4. Frontend Integration Notes**
 - **Category Handling**: Fetch categories once via `GET /api/categories` and cache them. Use IDs for filtering soundboard/stream. Hardcoding IDs breaks on seed changes—always fetch dynamically.
 - **Soundboard/Stream Flow**: For "All Categories", omit `category` param. For specific, include `category=<id>`. Handle pagination UI with `hasNextPage`.
+- **Claim Lock Behavior**: `GET /api/categories` remains available for unclaimed organizations, but category creation is blocked until leadership is verified.
 - **Edge Cases in Frontend**:
   - Network errors: Retry fetches, show loading states.
   - Empty results: Display "No content" message.
   - Invalid category: Fallback to "All Categories".
   - Auth expiry: Redirect to login on 401.
   - Rate limits: Implement backoff on 429.
+
+## Preseeded Organization Claim Flow
+
+Echo supports preseeded organizations where leadership is claimed and verified after students can already participate.
+
+### Claim submission (public endpoint)
+
+- `POST /api/users/organizations/:id/claim`
+
+Rules enforced by backend:
+- Claim email domain must exactly match `Organization.domain`.
+- Open-domain organizations are not claimable through this endpoint.
+- Duplicate pending claims from the same user for the same organization are rejected.
+- Users with previously rejected claims can submit a new claim.
+
+### Super admin review
+
+- `GET /api/admin/organization-claims?status=PENDING|APPROVED|REJECTED`
+- `POST /api/admin/organization-claims/:id/approve`
+- `POST /api/admin/organization-claims/:id/reject`
+
+Approval effects:
+- Claim becomes `APPROVED`.
+- Organization is marked claim-verified and category customization is unlocked.
+- Claimant is promoted to organization admin.
+- Any other pending claims for that organization are auto-rejected.
+
+### Category behavior during unclaimed state
+
+- Default categories are seeded so posting continues while leadership is unverified.
+- Category writes (`POST /api/categories`) are blocked until leadership claim is verified.
+- Category reads (`GET /api/categories`) always remain available.
 
 ## Project structure
 

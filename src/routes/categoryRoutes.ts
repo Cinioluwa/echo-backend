@@ -68,7 +68,10 @@ const router = Router();
  *       Categories help organize pings and waves by topic.
  *       
  *       **Authentication required**: User must be logged in.
- *       **Note**: In some deployments, this may be admin-only.
+ *       **Authorization rules**:
+ *       - Requires ADMIN or SUPER_ADMIN role.
+ *       - Organization must have verified leadership claim.
+ *       - Category customization must be unlocked for the organization.
  *     tags:
  *       - Categories
  *     security:
@@ -101,6 +104,8 @@ const router = Router();
  *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Category customization is locked pending leadership verification, or caller lacks required role
  *       500:
  *         description: Internal server error
  */
