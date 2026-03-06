@@ -383,7 +383,7 @@ All JSON bodies are validated with Zod. Many list endpoints accept optional pagi
 ### Auth — `/api/users` & `/api/auth`
 - `POST /api/users/register` — Register (email, password, firstName, lastName, level?)
 - `POST /api/users/login` — Login, returns JWT
-- `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (body: { idToken }) **(preferred)**
+- `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (body: `{ token }`) **(preferred)**
 - `POST /api/users/google` — Google OAuth Sign-In/Sign-Up (body: { idToken }) (legacy alias)
 - `POST /api/users/verify-email` — Verify email with token from registration
 - `POST /api/users/forgot-password` — Request password reset (sends email)
@@ -439,6 +439,23 @@ Echo is **organization-scoped**. Users can only sign in with email domains that 
   - `GET /api/admin/organization-requests?status=PENDING`
   - `POST /api/admin/organization-requests/:id/approve` (sets org `ACTIVE`)
   - `POST /api/admin/organization-requests/:id/reject`
+
+### Organization join policy (member-level access control)
+
+Organizations now define member join behavior with `joinPolicy`:
+- `OPEN`: domain-linked users can join automatically after verification.
+- `REQUIRES_APPROVAL`: matched users are queued for admin approval.
+
+Open-domain organizations (`domain = null`) are permanently locked to `REQUIRES_APPROVAL` and cannot be changed to `OPEN`.
+
+**Domain match does not bypass policy**. A domain match only identifies the organization; access still follows `joinPolicy`.
+
+**Admin endpoints (organization-scoped):**
+- `GET /api/admin/organization/settings` — Returns domain, join policy, effective policy, and lock state.
+- `PATCH /api/admin/organization/join-policy` — Update join policy (blocked for open-domain unlock attempts).
+- `GET /api/admin/organization/join-requests?status=PENDING|APPROVED|REJECTED` — List member join requests.
+- `POST /api/admin/organization/join-requests/:id/approve` — Approve pending join request.
+- `POST /api/admin/organization/join-requests/:id/reject` — Reject pending join request.
 
 **Dev/Staging convenience:**
 - To auto-activate orgs on admin email verification (easy dev): set `ORG_ONBOARDING_AUTO_ACTIVATE=true`.

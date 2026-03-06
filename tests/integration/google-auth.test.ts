@@ -123,4 +123,29 @@ describe('Google Auth Integration', () => {
     expect(res.body).toHaveProperty('error');
     expect(res.body.error).toContain('Consumer email domains are not allowed');
   });
+
+  it('should return pending approval when org join policy requires approval', async () => {
+    const prisma = getPrisma();
+    const request = await buildTestClient({ disableRateLimiting: true });
+
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: { joinPolicy: 'REQUIRES_APPROVAL' },
+    });
+
+    vi.mocked(verifyGoogleToken).mockResolvedValue({
+      email: `approval-${Date.now()}@example.com`,
+      emailVerified: true,
+      firstName: 'Pending',
+      lastName: 'User',
+      googleId: `pending-${Date.now()}`,
+    });
+
+    const res = await request
+      .post('/api/auth/google')
+      .send({ token: googleToken });
+
+    expect(res.status).toBe(202);
+    expect(res.body).toHaveProperty('code', 'ORG_JOIN_APPROVAL_REQUIRED');
+  });
 });

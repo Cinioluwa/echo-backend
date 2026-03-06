@@ -39,8 +39,12 @@ import { userIdParamSchema } from '../schemas/userSchemas.js';
 import {
     analyticsWindowOptionalSchema,
     analyticsWindowSchema,
+    listOrganizationJoinRequestsSchema,
+    organizationJoinRequestIdSchema,
     priorityPingsSchema,
+    rejectOrganizationJoinRequestSchema,
     responseTimeAnalyticsSchema,
+    updateOrganizationJoinPolicySchema,
     updateUserRoleSchema,
 } from '../schemas/adminSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
@@ -53,6 +57,13 @@ import {
     listOrganizationRequests,
     rejectOrganizationRequest,
 } from '../controllers/organizationRequestController.js';
+import {
+    approveOrganizationJoinRequest,
+    getOrganizationJoinSettings,
+    listOrganizationJoinRequests,
+    rejectOrganizationJoinRequest,
+    updateOrganizationJoinPolicy,
+} from '../controllers/organizationJoinPolicyController.js';
 
 const router = Router();
 
@@ -202,6 +213,51 @@ router.post('/organization-requests/:id/approve', authMiddleware, superAdminMidd
  *         description: Super Admin access required
  */
 router.post('/organization-requests/:id/reject', authMiddleware, superAdminMiddleware, rejectOrganizationRequest);
+
+router.get(
+    '/organization/settings',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    getOrganizationJoinSettings
+);
+
+router.patch(
+    '/organization/join-policy',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(updateOrganizationJoinPolicySchema),
+    updateOrganizationJoinPolicy
+);
+
+router.get(
+    '/organization/join-requests',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(listOrganizationJoinRequestsSchema),
+    listOrganizationJoinRequests
+);
+
+router.post(
+    '/organization/join-requests/:id/approve',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(organizationJoinRequestIdSchema),
+    approveOrganizationJoinRequest
+);
+
+router.post(
+    '/organization/join-requests/:id/reject',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(organizationJoinRequestIdSchema),
+    validate(rejectOrganizationJoinRequestSchema),
+    rejectOrganizationJoinRequest
+);
 
 /**
  * @openapi

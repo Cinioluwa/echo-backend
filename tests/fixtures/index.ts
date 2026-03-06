@@ -1,13 +1,15 @@
 import { getPrisma } from '../integration/testContainer.js';
-import { Role, Status, ProgressStatus } from '@prisma/client';
+import { Role, Status, ProgressStatus, JoinPolicy } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const getPrismaClient = () => getPrisma();
 
 export interface CreateOrganizationData {
   name?: string;
-  domain?: string;
+  domain?: string | null;
   status?: string;
+  joinPolicy?: JoinPolicy;
+  isDomainLocked?: boolean;
 }
 
 export interface CreateUserData {
@@ -63,6 +65,8 @@ export async function createOrganization(data: CreateOrganizationData = {}) {
     name: `Test Org ${Date.now()}`,
     domain: `test${Date.now()}.edu`,
     status: 'ACTIVE',
+    joinPolicy: 'OPEN' as JoinPolicy,
+    isDomainLocked: false,
     ...data,
   };
 

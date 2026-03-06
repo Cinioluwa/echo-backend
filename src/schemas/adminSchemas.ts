@@ -37,3 +37,27 @@ export const priorityPingsSchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20),
   }),
 });
+
+export const updateOrganizationJoinPolicySchema = z.object({
+  body: z.object({
+    joinPolicy: z.enum(['OPEN', 'REQUIRES_APPROVAL']),
+  }),
+});
+
+export const organizationJoinRequestIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'Join request ID must be a number'),
+  }),
+});
+
+export const listOrganizationJoinRequestsSchema = z.object({
+  query: z.object({
+    status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+  }),
+});
+
+export const rejectOrganizationJoinRequestSchema = z.object({
+  body: z.object({
+    reason: z.string().max(500).optional(),
+  }),
+});

@@ -5,6 +5,10 @@ import { AuthRequest } from '../types/AuthRequest.js';
 import { verifyGoogleToken } from '../services/googleAuthService.js';
 import { extractDomainFromEmail, getDomainCandidates, isConsumerEmailDomain } from '../utils/domainUtils.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
+import {
+  ensurePendingOrganizationJoinRequest,
+  getEffectiveJoinPolicy,
+} from '../services/organizationJoinPolicyService.js';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { env } from '../config/env.js';
@@ -83,6 +87,8 @@ export async function googleAuth(req: AuthRequest, res: Response) {
       });
     }
 
+    const effectiveJoinPolicy = getEffectiveJoinPolicy(organization);
+
     // Step 4: Check if user exists
     let user = await prisma.user.findUnique({
       where: {
@@ -102,13 +108,26 @@ export async function googleAuth(req: AuthRequest, res: Response) {
           lastName,
           organizationId: organization.id,
           role: 'USER', // Default role
-          status: 'ACTIVE', // Auto-activate since Google verified email
+          status: effectiveJoinPolicy === 'REQUIRES_APPROVAL' ? 'PENDING' : 'ACTIVE',
           isVerified: true, // Skip email verification
           googleId, // Store Google's unique ID
           profilePicture: picture,
           // No password field - Google OAuth users don't have passwords
         },
       });
+
+      if (effectiveJoinPolicy === 'REQUIRES_APPROVAL') {
+        await ensurePendingOrganizationJoinRequest(prisma, {
+          organizationId: organization.id,
+          userId: user.id,
+          email,
+        });
+
+        return res.status(202).json({
+          message: 'Google account verified. Your access is pending organization approval.',
+          code: 'ORG_JOIN_APPROVAL_REQUIRED',
+        });
+      }
 
       logger.info('New user created via Google Auth', {
         userId: user.id,
@@ -124,8 +143,28 @@ export async function googleAuth(req: AuthRequest, res: Response) {
             googleId,
             profilePicture: picture || user.profilePicture,
             isVerified: true,
-            status: 'ACTIVE',
+            status: effectiveJoinPolicy === 'REQUIRES_APPROVAL' ? 'PENDING' : 'ACTIVE',
           },
+        });
+      }
+
+      if (user.status !== 'ACTIVE' && effectiveJoinPolicy === 'REQUIRES_APPROVAL') {
+        await ensurePendingOrganizationJoinRequest(prisma, {
+          organizationId: organization.id,
+          userId: user.id,
+          email,
+        });
+
+        return res.status(202).json({
+          message: 'Your account is pending organization approval.',
+          code: 'ORG_JOIN_APPROVAL_REQUIRED',
+        });
+      }
+
+      if (user.status !== 'ACTIVE' && effectiveJoinPolicy === 'OPEN') {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { status: 'ACTIVE', isVerified: true },
         });
       }
 

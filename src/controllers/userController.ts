@@ -24,6 +24,10 @@ import {
   getDomainCandidates,
   isConsumerEmailDomain,
 } from '../utils/domainUtils.js';
+import {
+  ensurePendingOrganizationJoinRequest,
+  getEffectiveJoinPolicy,
+} from '../services/organizationJoinPolicyService.js';
 import { env } from '../config/env.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import type { Role } from '@prisma/client';
@@ -119,6 +123,7 @@ export const registerUser = async (
     }
 
     const normalizedEmail = normalizeEmail(email);
+    const effectiveJoinPolicy = getEffectiveJoinPolicy(organization);
 
     // Check if user already exists in the org
     const existingUser = await prisma.user.findUnique({
@@ -131,6 +136,20 @@ export const registerUser = async (
     });
 
     if (existingUser) {
+      if (existingUser.status !== 'ACTIVE' && effectiveJoinPolicy === 'REQUIRES_APPROVAL') {
+        await ensurePendingOrganizationJoinRequest(prisma, {
+          organizationId: organization.id,
+          userId: existingUser.id,
+          email: normalizedEmail,
+        });
+
+        return res.status(202).json({
+          message:
+            'Your account is pending organization approval. Please verify your email and wait for an admin decision.',
+          code: 'ORG_JOIN_APPROVAL_REQUIRED',
+        });
+      }
+
       return res.status(409).json({
         error: 'An account with this email already exists. Try logging in instead.',
         code: 'ACCOUNT_EXISTS',
@@ -148,8 +167,17 @@ export const registerUser = async (
           lastName: normalizeName(lastName),
           level: typeof level === 'number' ? level : null,
           organizationId: organization.id,
+          status: effectiveJoinPolicy === 'REQUIRES_APPROVAL' ? 'PENDING' : 'PENDING',
         },
       });
+
+      if (effectiveJoinPolicy === 'REQUIRES_APPROVAL') {
+        await ensurePendingOrganizationJoinRequest(tx, {
+          organizationId: organization.id,
+          userId: createdUser.id,
+          email: normalizedEmail,
+        });
+      }
 
       const tokenRecord = await createEmailVerificationToken(tx, createdUser.id);
 
@@ -178,8 +206,14 @@ export const registerUser = async (
     });
 
     const { password: _pw, ...safeUser } = user as any;
-    return res.status(201).json({
-      message: 'Account created. Please verify your email to activate your profile.',
+    return res.status(effectiveJoinPolicy === 'REQUIRES_APPROVAL' ? 202 : 201).json({
+      message:
+        effectiveJoinPolicy === 'REQUIRES_APPROVAL'
+          ? 'Account created. Verify your email and wait for organization approval before accessing Echo.'
+          : 'Account created. Please verify your email to activate your profile.',
+      ...(effectiveJoinPolicy === 'REQUIRES_APPROVAL'
+        ? { code: 'ORG_JOIN_APPROVAL_REQUIRED' }
+        : {}),
       user: safeUser,
     });
   } catch (error) {
@@ -238,6 +272,8 @@ export const loginUser = async (
       });
     }
 
+    const effectiveJoinPolicy = getEffectiveJoinPolicy(organization);
+
     const normalizedEmail = normalizeEmail(email);
 
     const user = await prisma.user.findUnique({
@@ -259,6 +295,21 @@ export const loginUser = async (
     }
 
     if (user.status !== 'ACTIVE') {
+      const pendingJoinRequest = await prisma.organizationJoinRequest.findFirst({
+        where: {
+          organizationId: organization.id,
+          userId: user.id,
+          status: 'PENDING',
+        },
+      });
+
+      if (pendingJoinRequest) {
+        return res.status(403).json({
+          error: 'Your account is pending organization approval.',
+          code: 'ORG_JOIN_APPROVAL_REQUIRED',
+        });
+      }
+
       return res.status(403).json({
         error: 'Please verify your email before logging in.',
         code: 'ACCOUNT_PENDING_VERIFICATION',
@@ -393,13 +444,40 @@ export const loginWithGoogle = async (
           firstName: normalizeName(derivedFirstName),
           lastName: normalizeName(derivedLastName),
           organizationId: organization.id,
-          status: 'ACTIVE',
+          status: effectiveJoinPolicy === 'REQUIRES_APPROVAL' ? 'PENDING' : 'ACTIVE',
+          isVerified: true,
         },
       });
+
+      if (effectiveJoinPolicy === 'REQUIRES_APPROVAL') {
+        await ensurePendingOrganizationJoinRequest(prisma, {
+          organizationId: organization.id,
+          userId: user.id,
+          email: normalizedEmail,
+        });
+
+        return res.status(202).json({
+          message: 'Your account is pending organization approval.',
+          code: 'ORG_JOIN_APPROVAL_REQUIRED',
+        });
+      }
     } else if (user.status !== 'ACTIVE') {
+      if (effectiveJoinPolicy === 'REQUIRES_APPROVAL') {
+        await ensurePendingOrganizationJoinRequest(prisma, {
+          organizationId: organization.id,
+          userId: user.id,
+          email: normalizedEmail,
+        });
+
+        return res.status(202).json({
+          message: 'Your account is pending organization approval.',
+          code: 'ORG_JOIN_APPROVAL_REQUIRED',
+        });
+      }
+
       user = await prisma.user.update({
         where: { id: user.id },
-        data: { status: 'ACTIVE' },
+        data: { status: 'ACTIVE', isVerified: true },
       });
     }
 
@@ -453,15 +531,30 @@ export const verifyEmail = async (
         return null;
       }
 
+      const effectiveJoinPolicy = getEffectiveJoinPolicy(tokenRecord.user.organization);
+      const requiresJoinApproval =
+        tokenRecord.user.role === 'USER' && effectiveJoinPolicy === 'REQUIRES_APPROVAL';
+
       await markEmailVerificationTokenUsed(tx, tokenRecord.id);
 
       const updatedUser = await tx.user.update({
         where: { id: tokenRecord.userId },
-        data: { status: 'ACTIVE' },
+        data: {
+          status: requiresJoinApproval ? 'PENDING' : 'ACTIVE',
+          isVerified: true,
+        },
         include: {
           organization: true,
         },
       });
+
+      if (requiresJoinApproval) {
+        await ensurePendingOrganizationJoinRequest(tx, {
+          organizationId: updatedUser.organizationId,
+          userId: updatedUser.id,
+          email: updatedUser.email,
+        });
+      }
 
       let organizationActivated = false;
 
@@ -487,7 +580,7 @@ export const verifyEmail = async (
         where: { userId: updatedUser.id, used: false },
       });
 
-      return { organizationActivated };
+      return { organizationActivated, requiresJoinApproval };
     });
 
     if (!result) {
@@ -497,7 +590,12 @@ export const verifyEmail = async (
     return res.status(200).json({
       message: result.organizationActivated
         ? 'Email verified and organization activated.'
-        : 'Email verified successfully.',
+        : result.requiresJoinApproval
+          ? 'Email verified. Your account is pending organization approval.'
+          : 'Email verified successfully.',
+      ...(result.requiresJoinApproval
+        ? { code: 'ORG_JOIN_APPROVAL_REQUIRED' }
+        : {}),
     });
   } catch (error) {
     return next(error);

@@ -65,4 +65,33 @@ describe('Auth register/login', () => {
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.token).toBeDefined();
   });
+
+  it('returns pending approval when organization join policy requires approval', async () => {
+    const prisma = getPrisma();
+    const request = await buildTestClient({ disableRateLimiting: true });
+
+    const approvalOrg = await prisma.organization.create({
+      data: {
+        name: `Approval Org ${Date.now()}`,
+        domain: `approval${Date.now()}.edu`,
+        status: 'ACTIVE',
+        joinPolicy: 'REQUIRES_APPROVAL',
+      },
+    });
+
+    const pendingEmail = `pending@${approvalOrg.domain}`;
+
+    const registerRes = await request
+      .post('/api/users/register')
+      .send({
+        email: pendingEmail,
+        password,
+        firstName: 'Pending',
+        lastName: 'Approval',
+        level: 2,
+      });
+
+    expect(registerRes.status).toBe(202);
+    expect(registerRes.body).toHaveProperty('code', 'ORG_JOIN_APPROVAL_REQUIRED');
+  });
 });

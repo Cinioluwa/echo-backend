@@ -11,7 +11,9 @@ generator client {
 model Organization {
   id          Int          @id @default(autoincrement())
   name        String       @unique
-  domain      String       @unique // Add domain field for organization identification
+  domain      String?      @unique // Null indicates open-domain organizations
+  joinPolicy  JoinPolicy   @default(OPEN)
+  isDomainLocked Boolean   @default(false)
   status      String       @default("PENDING") // PENDING, ACTIVE
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -26,6 +28,7 @@ model Organization {
   invitations Invitation[]
   categories  Category[] // An organization can have many custom categories
   requests    OrganizationRequest[]
+  joinRequests OrganizationJoinRequest[]
   notifications Notification[]
   media       Media[]
 }
@@ -60,6 +63,8 @@ model User {
   flaggedWaves       Wave[] @relation("WaveFlaggedBy")
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
+  organizationJoinRequests OrganizationJoinRequest[] @relation("JoinRequestUser")
+  reviewedOrganizationJoinRequests OrganizationJoinRequest[] @relation("JoinRequestReviewer")
   notifications       Notification[]
   media               Media[]
 
@@ -338,6 +343,29 @@ model OrganizationRequest {
   @@index([status])
 }
 
+model OrganizationJoinRequest {
+  id             Int                @id @default(autoincrement())
+  email          String
+  status         JoinRequestStatus  @default(PENDING)
+  reason         String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  reviewedAt     DateTime?
+
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  user           User               @relation("JoinRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+
+  reviewedBy     User?              @relation("JoinRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById   Int?
+
+  @@index([organizationId, status])
+  @@index([organizationId, email])
+  @@index([userId])
+}
+
 // Enums
 enum Role {
   USER
@@ -364,6 +392,17 @@ enum NotificationType {
   WAVE_APPROVED
   OFFICIAL_RESPONSE_POSTED
   ANNOUNCEMENT_POSTED
+}
+
+enum JoinPolicy {
+  OPEN
+  REQUIRES_APPROVAL
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // Media/Attachment Model for file uploads
