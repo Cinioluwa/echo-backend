@@ -16,6 +16,7 @@ export const registerSchema = z.object({
       message: 'Last name is required',
     }).min(1, 'Last name cannot be empty').max(50),
     level: z.number().int('Level must be an integer').min(1, 'Level must be between 1 and 7').max(7, 'Level must be between 1 and 7').optional(),
+    organizationId: z.number().int().positive().optional(),
   }),
 });
 

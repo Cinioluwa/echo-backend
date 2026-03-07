@@ -247,3 +247,78 @@ Requester: ${requesterEmail}
 Review in the admin dashboard: ${dashboardUrl}`,
 	};
 };
+
+export const buildWaitlistApprovalEmail = (organizationName: string) => {
+	const signupUrl = `${sanitizeAppUrl()}/signup`;
+
+	return {
+		subject: 'Your organization is now on Echo',
+		html: `
+			<p>Hi,</p>
+			<p>Great news! Your organization <strong>${organizationName}</strong> has been approved and is now on Echo.</p>
+			<p>You can now create your account and start using the platform.</p>
+			<p><a href="${signupUrl}">Sign up on Echo</a></p>
+			<p>If the link above does not work, copy and paste this URL into your browser:</p>
+			<p>${signupUrl}</p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,
+
+Great news! Your organization ${organizationName} has been approved and is now on Echo.
+
+You can now create your account and start using the platform.
+
+Sign up here: ${signupUrl}
+
+— The Echo Team`,
+	};
+};
+
+export const buildJoinRequestApprovedEmail = (organizationName: string) => {
+	const loginUrl = `${sanitizeAppUrl()}/login`;
+
+	return {
+		subject: `You've been approved to join ${organizationName} on Echo`,
+		html: `
+			<p>Hi,</p>
+			<p>Your request to join <strong>${organizationName}</strong> on Echo has been approved!</p>
+			<p>You can now log in and start using the platform.</p>
+			<p><a href="${loginUrl}">Log in to Echo</a></p>
+			<p>If the link above does not work, copy and paste this URL into your browser:</p>
+			<p>${loginUrl}</p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,
+
+Your request to join ${organizationName} on Echo has been approved!
+
+You can now log in and start using the platform.
+
+Log in here: ${loginUrl}
+
+— The Echo Team`,
+	};
+};
+
+export const buildJoinRequestRejectedEmail = (organizationName: string, reason?: string) => {
+	const reasonLine = reason ? `<p><strong>Reason:</strong> ${reason}</p>` : '';
+	const reasonText = reason ? `\nReason: ${reason}\n` : '';
+
+	return {
+		subject: `Your request to join ${organizationName} was not approved`,
+		html: `
+			<p>Hi,</p>
+			<p>Unfortunately, your request to join <strong>${organizationName}</strong> on Echo was not approved.</p>
+			${reasonLine}
+			<p>If you believe this was a mistake, please contact your organization admin for more information.</p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,
+
+Unfortunately, your request to join ${organizationName} on Echo was not approved.
+${reasonText}
+If you believe this was a mistake, please contact your organization admin for more information.
+
+— The Echo Team`,
+	};
+};

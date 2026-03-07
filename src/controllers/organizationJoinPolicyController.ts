@@ -6,6 +6,8 @@ import {
   getEffectiveJoinPolicy,
   isJoinPolicyLocked,
 } from '../services/organizationJoinPolicyService.js';
+import logger from '../config/logger.js';
+import { sendEmail, buildJoinRequestApprovedEmail, buildJoinRequestRejectedEmail } from '../services/emailService.js';
 
 export async function getOrganizationJoinSettings(
   req: AuthRequest,
@@ -203,6 +205,22 @@ export async function approveOrganizationJoinRequest(
       return res.status(404).json({ error: 'Pending organization join request not found' });
     }
 
+    try {
+      const approvedUser = await prisma.user.findUnique({
+        where: { id: result.user.id },
+        select: { email: true, organization: { select: { name: true } } },
+      });
+      if (approvedUser) {
+        const emailContent = buildJoinRequestApprovedEmail(approvedUser.organization?.name ?? 'your organization');
+        await sendEmail({ to: approvedUser.email, ...emailContent });
+      }
+    } catch (emailError) {
+      logger.error('Failed to send join request approval email', {
+        userId: result.user.id,
+        message: (emailError as Error).message,
+      });
+    }
+
     return res.status(200).json({
       message: 'Organization join request approved.',
       requestId: joinRequestId,
@@ -244,6 +262,29 @@ export async function rejectOrganizationJoinRequest(
 
     if (updated.count === 0) {
       return res.status(404).json({ error: 'Pending organization join request not found' });
+    }
+
+    try {
+      const joinRequest = await prisma.organizationJoinRequest.findUnique({
+        where: { id: joinRequestId },
+        select: {
+          email: true,
+          reason: true,
+          organization: { select: { name: true } },
+        },
+      });
+      if (joinRequest) {
+        const emailContent = buildJoinRequestRejectedEmail(
+          joinRequest.organization?.name ?? 'the organization',
+          joinRequest.reason ?? undefined,
+        );
+        await sendEmail({ to: joinRequest.email, ...emailContent });
+      }
+    } catch (emailError) {
+      logger.error('Failed to send join request rejection email', {
+        joinRequestId,
+        message: (emailError as Error).message,
+      });
     }
 
     return res.status(200).json({

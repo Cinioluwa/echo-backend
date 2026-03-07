@@ -73,7 +73,7 @@ export const registerUser = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password, firstName, lastName, level } = req.body;
+    const { email, password, firstName, lastName, level, organizationId } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -86,37 +86,50 @@ export const registerUser = async (
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    if (isConsumerEmailDomain(domain)) {
-      return res.status(400).json({
-        error: 'Personal email domains are not supported. Please use your organization email.',
-        code: 'CONSUMER_DOMAIN_NOT_ALLOWED',
-      });
-    }
-
     let organization = null as Awaited<
       ReturnType<typeof prisma.organization.findUnique>
     >;
 
-    for (const candidate of getDomainCandidates(domain)) {
-      // eslint-disable-next-line no-await-in-loop
-      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
-      if (found) {
-        organization = found;
-        break;
+    if (isConsumerEmailDomain(domain)) {
+      // Personal email: require explicit org selection
+      if (!organizationId) {
+        return res.status(400).json({
+          error: 'Please select your organization to register.',
+          code: 'ORG_ID_REQUIRED_FOR_PERSONAL_EMAIL',
+        });
       }
-    }
 
-    if (!organization) {
-      logger.info('Registration attempt for unknown domain', {
-        domain,
-        email,
-        requestId: (req as any).requestId,
-      });
-      return res.status(404).json({
-        error: 'No organization is registered for this email domain.',
-        code: 'ORG_NOT_FOUND',
-        domain,
-      });
+      organization = await prisma.organization.findUnique({ where: { id: organizationId } });
+
+      if (!organization) {
+        return res.status(404).json({
+          error: 'Organization not found.',
+          code: 'ORG_NOT_FOUND',
+        });
+      }
+    } else {
+      // Org email: domain-based lookup
+      for (const candidate of getDomainCandidates(domain)) {
+        // eslint-disable-next-line no-await-in-loop
+        const found = await prisma.organization.findUnique({ where: { domain: candidate } });
+        if (found) {
+          organization = found;
+          break;
+        }
+      }
+
+      if (!organization) {
+        logger.info('Registration attempt for unknown domain', {
+          domain,
+          email,
+          requestId: (req as any).requestId,
+        });
+        return res.status(404).json({
+          error: 'No organization is registered for this email domain.',
+          code: 'ORG_NOT_FOUND',
+          domain,
+        });
+      }
     }
 
     if (organization.status !== 'ACTIVE') {
@@ -781,13 +794,6 @@ export const requestOrganizationOnboarding = async (
       domain = extractDomainFromEmail(email);
   } catch {
       return res.status(400).json({ error: 'Invalid email format' });
-    }
-
-    if (isConsumerEmailDomain(domain)) {
-      return res.status(400).json({
-        error: 'Consumer email domains are not supported for organization onboarding.',
-        code: 'CONSUMER_DOMAIN_NOT_ALLOWED',
-      });
     }
 
     const normalizedDomain = domain;

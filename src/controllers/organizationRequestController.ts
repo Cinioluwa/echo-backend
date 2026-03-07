@@ -3,6 +3,7 @@ import prisma from '../config/db.js';
 import type { AuthRequest } from '../types/AuthRequest.js';
 import { ensureOrganizationDefaultCategories } from '../services/organizationCategoryService.js';
 import logger from '../config/logger.js';
+import { sendEmail, buildWaitlistApprovalEmail } from '../services/emailService.js';
 
 const CLAIM_REQUEST_INITIAL = 'INITIAL_CLAIM';
 const CLAIM_REQUEST_ADMIN_ACCESS = 'ADMIN_ACCESS';
@@ -107,6 +108,16 @@ export async function approveOrganizationRequest(
 
     if (!result) {
       return res.status(404).json({ error: 'Organization request not found' });
+    }
+
+    try {
+      const emailContent = buildWaitlistApprovalEmail(result.organizationName);
+      await sendEmail({ to: result.requesterEmail, ...emailContent });
+    } catch (emailError) {
+      logger.error('Failed to send waitlist approval email', {
+        email: result.requesterEmail,
+        message: (emailError as Error).message,
+      });
     }
 
     return res.status(200).json({
