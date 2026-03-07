@@ -8,6 +8,7 @@ import { OAuth2Client } from 'google-auth-library';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import {
+  buildOrganizationAdminAccessRequestEmail,
   buildOrganizationRequestEmail,
   buildPasswordResetEmail,
   buildVerificationEmail,
@@ -38,6 +39,9 @@ const googleClient = env.GOOGLE_CLIENT_ID
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const normalizeName = (value: string) => value.trim();
+
+const CLAIM_REQUEST_INITIAL = 'INITIAL_CLAIM';
+const CLAIM_REQUEST_ADMIN_ACCESS = 'ADMIN_ACCESS';
 
 const sanitizePingAuthor = (ping: any) =>
   ping
@@ -959,6 +963,10 @@ export const submitOrganizationClaim = async (
       return res.status(409).json({
         error: 'This organization already has verified leadership.',
         code: 'ORG_ALREADY_CLAIMED',
+        nextAction: {
+          code: 'REQUEST_ADMIN_ACCESS',
+          endpoint: `/api/users/organizations/${organization.id}/request-admin-access`,
+        },
       });
     }
 
@@ -1026,7 +1034,10 @@ export const submitOrganizationClaim = async (
           organizationId,
           userId: user.id,
           requesterEmail: normalizedEmail,
-          metadata: metadata ?? undefined,
+          metadata: {
+            ...(metadata ?? {}),
+            requestType: CLAIM_REQUEST_INITIAL,
+          },
         },
       });
 
@@ -1048,6 +1059,10 @@ export const submitOrganizationClaim = async (
       return res.status(409).json({
         error: 'This organization already has verified leadership.',
         code: 'ORG_ALREADY_CLAIMED',
+        nextAction: {
+          code: 'REQUEST_ADMIN_ACCESS',
+          endpoint: `/api/users/organizations/${organizationId}/request-admin-access`,
+        },
       });
     }
 
@@ -1079,6 +1094,247 @@ export const submitOrganizationClaim = async (
         id: claimResult.claim.id,
         status: claimResult.claim.status,
         organizationId: claimResult.claim.organizationId,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const requestOrganizationAdminAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const organizationId = Number(req.params.id);
+    if (Number.isNaN(organizationId)) {
+      return res.status(400).json({ error: 'Invalid organization id' });
+    }
+
+    const { email, firstName, lastName, password, reason, metadata } = req.body;
+
+    let requesterDomain: string;
+    try {
+      requesterDomain = extractDomainFromEmail(email);
+    } catch {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        id: true,
+        name: true,
+        domain: true,
+        isClaimVerified: true,
+        status: true,
+      },
+    });
+
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    if (organization.status !== 'ACTIVE') {
+      return res.status(409).json({
+        error: 'Organization must be active before admin-access transfer requests are allowed.',
+        code: 'ORG_NOT_ACTIVE',
+      });
+    }
+
+    if (!organization.isClaimVerified) {
+      return res.status(409).json({
+        error: 'Organization leadership is not yet verified. Submit a leadership claim instead.',
+        code: 'ORG_NOT_YET_VERIFIED',
+        nextAction: {
+          code: 'SUBMIT_INITIAL_CLAIM',
+          endpoint: `/api/users/organizations/${organization.id}/claim`,
+        },
+      });
+    }
+
+    if (organization.domain && requesterDomain !== organization.domain.toLowerCase()) {
+      return res.status(403).json({
+        error: 'Admin access request email domain does not match the organization domain.',
+        code: 'ORG_ADMIN_ACCESS_DOMAIN_MISMATCH',
+      });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const requestResult = await prisma.$transaction(async (tx) => {
+      const orgForUpdate = await tx.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true, isClaimVerified: true },
+      });
+
+      if (!orgForUpdate) {
+        return { kind: 'org_not_found' as const };
+      }
+
+      if (!orgForUpdate.isClaimVerified) {
+        return { kind: 'org_not_verified' as const };
+      }
+
+      let user = await tx.user.findUnique({
+        where: {
+          email_organizationId: {
+            email: normalizedEmail,
+            organizationId,
+          },
+        },
+      });
+
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            email: normalizedEmail,
+            password: hashedPassword,
+            firstName: normalizeName(firstName),
+            lastName: normalizeName(lastName),
+            organizationId,
+            role: 'ADMIN',
+            status: 'PENDING',
+          },
+        });
+      }
+
+      const existingPendingRequest = await tx.organizationClaim.findFirst({
+        where: {
+          organizationId,
+          userId: user.id,
+          status: 'PENDING',
+        },
+      });
+
+      if (
+        existingPendingRequest &&
+        typeof existingPendingRequest.metadata === 'object' &&
+        existingPendingRequest.metadata !== null &&
+        (existingPendingRequest.metadata as Record<string, unknown>).requestType ===
+          CLAIM_REQUEST_ADMIN_ACCESS
+      ) {
+        return { kind: 'duplicate_pending' as const };
+      }
+
+      const claim = await tx.organizationClaim.create({
+        data: {
+          organizationId,
+          userId: user.id,
+          requesterEmail: normalizedEmail,
+          metadata: {
+            ...(metadata ?? {}),
+            requestType: CLAIM_REQUEST_ADMIN_ACCESS,
+            requestReason: typeof reason === 'string' ? reason.trim() : undefined,
+          },
+        },
+      });
+
+      const verificationToken = await createEmailVerificationToken(tx, user.id);
+
+      return {
+        kind: 'created' as const,
+        claim,
+        user,
+        verificationToken: verificationToken.token,
+      };
+    });
+
+    if (requestResult.kind === 'org_not_found') {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    if (requestResult.kind === 'org_not_verified') {
+      return res.status(409).json({
+        error: 'Organization leadership is not yet verified. Submit a leadership claim instead.',
+        code: 'ORG_NOT_YET_VERIFIED',
+        nextAction: {
+          code: 'SUBMIT_INITIAL_CLAIM',
+          endpoint: `/api/users/organizations/${organizationId}/claim`,
+        },
+      });
+    }
+
+    if (requestResult.kind === 'duplicate_pending') {
+      return res.status(409).json({
+        error: 'You already have a pending admin access request for this organization.',
+        code: 'ORG_ADMIN_ACCESS_ALREADY_PENDING',
+      });
+    }
+
+    const verificationEmail = buildVerificationEmail(
+      requestResult.verificationToken,
+      firstName
+    );
+
+    try {
+      await sendEmail({ to: normalizedEmail, ...verificationEmail });
+    } catch (emailError) {
+      logger.error('Failed to dispatch admin access verification email', {
+        email: normalizedEmail,
+        message: (emailError as Error).message,
+      });
+    }
+
+    setImmediate(async () => {
+      try {
+        const currentAdmins = await prisma.user.findMany({
+          where: {
+            organizationId,
+            role: { in: ['ADMIN', 'SUPER_ADMIN'] },
+            status: 'ACTIVE',
+          },
+          select: { email: true },
+        });
+
+        const recipients = new Set<string>();
+        for (const adminUser of currentAdmins) {
+          if (adminUser.email.toLowerCase() !== normalizedEmail) {
+            recipients.add(adminUser.email);
+          }
+        }
+
+        if (env.PLATFORM_ADMIN_EMAIL) {
+          recipients.add(env.PLATFORM_ADMIN_EMAIL);
+        }
+
+        const notification = buildOrganizationAdminAccessRequestEmail(
+          organization.name,
+          normalizedEmail
+        );
+
+        await Promise.allSettled(
+          [...recipients].map(async (recipient) => {
+            await sendEmail({ to: recipient, ...notification });
+          })
+        );
+      } catch (notifyError) {
+        logger.warn('Failed to notify leadership about admin access request', {
+          organizationId,
+          requesterEmail: normalizedEmail,
+          message: (notifyError as Error).message,
+        });
+      }
+    });
+
+    logger.info('Organization admin access requested', {
+      organizationId,
+      organizationName: organization.name,
+      requesterEmail: normalizedEmail,
+      requestId: (req as any).requestId,
+      claimId: requestResult.claim.id,
+    });
+
+    return res.status(201).json({
+      message:
+        'Admin access request submitted. Verify your email and wait for leadership review.',
+      code: 'ORG_ADMIN_ACCESS_REQUEST_SUBMITTED',
+      request: {
+        id: requestResult.claim.id,
+        status: requestResult.claim.status,
+        organizationId: requestResult.claim.organizationId,
       },
     });
   } catch (error) {

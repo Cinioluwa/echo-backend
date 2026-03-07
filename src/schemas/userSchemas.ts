@@ -105,3 +105,17 @@ export const organizationClaimSchema = z.object({
     metadata: z.record(z.string(), z.unknown()).optional(),
   }),
 });
+
+export const organizationAdminAccessSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'Organization ID must be a number'),
+  }),
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+    firstName: z.string().min(1, 'First name is required').max(50),
+    lastName: z.string().min(1, 'Last name is required').max(50),
+    password: z.string().min(8, 'Password must be at least 8 characters long'),
+    reason: z.string().min(5, 'Reason must be at least 5 characters').max(500).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  }),
+});

@@ -7,6 +7,7 @@ describe('Organization Claim Flow', () => {
   let client: any;
   let superAdminToken: string;
   let unclaimedOrg: any;
+  let verifiedOrg: any;
 
   beforeAll(async () => {
     client = await buildTestClient({ disableRateLimiting: true });
@@ -27,6 +28,23 @@ describe('Organization Claim Flow', () => {
       joinPolicy: 'REQUIRES_APPROVAL',
       isClaimVerified: false,
       categoryCustomizationLocked: true,
+    });
+
+    verifiedOrg = await createOrganization({
+      name: `Verified Org ${Date.now()}`,
+      domain: `verified-${Date.now()}.edu`,
+      status: 'ACTIVE',
+      joinPolicy: 'REQUIRES_APPROVAL',
+      isClaimVerified: true,
+      categoryCustomizationLocked: false,
+    });
+
+    await createUser({
+      email: `existing-admin@${verifiedOrg.domain}`,
+      organizationId: verifiedOrg.id,
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      isVerified: true,
     });
 
     const superAdmin = await createUser({
@@ -166,5 +184,94 @@ describe('Organization Claim Flow', () => {
       .set('x-organization-id', String(unclaimedOrg.id))
       .send({ name: 'Hostels' })
       .expect(201);
+  });
+
+  it('blocks direct claim for verified organizations and suggests admin access request flow', async () => {
+    const response = await client
+      .post(`/api/users/organizations/${verifiedOrg.id}/claim`)
+      .send({
+        email: `new-leader@${verifiedOrg.domain}`,
+        firstName: 'New',
+        lastName: 'Leader',
+        password: 'Password123!',
+      })
+      .expect(409);
+
+    expect(response.body.code).toBe('ORG_ALREADY_CLAIMED');
+    expect(response.body.nextAction?.code).toBe('REQUEST_ADMIN_ACCESS');
+  });
+
+  it('creates and approves admin access request for a verified organization', async () => {
+    const requesterEmail = `incoming-leader@${verifiedOrg.domain}`;
+
+    const request = await client
+      .post(`/api/users/organizations/${verifiedOrg.id}/request-admin-access`)
+      .send({
+        email: requesterEmail,
+        firstName: 'Incoming',
+        lastName: 'Leader',
+        password: 'Password123!',
+        reason: 'Leadership transition approved by school management.',
+      })
+      .expect(201);
+
+    expect(request.body.code).toBe('ORG_ADMIN_ACCESS_REQUEST_SUBMITTED');
+    expect(request.body.request.status).toBe('PENDING');
+
+    await client
+      .post(`/api/users/organizations/${verifiedOrg.id}/request-admin-access`)
+      .send({
+        email: requesterEmail,
+        firstName: 'Incoming',
+        lastName: 'Leader',
+        password: 'Password123!',
+      })
+      .expect(409)
+      .expect((res: any) => {
+        expect(res.body.code).toBe('ORG_ADMIN_ACCESS_ALREADY_PENDING');
+      });
+
+    const listRes = await client
+      .get('/api/admin/organization-admin-access-requests?status=PENDING')
+      .set('Authorization', `Bearer ${superAdminToken}`)
+      .expect(200);
+
+    const pendingRequest = listRes.body.claims.find(
+      (claim: any) => claim.organizationId === verifiedOrg.id && claim.requesterEmail === requesterEmail
+    );
+
+    expect(pendingRequest).toBeTruthy();
+    expect(pendingRequest.metadata.requestType).toBe('ADMIN_ACCESS');
+
+    const prismaModule = await import('../../src/config/db.js');
+    const prisma = prismaModule.default;
+
+    await prisma.user.updateMany({
+      where: {
+        email: requesterEmail,
+        organizationId: verifiedOrg.id,
+      },
+      data: { isVerified: true },
+    });
+
+    const approveRes = await client
+      .post(`/api/admin/organization-claims/${pendingRequest.id}/approve`)
+      .set('Authorization', `Bearer ${superAdminToken}`)
+      .expect(200);
+
+    expect(approveRes.body.claim.status).toBe('APPROVED');
+
+    const approvedUser = await prisma.user.findUnique({
+      where: {
+        email_organizationId: {
+          email: requesterEmail,
+          organizationId: verifiedOrg.id,
+        },
+      },
+      select: { role: true, status: true },
+    });
+
+    expect(approvedUser?.role).toBe('ADMIN');
+    expect(approvedUser?.status).toBe('ACTIVE');
   });
 });

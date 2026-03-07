@@ -149,9 +149,23 @@ Rules enforced by backend:
 - Duplicate pending claims from the same user for the same organization are rejected.
 - Users with previously rejected claims can submit a new claim.
 
+If leadership is already verified, this endpoint returns `ORG_ALREADY_CLAIMED` and includes a `nextAction` payload that points clients to the admin-access request endpoint.
+
+### Admin access request for verified organizations (leader conflict resolution)
+
+- `POST /api/users/organizations/:id/request-admin-access`
+
+Rules enforced by backend:
+- Organization must be active and already leadership-verified.
+- Email domain must match `Organization.domain` when domain is configured.
+- Duplicate pending admin-access requests from the same user are rejected.
+- Request is stored in `OrganizationClaim` metadata with `requestType=ADMIN_ACCESS` for status tracking and audit context.
+- Existing org admins and/or platform admin are notified by email for manual review.
+
 ### Super admin review
 
 - `GET /api/admin/organization-claims?status=PENDING|APPROVED|REJECTED`
+- `GET /api/admin/organization-admin-access-requests?status=PENDING|APPROVED|REJECTED`
 - `POST /api/admin/organization-claims/:id/approve`
 - `POST /api/admin/organization-claims/:id/reject`
 
@@ -160,6 +174,11 @@ Approval effects:
 - Organization is marked claim-verified and category customization is unlocked.
 - Claimant is promoted to organization admin.
 - Any other pending claims for that organization are auto-rejected.
+
+Admin-access approval effects (`requestType=ADMIN_ACCESS`):
+- Request becomes `APPROVED`.
+- Requester is promoted to organization admin.
+- Existing verified leadership remains intact (no claim reset).
 
 ### Category behavior during unclaimed state
 

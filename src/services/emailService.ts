@@ -223,3 +223,27 @@ Domain: ${domain}
 Review in the admin dashboard: ${dashboardUrl}`,
 	};
 };
+
+export const buildOrganizationAdminAccessRequestEmail = (
+	organizationName: string,
+	requesterEmail: string
+) => {
+	const dashboardUrl = `${sanitizeAppUrl()}/admin/organization-claims`;
+
+	return {
+		subject: `Admin access request: ${organizationName}`,
+		html: `
+			<p>A leadership admin-access request was submitted for a verified organization.</p>
+			<p><strong>Organization:</strong> ${organizationName}</p>
+			<p><strong>Requester:</strong> ${requesterEmail}</p>
+			<p>Review and resolve the request in the Echo admin dashboard.</p>
+			<p><a href="${dashboardUrl}">Open admin dashboard</a></p>
+		`,
+		text: `A leadership admin-access request was submitted for a verified organization.
+
+Organization: ${organizationName}
+Requester: ${requesterEmail}
+
+Review in the admin dashboard: ${dashboardUrl}`,
+	};
+};

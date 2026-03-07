@@ -2,6 +2,19 @@ import type { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import type { AuthRequest } from '../types/AuthRequest.js';
 import { ensureOrganizationDefaultCategories } from '../services/organizationCategoryService.js';
+import logger from '../config/logger.js';
+
+const CLAIM_REQUEST_INITIAL = 'INITIAL_CLAIM';
+const CLAIM_REQUEST_ADMIN_ACCESS = 'ADMIN_ACCESS';
+
+function getClaimRequestType(metadata: unknown): string {
+  if (typeof metadata !== 'object' || metadata === null) {
+    return CLAIM_REQUEST_INITIAL;
+  }
+
+  const type = (metadata as Record<string, unknown>).requestType;
+  return type === CLAIM_REQUEST_ADMIN_ACCESS ? CLAIM_REQUEST_ADMIN_ACCESS : CLAIM_REQUEST_INITIAL;
+}
 
 export async function listOrganizationRequests(
   req: Request,
@@ -172,6 +185,47 @@ export async function listOrganizationClaims(
   }
 }
 
+export async function listOrganizationAdminAccessRequests(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const statusFilter =
+      status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED'
+        ? status
+        : undefined;
+
+    const claims = await prisma.organizationClaim.findMany({
+      where: statusFilter ? { status: statusFilter } : undefined,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        organization: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            isVerified: true,
+            status: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    const adminAccessRequests = claims.filter(
+      (claim) => getClaimRequestType(claim.metadata) === CLAIM_REQUEST_ADMIN_ACCESS
+    );
+
+    return res.status(200).json({ claims: adminAccessRequests });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function approveOrganizationClaim(
   req: AuthRequest,
   res: Response,
@@ -216,12 +270,46 @@ export async function approveOrganizationClaim(
         return { kind: 'invalid_state' as const };
       }
 
-      if (claim.organization.isClaimVerified) {
-        return { kind: 'already_claimed' as const };
-      }
-
       if (!claim.user.isVerified) {
         return { kind: 'email_not_verified' as const };
+      }
+
+      const requestType = getClaimRequestType(claim.metadata);
+
+      if (requestType === CLAIM_REQUEST_ADMIN_ACCESS) {
+        if (!claim.organization.isClaimVerified) {
+          return { kind: 'admin_access_requires_verified_org' as const };
+        }
+
+        const approvedClaim = await tx.organizationClaim.update({
+          where: { id },
+          data: {
+            status: 'APPROVED',
+            reviewedAt: new Date(),
+            reviewedById: reviewerId,
+          },
+        });
+
+        await tx.user.update({
+          where: { id: claim.userId },
+          data: {
+            role: 'ADMIN',
+            status: 'ACTIVE',
+          },
+        });
+
+        logger.info('Organization admin-access request approved', {
+          claimId: claim.id,
+          organizationId: claim.organizationId,
+          userId: claim.userId,
+          reviewerId,
+        });
+
+        return { kind: 'approved' as const, claim: approvedClaim };
+      }
+
+      if (claim.organization.isClaimVerified) {
+        return { kind: 'already_claimed' as const };
       }
 
       const approvedClaim = await tx.organizationClaim.update({
@@ -294,6 +382,13 @@ export async function approveOrganizationClaim(
       });
     }
 
+    if (result.kind === 'admin_access_requires_verified_org') {
+      return res.status(409).json({
+        error: 'Admin-access requests can only be approved after leadership is verified.',
+        code: 'ORG_ADMIN_ACCESS_NOT_ALLOWED',
+      });
+    }
+
     return res.status(200).json({
       message: 'Organization claim approved',
       claim: result.claim,
@@ -341,6 +436,13 @@ export async function rejectOrganizationClaim(
         reviewedAt: new Date(),
         reviewedById: reviewerId,
       },
+    });
+
+    logger.info('Organization claim rejected', {
+      claimId: id,
+      reviewerId,
+      organizationId: claim.organizationId,
+      userId: claim.userId,
     });
 
     return res.status(200).json({

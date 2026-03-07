@@ -9,6 +9,7 @@ import {
   requestPasswordReset,
   resetPassword,
   requestOrganizationOnboarding,
+  requestOrganizationAdminAccess,
   listOrganizationsForOnboarding,
   submitOrganizationClaim,
   deleteCurrentUser, 
@@ -30,6 +31,7 @@ import {
   resetPasswordSchema,
   organizationWaitlistSchema,
   onboardingOrganizationLookupSchema,
+  organizationAdminAccessSchema,
   organizationClaimSchema,
 } from '../schemas/userSchemas.js';
 
@@ -604,6 +606,71 @@ router.post(
   '/organizations/:id/claim',
   validate(organizationClaimSchema),
   submitOrganizationClaim
+);
+
+/**
+ * @openapi
+ * /api/users/organizations/{id}/request-admin-access:
+ *   post:
+ *     summary: Request admin access for a verified organization
+ *     description: |
+ *       Submit a leadership-transfer/admin-access request when an organization
+ *       already has verified leadership.
+ *
+ *       **Guardrails:**
+ *       - Organization must already be leadership-verified.
+ *       - Request email domain must match organization domain when domain is configured.
+ *       - Duplicate pending admin-access requests from the same user are rejected.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Organization ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - firstName
+ *               - lastName
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *               reason:
+ *                 type: string
+ *               metadata:
+ *                 type: object
+ *                 additionalProperties: true
+ *     responses:
+ *       201:
+ *         description: Admin access request submitted successfully
+ *       403:
+ *         description: Domain mismatch
+ *       404:
+ *         description: Organization not found
+ *       409:
+ *         description: Organization not verified yet or duplicate request
+ */
+router.post(
+  '/organizations/:id/request-admin-access',
+  validate(organizationAdminAccessSchema),
+  requestOrganizationAdminAccess
 );
 
 /**

@@ -58,6 +58,7 @@ import {
 import {
     approveOrganizationRequest,
     approveOrganizationClaim,
+    listOrganizationAdminAccessRequests,
     listOrganizationClaims,
     listOrganizationRequests,
     rejectOrganizationClaim,
@@ -253,6 +254,14 @@ router.get(
     superAdminMiddleware,
     validate(listOrganizationClaimsSchema),
     listOrganizationClaims
+);
+
+router.get(
+    '/organization-admin-access-requests',
+    authMiddleware,
+    superAdminMiddleware,
+    validate(listOrganizationClaimsSchema),
+    listOrganizationAdminAccessRequests
 );
 
 /**
