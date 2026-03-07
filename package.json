@@ -23,7 +23,8 @@
     "test:e2e": "playwright test",
     "clean:e2e-artifacts": "node scripts/clean-e2e-artifacts.mjs",
     "clean:e2e-artifacts:dry": "node scripts/clean-e2e-artifacts.mjs --dry-run",
-    "cleanup:stale-org-requests": "node scripts/cleanup-stale-org-requests.mjs --dry-run"
+    "cleanup:stale-org-requests": "node scripts/cleanup-stale-org-requests.mjs --dry-run",
+    "seed:orgs:nigeria": "node scripts/seed-nigerian-academic-orgs.mjs"
   },
   "keywords": [],
   "author": "",

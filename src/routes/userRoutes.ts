@@ -9,6 +9,7 @@ import {
   requestPasswordReset,
   resetPassword,
   requestOrganizationOnboarding,
+  listOrganizationsForOnboarding,
   submitOrganizationClaim,
   deleteCurrentUser, 
   updateCurrentUser, 
@@ -28,10 +29,43 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   organizationWaitlistSchema,
+  onboardingOrganizationLookupSchema,
   organizationClaimSchema,
 } from '../schemas/userSchemas.js';
 
 const router = Router();
+
+/**
+ * @openapi
+ * /api/users/organizations:
+ *   get:
+ *     summary: List organizations for onboarding selection
+ *     description: |
+ *       Returns active organizations for selection-only onboarding.
+ *       If no match is found in the UI, users should submit `/organization-waitlist`
+ *       instead of creating organizations directly.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive search by organization name or domain
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 25
+ *     responses:
+ *       200:
+ *         description: Organization list returned
+ */
+router.get('/organizations', validate(onboardingOrganizationLookupSchema), listOrganizationsForOnboarding);
 
 /**
  * @openapi
@@ -446,13 +480,14 @@ router.patch('/reset-password', validate(resetPasswordSchema), resetPassword);
  *   post:
  *     summary: Request organization onboarding
  *     description: |
- *       Submit a request to add a new organization to the platform.
- *       This is for users whose organization (school/company) is not yet registered.
+ *       Submit a reviewed request to add a new organization to the platform.
+ *       This endpoint does not create an organization immediately.
+ *       It queues the request for super-admin approval.
  *       
  *       **Flow:**
  *       1. User submits their organization details
  *       2. Request is reviewed by super admins
- *       3. If approved, organization is created and user can register
+ *       3. If approved, organization is created and users can register
  *     tags:
  *       - Users
  *     requestBody:
@@ -474,10 +509,10 @@ router.patch('/reset-password', validate(resetPasswordSchema), resetPassword);
  *                 type: string
  *                 description: Name of the organization
  *                 example: New School University
- *               additionalInfo:
- *                 type: string
- *                 description: Additional context about the request
- *                 example: We have 5000 students and would love to use Echo
+ *               metadata:
+ *                 type: object
+ *                 additionalProperties: true
+ *                 description: Optional review metadata/context for admins
  *     responses:
  *       201:
  *         description: Request submitted successfully
@@ -488,7 +523,7 @@ router.patch('/reset-password', validate(resetPasswordSchema), resetPassword);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Your request has been submitted. We'll contact you once reviewed.
+ *                   example: Organization request received. Your request will be reviewed by platform admins.
  *       400:
  *         description: Invalid input or duplicate request
  *       500:

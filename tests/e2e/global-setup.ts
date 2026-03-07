@@ -6,7 +6,7 @@ import { writeFileSync } from 'fs';
 let serverProcess: any;
 const E2E_SERVER_PID_FILE = '.e2e-server.pid';
 
-async function waitForServer(port: number, timeout = 10000): Promise<void> {
+async function waitForServer(port: number, timeout = 30000): Promise<void> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 

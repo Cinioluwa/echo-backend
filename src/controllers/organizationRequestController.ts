@@ -45,17 +45,49 @@ export async function approveOrganizationRequest(
         return null;
       }
 
+      let organizationId = orgRequest.organizationId;
+
+      if (!organizationId) {
+        const existingOrganization = await tx.organization.findUnique({
+          where: { domain: orgRequest.domain },
+          select: { id: true },
+        });
+
+        if (existingOrganization) {
+          organizationId = existingOrganization.id;
+        } else {
+          const createdOrganization = await tx.organization.create({
+            data: {
+              name: orgRequest.organizationName.trim(),
+              domain: orgRequest.domain,
+              status: 'ACTIVE',
+              joinPolicy: 'OPEN',
+              isDomainLocked: false,
+              isClaimVerified: true,
+              categoryCustomizationLocked: false,
+            },
+            select: { id: true },
+          });
+
+          organizationId = createdOrganization.id;
+        }
+      }
+
       const updatedRequest = await tx.organizationRequest.update({
         where: { id },
-        data: { status: 'APPROVED', resolvedAt: new Date() },
+        data: {
+          status: 'APPROVED',
+          resolvedAt: new Date(),
+          organizationId,
+        },
       });
 
-      if (orgRequest.organizationId) {
-        await tx.organization.update({
-          where: { id: orgRequest.organizationId },
-          data: { status: 'ACTIVE' },
-        });
-      }
+      await tx.organization.update({
+        where: { id: organizationId },
+        data: { status: 'ACTIVE' },
+      });
+
+      await ensureOrganizationDefaultCategories(tx, organizationId);
 
       return updatedRequest;
     });

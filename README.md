@@ -104,6 +104,7 @@ npm run test:e2e
 - `npm run test:unit` — Run unit tests only
 - `npm run test:integration` — Run integration tests
 - `npm run test:e2e` — Run E2E tests (Playwright)
+- `npm run seed:orgs:nigeria` — Upsert preseeded Nigerian academic organizations as unclaimed with default categories
 
 ## ⚡ Frontend Integration Quick Start
 
@@ -165,6 +166,26 @@ Approval effects:
 - Default categories are seeded so posting continues while leadership is unverified.
 - Category writes (`POST /api/categories`) are blocked until leadership claim is verified.
 - Category reads (`GET /api/categories`) always remain available.
+
+## Selection-Only Onboarding (Issue #8)
+
+- Users cannot create organizations directly during onboarding.
+- UI should select from `GET /api/users/organizations` for institution/company selection.
+- If an organization is not listed, users submit `POST /api/users/organization-waitlist` for super-admin review.
+- The waitlist endpoint records a request only; organization creation happens on admin approval.
+
+### Preseed Nigerian academic organizations
+
+Run this command during deploy/startup workflows to keep the academic institution catalog up to date:
+
+```powershell
+npm run seed:orgs:nigeria
+```
+
+Seed behavior:
+- Upserts preconfigured Nigerian institutions into `Organization`.
+- Creates unclaimed institutions with `isClaimVerified=false` and `categoryCustomizationLocked=true`.
+- Ensures default categories (`General`, `Academics`, `Facilities`) exist for each seeded organization.
 
 ## Project structure
 

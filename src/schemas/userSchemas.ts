@@ -73,10 +73,23 @@ export const organizationWaitlistSchema = z.object({
   body: z.object({
     organizationName: z.string().min(2, 'Organization name is required').max(120),
     email: z.string().email('Invalid email address'),
-    firstName: z.string().min(1, 'First name is required').max(50),
-    lastName: z.string().min(1, 'Last name is required').max(50),
-    password: z.string().min(8, 'Password must be at least 8 characters long'),
+    firstName: z.string().min(1, 'First name is required').max(50).optional(),
+    lastName: z.string().min(1, 'Last name is required').max(50).optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
+  }),
+});
+
+export const onboardingOrganizationLookupSchema = z.object({
+  query: z.object({
+    query: z.string().max(120).optional(),
+    limit: z
+      .union([z.string(), z.number()])
+      .optional()
+      .transform((value) => {
+        if (value === undefined) return undefined;
+        const parsed = typeof value === 'number' ? value : Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      }),
   }),
 });
 

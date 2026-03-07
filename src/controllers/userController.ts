@@ -19,7 +19,6 @@ import {
   markEmailVerificationTokenUsed,
   markPasswordResetTokenUsed,
 } from '../services/tokenService.js';
-import { ensureOrganizationDefaultCategories } from '../services/organizationCategoryService.js';
 import {
   extractDomainFromEmail,
   getDomainCandidates,
@@ -770,7 +769,7 @@ export const requestOrganizationOnboarding = async (
   next: NextFunction
 ) => {
   try {
-    const { organizationName, email, firstName, lastName, password, metadata } =
+    const { organizationName, email, firstName, lastName, metadata } =
       req.body;
 
     let domain: string;
@@ -815,74 +814,36 @@ export const requestOrganizationOnboarding = async (
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const requesterMetadata: Record<string, unknown> = {};
+    if (typeof firstName === 'string' && firstName.trim().length > 0) {
+      requesterMetadata.requesterFirstName = normalizeName(firstName);
+    }
+    if (typeof lastName === 'string' && lastName.trim().length > 0) {
+      requesterMetadata.requesterLastName = normalizeName(lastName);
+    }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const organization = await tx.organization.create({
-        data: {
-          name: organizationName.trim(),
-          domain: normalizedDomain,
-          status: 'PENDING',
-          categoryCustomizationLocked: false,
-          isClaimVerified: true,
-        },
-      });
+    const resolvedMetadata =
+      metadata ??
+      (Object.keys(requesterMetadata).length > 0 ? requesterMetadata : undefined);
 
-      await ensureOrganizationDefaultCategories(tx, organization.id);
-
-      const adminUser = await tx.user.create({
-        data: {
-          email: normalizedEmail,
-          password: hashedPassword,
-          firstName: normalizeName(firstName),
-          lastName: normalizeName(lastName),
-          organizationId: organization.id,
-          role: 'ADMIN',
-          status: 'PENDING',
-        },
-      });
-
-      const requestRecord = await tx.organizationRequest.create({
-        data: {
-          organizationName: organizationName.trim(),
-          domain: normalizedDomain,
-          requesterEmail: normalizedEmail,
-          organizationId: organization.id,
-          metadata: metadata ?? undefined,
-        },
-      });
-
-      const verificationToken = await createEmailVerificationToken(
-        tx,
-        adminUser.id
-      );
-
-      return { organization, adminUser, requestRecord, verificationToken };
+    const requestRecord = await prisma.organizationRequest.create({
+      data: {
+        organizationName: organizationName.trim(),
+        domain: normalizedDomain,
+        requesterEmail: normalizedEmail,
+        metadata: resolvedMetadata,
+      },
     });
 
-    const verificationEmail = buildVerificationEmail(
-      result.verificationToken.token,
-      firstName
-    );
-
     setImmediate(() => {
-      sendEmail({ to: normalizeEmail(email), ...verificationEmail }).catch(
-        (emailError) => {
-          logger.error('Failed to dispatch onboarding verification email', {
-            email: normalizeEmail(email),
-            message: (emailError as Error).message,
-          });
-        }
-      );
-
-        const notifyTo = env.PLATFORM_ADMIN_EMAIL ?? env.EMAIL_FROM;
-        if (notifyTo) {
+      const notifyTo = env.PLATFORM_ADMIN_EMAIL ?? env.EMAIL_FROM;
+      if (notifyTo) {
         const notification = buildOrganizationRequestEmail(
           organizationName,
           normalizedDomain
         );
 
-          sendEmail({ to: notifyTo, ...notification }).catch((notifyError) => {
+        sendEmail({ to: notifyTo, ...notification }).catch((notifyError) => {
           logger.warn('Failed to notify platform admins of new org request', {
             domain: normalizedDomain,
             message: (notifyError as Error).message,
@@ -892,15 +853,61 @@ export const requestOrganizationOnboarding = async (
     });
 
     logger.info('Organization onboarding requested', {
-      organizationId: result.organization.id,
+      organizationRequestId: requestRecord.id,
       domain: normalizedDomain,
       requestId: (req as any).requestId,
     });
 
     return res.status(201).json({
-      message: 'Organization request received. Check your email to verify the admin account.',
-      organizationId: result.organization.id,
-      organizationStatus: 'PENDING',
+      message: 'Organization request received. Your request will be reviewed by platform admins.',
+      requestId: requestRecord.id,
+      status: requestRecord.status,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const listOrganizationsForOnboarding = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const query = typeof req.query.query === 'string' ? req.query.query.trim() : '';
+    const queryLower = query.toLowerCase();
+    const limitRaw = Number(req.query.limit);
+    const limit = Number.isFinite(limitRaw)
+      ? Math.max(1, Math.min(100, Math.trunc(limitRaw)))
+      : 25;
+
+    const organizations = await prisma.organization.findMany({
+      where: {
+        status: 'ACTIVE',
+      },
+      orderBy: [{ name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        domain: true,
+        isClaimVerified: true,
+        categoryCustomizationLocked: true,
+      },
+    });
+
+    const filtered =
+      queryLower.length === 0
+        ? organizations
+        : organizations.filter((organization) =>
+            organization.name.toLowerCase().includes(queryLower) ||
+            (organization.domain ?? '').toLowerCase().includes(queryLower)
+          );
+
+    const results = filtered.slice(0, limit);
+
+    return res.status(200).json({
+      organizations: results,
+      count: results.length,
     });
   } catch (error) {
     return next(error);
