@@ -1385,7 +1385,7 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
 export const getCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    
+
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized: User ID not found' });
     }
@@ -1397,9 +1397,29 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         email: true,
         firstName: true,
         lastName: true,
+        role: true,         // ← add: needed for role-gating on the UI
+        status: true,       // ← add: so UI knows if PENDING / ACTIVE
         level: true,
         organizationId: true,
         createdAt: true,
+        // ← add: fetch the most recent join request for this user
+        organizationJoinRequests: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            status: true,   // PENDING | APPROVED | REJECTED
+            reason: true,   // rejection reason if rejected
+            createdAt: true,
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                domain: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -1407,7 +1427,12 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
       return res.status(404).json({ error: 'User not found' });
     }
 
-    return res.status(200).json(user);
+    const { organizationJoinRequests, ...rest } = user;
+
+    return res.status(200).json({
+      ...rest,
+      pendingJoinRequest: organizationJoinRequests[0] ?? null,
+    });
   } catch (error) {
     logger.error('Error fetching user', { error, userId: req.user?.userId });
     return next(error);
