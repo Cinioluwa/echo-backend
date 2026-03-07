@@ -62,10 +62,10 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
   });
 
   test('organization data isolation for pings and categories', async ({ request }) => {
-    // Step 1: Org1 user creates a category
+    // Step 1: Org1 admin creates a category (category writes are leadership-only)
     const categoryResponse = await request.post('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
+        'Authorization': `Bearer ${org1AdminToken}`
       },
       data: {
         name: 'Org1 Confidential Category'

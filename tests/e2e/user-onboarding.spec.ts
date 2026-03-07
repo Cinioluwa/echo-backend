@@ -73,13 +73,23 @@ test.describe('User Registration & Onboarding E2E', () => {
     const profile = await profileResponse.json();
     expect(profile.email).toBe(userData.email);
 
-    // Step 4: Create a category for the ping
+    // Step 4: Organization admin creates a category for the ping
+    const adminLoginResponse = await request.post('/api/users/login', {
+      data: {
+        email: 'admin@testorg1.edu',
+        password: 'password123'
+      }
+    });
+
+    expect(adminLoginResponse.status()).toBe(200);
+    const { token: adminToken } = await adminLoginResponse.json();
+
     const categoryResponse = await request.post('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${adminToken}`
       },
       data: {
-        name: 'E2E Test Category'
+        name: `E2E Test Category ${Date.now()}`
       }
     });
 

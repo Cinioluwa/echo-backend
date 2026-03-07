@@ -47,10 +47,10 @@ test.describe('Ping Lifecycle E2E', () => {
     const adminData = await adminResponse.json();
     adminToken = adminData.token;
 
-    // Create a test category
+    // Create a test category with admin privileges
     const categoryResponse = await request.post('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${userToken}`
+        'Authorization': `Bearer ${adminToken}`
       },
       data: {
         name: `E2E Ping Lifecycle Category ${Date.now()}`
