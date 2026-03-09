@@ -121,17 +121,17 @@ export async function invalidateCache(pattern: string): Promise<number> {
 
   try {
     let totalDeleted = 0;
-    let cursor = 0;
+    let cursor = '0';
     const matchPattern = `${CACHE_PREFIX}${pattern}`;
 
     // SCAN instead of KEYS to avoid blocking the server on large keyspaces.
     do {
       const reply = await client.scan(cursor, { MATCH: matchPattern, COUNT: 100 });
-      cursor = reply.cursor;
+      cursor = String(reply.cursor);
       if (reply.keys.length > 0) {
         totalDeleted += await client.del(reply.keys);
       }
-    } while (cursor !== 0);
+    } while (cursor !== '0');
 
     if (totalDeleted > 0) {
       logger.info('Cache invalidated', { pattern, keysDeleted: totalDeleted });
