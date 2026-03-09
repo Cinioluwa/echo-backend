@@ -112,6 +112,15 @@ export function createApp(options: CreateAppOptions = {}) {
     })
     : undefined;
 
+  // Azure (and some proxies) forward IP:port in X-Forwarded-For — strip the port if present.
+  const getClientIp = (req: Request): string => {
+    const raw = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+    // IPv6 addresses contain multiple colons — only strip port from IPv4:port format
+    const ipv4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):(\d+)$/;
+    const match = ipv4WithPort.exec(raw);
+    return match ? match[1] : raw;
+  };
+
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 500,
@@ -119,6 +128,7 @@ export function createApp(options: CreateAppOptions = {}) {
     legacyHeaders: false,
     message: 'Too many requests from this IP, please try again after 15 minutes.',
     store: globalStore,
+    keyGenerator: getClientIp,
   });
 
   const authLimiter = rateLimit({
@@ -129,6 +139,7 @@ export function createApp(options: CreateAppOptions = {}) {
     message: 'Too many authentication attempts. Please try again after 15 minutes.',
     skipSuccessfulRequests: true,
     store: authStore,
+    keyGenerator: getClientIp,
   });
 
   const createLimiter = rateLimit({
@@ -138,6 +149,7 @@ export function createApp(options: CreateAppOptions = {}) {
     legacyHeaders: false,
     message: 'Too many create/update operations. Please slow down.',
     store: writeStore,
+    keyGenerator: getClientIp,
   });
 
   const applyCreateLimiter = (req: Request, res: Response, next: NextFunction) => {
