@@ -1,47 +1,41 @@
-import { createCluster, type RedisClusterType } from 'redis';
+import { createClient, type RedisClientType } from 'redis';
 import { env } from './env.js';
 import logger from './logger.js';
 
-let client: RedisClusterType | null = null;
-let connectPromise: Promise<RedisClusterType> | null = null;
+// Azure Managed Redis exposes a single TLS endpoint (*.redis.azure.net:10000).
+// It does NOT respond to CLUSTER SLOTS/SHARDS commands, so createCluster() leaves
+// the slot table empty and every command crashes. Use createClient (standalone) instead.
+let client: RedisClientType | null = null;
+let connectPromise: Promise<RedisClientType> | null = null;
 
 export function isRedisConfigured() {
   return Boolean(env.REDIS_URL);
 }
 
-export function getRedisClient(): RedisClusterType | null {
-  if (!env.REDIS_URL) return null;
-  if (client) return client;
-
-  client = createCluster({
-    rootNodes: [{ url: env.REDIS_URL }],
-    defaults: {
-      // createCluster does not auto-parse credentials from the root node URL.
-      // The password must be explicitly provided in defaults.
-      password: decodeURIComponent(new URL(env.REDIS_URL).password),
-      socket: {
-        tls: true,
-        rejectUnauthorized: false, // Azure Managed Redis uses self-signed certs
-        connectTimeout: 10_000,    // fail fast if unreachable; don't stall startup
-      },
+function buildRedisClient(): RedisClientType {
+  return createClient({
+    url: env.REDIS_URL,
+    socket: {
+      tls: true,
+      rejectUnauthorized: false, // Azure Managed Redis uses self-signed certs
+      connectTimeout: 10_000,    // fail fast if unreachable; don't stall startup
     },
-    useReplicas: false,
-  });
-
-  client.on('error', (err: Error) => {
-    logger.warn('Redis client error', { error: err instanceof Error ? err.message : String(err) });
-  });
-
-  return client;
+  }) as RedisClientType;
 }
 
-export async function connectRedis(): Promise<RedisClusterType | null> {
+export async function connectRedis(): Promise<RedisClientType | null> {
   if (!env.REDIS_URL) return null;
 
   if (connectPromise) return connectPromise;
 
-  const redisClient = getRedisClient();
-  if (!redisClient) return null;
+  if (!client) {
+    client = buildRedisClient();
+    client.on('error', (err: Error) => {
+      logger.warn('Redis client error', { error: err instanceof Error ? err.message : String(err) });
+    });
+  }
+
+  const redisClient = client;
 
   connectPromise = (async () => {
     if (!redisClient.isOpen) {
@@ -56,6 +50,7 @@ export async function connectRedis(): Promise<RedisClusterType | null> {
   } catch (err) {
     // Reset so we can retry on next boot.
     connectPromise = null;
+    client = null;
 
     const message = err instanceof Error ? err.message : String(err);
     logger.error('Failed to connect to Redis — falling back to in-memory store', { error: message });

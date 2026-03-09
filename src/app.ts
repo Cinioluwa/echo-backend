@@ -27,10 +27,10 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import swaggerRoutes from './routes/swaggerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 
-import type { RedisClusterType } from 'redis';
+import type { RedisClientType } from 'redis';
 export type CreateAppOptions = {
   disableRateLimiting?: boolean;
-  redisClient?: RedisClusterType | null;
+  redisClient?: RedisClientType | null;
 };
 
 // Builds an Express app without binding a listener; useful for tests.
@@ -93,24 +93,25 @@ export function createApp(options: CreateAppOptions = {}) {
     ? options.redisClient
     : null;
 
+  // Standalone client sendCommand takes a plain string array (no firstKey/isReadonly routing args).
   const globalStore = redisClient
     ? new RedisStore({
       prefix: 'rl:global:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(undefined, false, args),
+      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
     })
     : undefined;
 
   const authStore = redisClient
     ? new RedisStore({
       prefix: 'rl:auth:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(undefined, false, args),
+      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
     })
     : undefined;
 
   const writeStore = redisClient
     ? new RedisStore({
       prefix: 'rl:write:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(undefined, false, args),
+      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
     })
     : undefined;
 
