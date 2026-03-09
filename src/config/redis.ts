@@ -16,6 +16,9 @@ export function getRedisClient(): RedisClusterType | null {
   client = createCluster({
     rootNodes: [{ url: env.REDIS_URL }],
     defaults: {
+      // createCluster does not auto-parse credentials from the root node URL.
+      // The password must be explicitly provided in defaults.
+      password: new URL(env.REDIS_URL).password,
       socket: {
         tls: true,
         rejectUnauthorized: false, // Azure Managed Redis uses self-signed certs

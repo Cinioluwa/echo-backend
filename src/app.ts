@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import { appendFileSync } from 'node:fs';
 import { RedisStore } from 'rate-limit-redis';
@@ -112,13 +112,15 @@ export function createApp(options: CreateAppOptions = {}) {
     })
     : undefined;
 
-  // Azure (and some proxies) forward IP:port in X-Forwarded-For — strip the port if present.
+  // Azure (and some proxies) forward IP:port in X-Forwarded-For — strip the port if present,
+  // then pass through ipKeyGenerator to satisfy express-rate-limit IPv6 validation.
   const getClientIp = (req: Request): string => {
     const raw = req.ip ?? req.socket.remoteAddress ?? 'unknown';
     // IPv6 addresses contain multiple colons — only strip port from IPv4:port format
     const ipv4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):(\d+)$/;
     const match = ipv4WithPort.exec(raw);
-    return match ? match[1] : raw;
+    const ip = match ? match[1] : raw;
+    return ipKeyGenerator(ip);
   };
 
   const limiter = rateLimit({
