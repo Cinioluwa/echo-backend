@@ -12,6 +12,11 @@ export function isRedisConfigured() {
   return Boolean(env.REDIS_URL);
 }
 
+/** Returns the already-connected client, or null if not yet connected. */
+export function getConnectedClient(): RedisClientType | null {
+  return client;
+}
+
 function buildRedisClient(): RedisClientType {
   return createClient({
     url: env.REDIS_URL,

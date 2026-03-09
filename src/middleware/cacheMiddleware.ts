@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import { getRedisClient, isRedisConfigured } from '../config/redis.js';
+import { isRedisConfigured, getConnectedClient } from '../config/redis.js';
 import logger from '../config/logger.js';
 
 /**
@@ -48,7 +48,7 @@ export function cache(
       return;
     }
 
-    const client = getRedisClient();
+    const client = getConnectedClient();
     if (!client || !client.isOpen) {
       next();
       return;
@@ -116,26 +116,28 @@ export function cache(
 export async function invalidateCache(pattern: string): Promise<number> {
   if (!isRedisConfigured()) return 0;
 
-  const client = getRedisClient();
+  const client = getConnectedClient();
   if (!client || !client.isOpen) return 0;
 
   try {
     let totalDeleted = 0;
-    // In cluster mode, iterate over each master node
-    for (const node of client.masters) {
-      const nodeClient = node.client;
-      if (!nodeClient) continue;
-      const keys = await nodeClient.keys(`${CACHE_PREFIX}${pattern}`);
-      if (keys.length > 0) {
-        const deleted = await nodeClient.del(keys);
-        totalDeleted += deleted;
+    let cursor = 0;
+    const matchPattern = `${CACHE_PREFIX}${pattern}`;
+
+    // SCAN instead of KEYS to avoid blocking the server on large keyspaces.
+    do {
+      const reply = await client.scan(cursor, { MATCH: matchPattern, COUNT: 100 });
+      cursor = reply.cursor;
+      if (reply.keys.length > 0) {
+        totalDeleted += await client.del(reply.keys);
       }
-    }
+    } while (cursor !== 0);
+
     if (totalDeleted > 0) {
       logger.info('Cache invalidated', { pattern, keysDeleted: totalDeleted });
     }
     return totalDeleted;
-  } catch (err) {
+  } catch (err: unknown) {
     logger.warn('Cache invalidation failed', { 
       pattern, 
       error: err instanceof Error ? err.message : String(err) 
