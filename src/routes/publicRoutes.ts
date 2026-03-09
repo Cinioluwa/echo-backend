@@ -89,7 +89,7 @@ const router = Router();
  *         description: Internal server error
  */
 // Soundboard (Pings) - now requires auth
-router.get('/soundboard', authMiddleware, organizationMiddleware, cache(30), getPublicPings);
+router.get('/soundboard', authMiddleware, organizationMiddleware, cache(120), getPublicPings);
 
 /**
  * @openapi

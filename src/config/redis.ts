@@ -1,32 +1,37 @@
-import { createClient, type RedisClientType } from 'redis';
+import { createCluster, type RedisClusterType } from 'redis';
 import { env } from './env.js';
 import logger from './logger.js';
 
-let client: RedisClientType | null = null;
-let connectPromise: Promise<RedisClientType> | null = null;
+let client: RedisClusterType | null = null;
+let connectPromise: Promise<RedisClusterType> | null = null;
 
 export function isRedisConfigured() {
   return Boolean(env.REDIS_URL);
 }
 
-export function getRedisClient(): RedisClientType | null {
+export function getRedisClient(): RedisClusterType | null {
   if (!env.REDIS_URL) return null;
   if (client) return client;
 
-  client = createClient({ url: env.REDIS_URL });
-
-  client.on('error', (err) => {
-    logger.warn('Redis client error', { error: err instanceof Error ? err.message : String(err) });
+  client = createCluster({
+    rootNodes: [{ url: env.REDIS_URL }],
+    defaults: {
+      socket: {
+        tls: true,
+        rejectUnauthorized: false, // Azure Managed Redis uses self-signed certs
+      },
+    },
+    useReplicas: false,
   });
 
-  client.on('reconnecting', () => {
-    logger.warn('Redis client reconnecting');
+  client.on('error', (err: Error) => {
+    logger.warn('Redis client error', { error: err instanceof Error ? err.message : String(err) });
   });
 
   return client;
 }
 
-export async function connectRedis(): Promise<RedisClientType | null> {
+export async function connectRedis(): Promise<RedisClusterType | null> {
   if (!env.REDIS_URL) return null;
 
   if (connectPromise) return connectPromise;

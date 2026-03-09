@@ -28,10 +28,10 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import swaggerRoutes from './routes/swaggerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 
-import type { RedisClientType } from 'redis';
+import type { RedisClusterType } from 'redis';
 export type CreateAppOptions = {
   disableRateLimiting?: boolean;
-  redisClient?: RedisClientType | null;
+  redisClient?: RedisClusterType | null;
 };
 
 // Builds an Express app without binding a listener; useful for tests.
@@ -94,21 +94,21 @@ export function createApp(options: CreateAppOptions = {}) {
   const globalStore = redisClient
     ? new RedisStore({
       prefix: 'rl:global:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      sendCommand: (...args: string[]) => redisClient.sendCommand(undefined, false, args),
     })
     : undefined;
 
   const authStore = redisClient
     ? new RedisStore({
       prefix: 'rl:auth:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      sendCommand: (...args: string[]) => redisClient.sendCommand(undefined, false, args),
     })
     : undefined;
 
   const writeStore = redisClient
     ? new RedisStore({
       prefix: 'rl:write:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      sendCommand: (...args: string[]) => redisClient.sendCommand(undefined, false, args),
     })
     : undefined;
 

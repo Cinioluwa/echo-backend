@@ -120,12 +120,21 @@ export async function invalidateCache(pattern: string): Promise<number> {
   if (!client || !client.isOpen) return 0;
 
   try {
-    const keys = await client.keys(`${CACHE_PREFIX}${pattern}`);
-    if (keys.length === 0) return 0;
-
-    const deleted = await client.del(keys);
-    logger.info('Cache invalidated', { pattern, keysDeleted: deleted });
-    return deleted;
+    let totalDeleted = 0;
+    // In cluster mode, iterate over each master node
+    for (const node of client.masters) {
+      const nodeClient = node.client;
+      if (!nodeClient) continue;
+      const keys = await nodeClient.keys(`${CACHE_PREFIX}${pattern}`);
+      if (keys.length > 0) {
+        const deleted = await nodeClient.del(keys);
+        totalDeleted += deleted;
+      }
+    }
+    if (totalDeleted > 0) {
+      logger.info('Cache invalidated', { pattern, keysDeleted: totalDeleted });
+    }
+    return totalDeleted;
   } catch (err) {
     logger.warn('Cache invalidation failed', { 
       pattern, 
