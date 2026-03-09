@@ -18,14 +18,28 @@ const PORT = env.PORT;
 
 (async () => {
   try {
-    const redisClient = await connectRedis();
     await connectDatabase();
-    const app = createApp({ redisClient });
+
+    // Start the HTTP server immediately so health-check probes get a response.
+    const app = createApp();
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server is listening on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.debug('Server address', { address: server.address() });
     });
+
+    // Connect Redis in the background — never blocks or crashes the server.
+    connectRedis()
+      .then((redisClient) => {
+        if (redisClient) {
+          logger.info('Redis available — rate-limit stores upgraded');
+        } else {
+          logger.warn('Redis unavailable — using in-memory rate-limit stores');
+        }
+      })
+      .catch((err) => {
+        logger.error('Redis connection failed', { error: err instanceof Error ? err.message : String(err) });
+      });
   } catch (err) {
     logger.error('Failed to start server during startup', { error: err });
     process.exit(1);

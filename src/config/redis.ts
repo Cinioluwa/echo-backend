@@ -18,7 +18,7 @@ export function getRedisClient(): RedisClusterType | null {
     defaults: {
       // createCluster does not auto-parse credentials from the root node URL.
       // The password must be explicitly provided in defaults.
-      password: new URL(env.REDIS_URL).password,
+      password: decodeURIComponent(new URL(env.REDIS_URL).password),
       socket: {
         tls: true,
         rejectUnauthorized: false, // Azure Managed Redis uses self-signed certs
@@ -57,12 +57,7 @@ export async function connectRedis(): Promise<RedisClusterType | null> {
     connectPromise = null;
 
     const message = err instanceof Error ? err.message : String(err);
-    logger.error('Failed to connect to Redis', { error: message });
-
-    // In production, fail fast if REDIS_URL is set (prevents silently falling back to memory store).
-    if (env.NODE_ENV === 'production') {
-      throw err;
-    }
+    logger.error('Failed to connect to Redis — falling back to in-memory store', { error: message });
 
     return null;
   }
