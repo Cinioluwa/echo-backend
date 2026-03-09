@@ -7,7 +7,6 @@ import { appendFileSync } from 'node:fs';
 import { RedisStore } from 'rate-limit-redis';
 import { requestLogger } from './middleware/requestLogger.js';
 import logger from './config/logger.js';
-import { getRedisClient, isRedisConfigured } from './config/redis.js';
 import { env } from './config/env.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
@@ -86,9 +85,12 @@ export function createApp(options: CreateAppOptions = {}) {
   }
 
 
-  // Use the connected redisClient if provided, otherwise fallback to getRedisClient (legacy, for tests)
-  const redisClient = !options.disableRateLimiting && isRedisConfigured()
-    ? (options.redisClient ?? getRedisClient())
+  // Only use Redis if a connected client was explicitly passed in.
+  // Never call getRedisClient() here — it returns an unconnected cluster client
+  // which causes RedisStore's constructor to fire commands against an offline node,
+  // producing an unhandled rejection that crashes the process (Node 15+).
+  const redisClient = !options.disableRateLimiting && options.redisClient
+    ? options.redisClient
     : null;
 
   const globalStore = redisClient

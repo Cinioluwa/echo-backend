@@ -22,6 +22,7 @@ export function getRedisClient(): RedisClusterType | null {
       socket: {
         tls: true,
         rejectUnauthorized: false, // Azure Managed Redis uses self-signed certs
+        connectTimeout: 10_000,    // fail fast if unreachable; don't stall startup
       },
     },
     useReplicas: false,

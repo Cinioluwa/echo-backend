@@ -20,26 +20,22 @@ const PORT = env.PORT;
   try {
     await connectDatabase();
 
-    // Start the HTTP server immediately so health-check probes get a response.
-    const app = createApp();
+    // Connect Redis before creating the app. RedisStore fires loadIncrementScript
+    // immediately in its constructor — passing an unconnected cluster client would
+    // cause an unhandled rejection that crashes the process under Node 15+.
+    const redisClient = await connectRedis();
+    if (redisClient) {
+      logger.info('Redis connected — rate-limit stores will use Redis');
+    } else {
+      logger.warn('Redis unavailable — falling back to in-memory rate-limit stores');
+    }
+
+    const app = createApp({ redisClient: redisClient ?? null });
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server is listening on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.debug('Server address', { address: server.address() });
     });
-
-    // Connect Redis in the background — never blocks or crashes the server.
-    connectRedis()
-      .then((redisClient) => {
-        if (redisClient) {
-          logger.info('Redis available — rate-limit stores upgraded');
-        } else {
-          logger.warn('Redis unavailable — using in-memory rate-limit stores');
-        }
-      })
-      .catch((err) => {
-        logger.error('Redis connection failed', { error: err instanceof Error ? err.message : String(err) });
-      });
   } catch (err) {
     logger.error('Failed to start server during startup', { error: err });
     process.exit(1);
