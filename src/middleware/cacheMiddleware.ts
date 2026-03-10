@@ -122,12 +122,14 @@ export async function invalidateCache(pattern: string): Promise<number> {
   try {
     let totalDeleted = 0;
     const matchPattern = `${CACHE_PREFIX}${pattern}`;
+    const keysToDelete: string[] = [];
 
-    // scanIterator handles cursor management automatically and works on both
-    // standalone and cluster clients (unlike a manual SCAN cursor loop).
     for await (const key of client.scanIterator({ MATCH: matchPattern, COUNT: 100 })) {
-      await client.del(key);
-      totalDeleted++;
+      if (key) keysToDelete.push(String(key));
+    }
+
+    if (keysToDelete.length > 0) {
+      totalDeleted = await client.del(keysToDelete);
     }
 
     if (totalDeleted > 0) {
