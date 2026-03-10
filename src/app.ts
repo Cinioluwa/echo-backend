@@ -28,10 +28,10 @@ import swaggerRoutes from './routes/swaggerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import superAdminRoutes from './routes/superAdminRoutes.js';
 
-import type { RedisClientType } from 'redis';
+import type { RedisClusterType } from './config/redis.js';
 export type CreateAppOptions = {
   disableRateLimiting?: boolean;
-  redisClient?: RedisClientType | null;
+  redisClient?: RedisClusterType | null;
 };
 
 // Builds an Express app without binding a listener; useful for tests.
@@ -88,31 +88,32 @@ export function createApp(options: CreateAppOptions = {}) {
 
   // Only use Redis if a connected client was explicitly passed in.
   // Never call getRedisClient() here — it returns an unconnected cluster client
-  // which causes RedisStore's constructor to fire commands against an offline node,
-  // producing an unhandled rejection that crashes the process (Node 15+).
+  // which must be connected before use; calling commands on it before connect
+  // produces an unhandled rejection that crashes the process (Node 15+).
   const redisClient = !options.disableRateLimiting && options.redisClient
     ? options.redisClient
     : null;
 
-  // Standalone client sendCommand takes a plain string array (no firstKey/isReadonly routing args).
+  // Cluster client sendCommand takes (firstKey, isReadonly, args) for key-slot routing.
+  // Pass undefined firstKey so the cluster routes based on the key inside the args.
   const globalStore = redisClient
     ? new RedisStore({
       prefix: 'rl:global:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      sendCommand: (...args: string[]) => (redisClient as any).sendCommand(undefined, false, args),
     })
     : undefined;
 
   const authStore = redisClient
     ? new RedisStore({
       prefix: 'rl:auth:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      sendCommand: (...args: string[]) => (redisClient as any).sendCommand(undefined, false, args),
     })
     : undefined;
 
   const writeStore = redisClient
     ? new RedisStore({
       prefix: 'rl:write:',
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      sendCommand: (...args: string[]) => (redisClient as any).sendCommand(undefined, false, args),
     })
     : undefined;
 
