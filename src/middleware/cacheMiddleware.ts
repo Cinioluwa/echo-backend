@@ -14,7 +14,7 @@ const CACHE_PREFIX = 'echo:cache:';
 function generateCacheKey(req: Request): string {
   const orgId = (req as Request & { organizationId?: number }).organizationId || 'global';
   const userId = (req as Request & { user?: { id: number } }).user?.id || 'anon';
-  
+
   // For org-scoped routes, include orgId. For user-specific routes, include userId.
   // Default: org-scoped caching (most feeds are org-scoped, not user-specific)
   return `${CACHE_PREFIX}${orgId}:${req.originalUrl}`;
@@ -83,12 +83,12 @@ export function cache(
         // Only cache successful responses
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const jsonString = JSON.stringify(body);
-          
+
           // Cache asynchronously (don't block response)
           client.setEx(cacheKey, ttlSeconds, jsonString).catch((err) => {
-            logger.warn('Failed to cache response', { 
-              key: cacheKey, 
-              error: err instanceof Error ? err.message : String(err) 
+            logger.warn('Failed to cache response', {
+              key: cacheKey,
+              error: err instanceof Error ? err.message : String(err)
             });
           });
         }
@@ -99,8 +99,8 @@ export function cache(
       next();
     } catch (err) {
       // On any Redis error, proceed without caching
-      logger.warn('Cache middleware error', { 
-        error: err instanceof Error ? err.message : String(err) 
+      logger.warn('Cache middleware error', {
+        error: err instanceof Error ? err.message : String(err)
       });
       next();
     }
@@ -121,26 +121,23 @@ export async function invalidateCache(pattern: string): Promise<number> {
 
   try {
     let totalDeleted = 0;
-    let cursor = '0';
     const matchPattern = `${CACHE_PREFIX}${pattern}`;
 
-    // SCAN instead of KEYS to avoid blocking the server on large keyspaces.
-    do {
-      const reply = await client.scan(cursor, { MATCH: matchPattern, COUNT: 100 });
-      cursor = String(reply.cursor);
-      if (reply.keys.length > 0) {
-        totalDeleted += await client.del(reply.keys);
-      }
-    } while (cursor !== '0');
+    // scanIterator handles cursor management automatically and works on both
+    // standalone and cluster clients (unlike a manual SCAN cursor loop).
+    for await (const key of client.scanIterator({ MATCH: matchPattern, COUNT: 100 })) {
+      await client.del(key);
+      totalDeleted++;
+    }
 
     if (totalDeleted > 0) {
       logger.info('Cache invalidated', { pattern, keysDeleted: totalDeleted });
     }
     return totalDeleted;
   } catch (err: unknown) {
-    logger.warn('Cache invalidation failed', { 
-      pattern, 
-      error: err instanceof Error ? err.message : String(err) 
+    logger.warn('Cache invalidation failed', {
+      pattern,
+      error: err instanceof Error ? err.message : String(err)
     });
     return 0;
   }

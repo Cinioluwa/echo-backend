@@ -28,10 +28,10 @@ import swaggerRoutes from './routes/swaggerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import superAdminRoutes from './routes/superAdminRoutes.js';
 
-import type { RedisClusterType } from './config/redis.js';
+import type { RedisClientType } from './config/redis.js';
 export type CreateAppOptions = {
   disableRateLimiting?: boolean;
-  redisClient?: RedisClusterType | null;
+  redisClient?: RedisClientType | null;
 };
 
 // Builds an Express app without binding a listener; useful for tests.
@@ -87,35 +87,30 @@ export function createApp(options: CreateAppOptions = {}) {
 
 
   // Only use Redis if a connected client was explicitly passed in.
-  // Never call getRedisClient() here — it returns an unconnected cluster client
-  // which must be connected before use; calling commands on it before connect
-  // produces an unhandled rejection that crashes the process (Node 15+).
+  // Using a standalone createClient (not createCluster) for Azure Managed Redis Enterprise.
+  // The standalone sendCommand signature is simply: sendCommand(args: string[]) => Promise
   const redisClient = !options.disableRateLimiting && options.redisClient
     ? options.redisClient
     : null;
 
-  // Cluster client sendCommand takes (firstKey, isReadonly, args) for key-slot routing.
-  // Pass undefined firstKey so the cluster routes based on the key inside the args.
-  const globalStore = redisClient
-    ? new RedisStore({
-      prefix: 'rl:global:',
-      sendCommand: (...args: string[]) => (redisClient as any).sendCommand(undefined, false, args),
-    })
-    : undefined;
+  const makeSendCommand = (client: NonNullable<typeof redisClient>) =>
+    (...args: string[]) => (client as any).sendCommand(args);
 
-  const authStore = redisClient
-    ? new RedisStore({
-      prefix: 'rl:auth:',
-      sendCommand: (...args: string[]) => (redisClient as any).sendCommand(undefined, false, args),
-    })
-    : undefined;
+  let globalStore: InstanceType<typeof RedisStore> | undefined;
+  let authStore: InstanceType<typeof RedisStore> | undefined;
+  let writeStore: InstanceType<typeof RedisStore> | undefined;
 
-  const writeStore = redisClient
-    ? new RedisStore({
-      prefix: 'rl:write:',
-      sendCommand: (...args: string[]) => (redisClient as any).sendCommand(undefined, false, args),
-    })
-    : undefined;
+  if (redisClient) {
+    try {
+      globalStore = new RedisStore({ prefix: 'rl:global:', sendCommand: makeSendCommand(redisClient) });
+      authStore = new RedisStore({ prefix: 'rl:auth:', sendCommand: makeSendCommand(redisClient) });
+      writeStore = new RedisStore({ prefix: 'rl:write:', sendCommand: makeSendCommand(redisClient) });
+    } catch (err) {
+      logger.warn('Failed to initialise Redis rate-limit stores — falling back to memory', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   // Azure (and some proxies) forward IP:port in X-Forwarded-For — strip the port if present,
   // then pass through ipKeyGenerator to satisfy express-rate-limit IPv6 validation.
@@ -179,7 +174,7 @@ export function createApp(options: CreateAppOptions = {}) {
   }
 
   app.use(helmet());
-  
+
   // Disable browser/CDN caching for API routes
   // Our Redis cache handles server-side caching; we don't want stale responses at edge/browser level
   app.use('/api', (_req, res, next) => {
@@ -189,7 +184,7 @@ export function createApp(options: CreateAppOptions = {}) {
     res.setHeader('Surrogate-Control', 'no-store'); // For CDNs like Railway
     next();
   });
-  
+
   app.use(healthRoutes);
   app.use(swaggerRoutes);
 

@@ -1,70 +1,79 @@
-import { createCluster } from 'redis';
+import { createClient } from 'redis';
 import { env } from './env.js';
 import logger from './logger.js';
 
-// Azure Managed Redis is configured with OSSCluster policy, which means it uses
-// native Redis cluster-mode slot sharding. The server responds to commands with
-// MOVED redirects pointing to the shard node that owns the key slot.
+// Azure Managed Redis (Enterprise tier, port 10000) exposes a SINGLE endpoint.
+// It does NOT implement OSS-cluster slot sharding — it has no MOVED redirects
+// and does not respond to CLUSTER INFO / CLUSTER NODES.
 //
-// createClient (standalone) cannot follow MOVED redirects — it throws immediately.
-// createCluster is cluster-aware and follows MOVED/ASK redirects automatically.
+// createCluster sends those discovery commands on connect and breaks on the
+// CROSSSLOT / -ERR responses, producing a RESP decoder error that crashes
+// the Node process (unhandled throw inside a socket data handler).
 //
-// When the cluster client discovers internal shard nodes, it must connect to them
-// over TLS (Azure rejects plaintext). `defaults.socket.tls` propagates TLS to all
-// discovered nodes.
-//
-// The password must also be passed explicitly in `defaults` so it is sent to every
-// shard node the cluster client is redirected to (NOAUTH otherwise).
-export type RedisClusterType = ReturnType<typeof createCluster>;
+// createClient (standalone) connects to the single endpoint over TLS and works
+// correctly. The `rediss://` scheme in the URL enables TLS automatically.
+export type RedisClientType = ReturnType<typeof createClient>;
 
-let client: RedisClusterType | null = null;
-let connectPromise: Promise<RedisClusterType> | null = null;
+let client: RedisClientType | null = null;
+let connectPromise: Promise<RedisClientType> | null = null;
 
-export function isRedisConfigured() {
+export function isRedisConfigured(): boolean {
   return Boolean(env.REDIS_URL);
 }
 
 /** Returns the already-connected client, or null if not yet connected. */
-export function getConnectedClient(): RedisClusterType | null {
+export function getConnectedClient(): RedisClientType | null {
   return client;
 }
 
-function buildRedisClient(): RedisClusterType {
+function buildRedisClient(): RedisClientType {
   if (!env.REDIS_URL) {
     throw new Error('REDIS_URL is not defined');
   }
-  const redisUrl = env.REDIS_URL;
-  return createCluster({
-    rootNodes: [{ url: redisUrl }],
-    defaults: {
-      password: new URL(redisUrl).password, // propagate auth to all shard nodes
-      socket: {
-        tls: true,
-        rejectUnauthorized: false, // Azure shard nodes use self-signed certs
-        connectTimeout: 10_000,
+  // The `rediss://` scheme enables TLS. Azure uses self-signed certs on shard
+  // nodes, so we disable strict cert validation.
+  return createClient({
+    url: env.REDIS_URL,
+    socket: {
+      tls: true,
+      rejectUnauthorized: false,
+      connectTimeout: 10_000,
+      reconnectStrategy: (retries) => {
+        // Back off quickly — don't hang the process indefinitely.
+        if (retries >= 3) return new Error('Redis max reconnect attempts reached');
+        return Math.min(retries * 500, 2000);
       },
     },
   });
 }
 
-export async function connectRedis(): Promise<RedisClusterType | null> {
+export async function connectRedis(): Promise<RedisClientType | null> {
   if (!env.REDIS_URL) return null;
   if (connectPromise) return connectPromise;
 
   if (!client) {
     client = buildRedisClient();
     client.on('error', (err: Error) => {
-      logger.warn('Redis cluster error', { error: err instanceof Error ? err.message : String(err) });
+      // Log but do NOT rethrow — an unhandled throw here becomes an
+      // uncaughtException that exits the process.
+      logger.warn('Redis client error', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
   }
 
   const redisClient = client;
 
   connectPromise = (async () => {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
-    }
-    logger.info('Redis cluster connected');
+    // Race the connect call against a timeout so startup never hangs.
+    const CONNECT_TIMEOUT_MS = 15_000;
+    await Promise.race([
+      redisClient.connect(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Redis connect timed out after ${CONNECT_TIMEOUT_MS}ms`)), CONNECT_TIMEOUT_MS)
+      ),
+    ]);
+    logger.info('Redis client connected');
     return redisClient;
   })();
 
@@ -74,7 +83,20 @@ export async function connectRedis(): Promise<RedisClusterType | null> {
     connectPromise = null;
     client = null;
     const message = err instanceof Error ? err.message : String(err);
-    logger.error('Failed to connect to Redis cluster — falling back to in-memory store', { error: message });
+    logger.error('Failed to connect to Redis — falling back to in-memory store', { error: message });
     return null;
+  }
+}
+
+export async function disconnectRedis(): Promise<void> {
+  if (client) {
+    try {
+      await client.quit();
+    } catch {
+      // ignore
+    } finally {
+      client = null;
+      connectPromise = null;
+    }
   }
 }
