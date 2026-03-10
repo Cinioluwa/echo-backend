@@ -26,6 +26,7 @@ import healthRoutes from './routes/healthRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import swaggerRoutes from './routes/swaggerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import superAdminRoutes from './routes/superAdminRoutes.js';
 
 import type { RedisClientType } from 'redis';
 export type CreateAppOptions = {
@@ -209,6 +210,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/waves/:waveId/surge', ...writeLimiter, waveSurgeRouter);
   app.use('/api/pings/:pingId/official-response', ...writeLimiter, officialResponseRoutes);
   app.use('/api/admin', ...writeLimiter, adminRoutes);
+  app.use('/api/super-admin', ...writeLimiter, superAdminRoutes);
   app.use('/api/announcements', ...writeLimiter, announcementRoutes);
   app.use('/api/notifications', ...writeLimiter, notificationRoutes);
   app.use('/api/representatives', ...writeLimiter, representativeRoutes);
