@@ -30,10 +30,14 @@ export function getConnectedClient(): RedisClusterType | null {
 }
 
 function buildRedisClient(): RedisClusterType {
+  if (!env.REDIS_URL) {
+    throw new Error('REDIS_URL is not defined');
+  }
+  const redisUrl = env.REDIS_URL;
   return createCluster({
-    rootNodes: [{ url: env.REDIS_URL }],
+    rootNodes: [{ url: redisUrl }],
     defaults: {
-      password: new URL(env.REDIS_URL).password, // propagate auth to all shard nodes
+      password: new URL(redisUrl).password, // propagate auth to all shard nodes
       socket: {
         tls: true,
         rejectUnauthorized: false, // Azure shard nodes use self-signed certs
