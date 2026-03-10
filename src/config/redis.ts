@@ -12,6 +12,9 @@ import logger from './logger.js';
 // When the cluster client discovers internal shard nodes, it must connect to them
 // over TLS (Azure rejects plaintext). `defaults.socket.tls` propagates TLS to all
 // discovered nodes.
+//
+// The password must also be passed explicitly in `defaults` so it is sent to every
+// shard node the cluster client is redirected to (NOAUTH otherwise).
 export type RedisClusterType = ReturnType<typeof createCluster>;
 
 let client: RedisClusterType | null = null;
@@ -30,6 +33,7 @@ function buildRedisClient(): RedisClusterType {
   return createCluster({
     rootNodes: [{ url: env.REDIS_URL }],
     defaults: {
+      password: new URL(env.REDIS_URL).password, // propagate auth to all shard nodes
       socket: {
         tls: true,
         rejectUnauthorized: false, // Azure shard nodes use self-signed certs
