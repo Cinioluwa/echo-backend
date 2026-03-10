@@ -22,18 +22,18 @@ function generateCacheKey(req: Request): string {
 
 /**
  * Cache middleware factory.
- * 
+ *
  * @param ttlSeconds - Time to live in seconds (default: 60)
  * @param options - Additional options
  * @returns Express middleware
- * 
+ *
  * @example
  * // Cache for 60 seconds (default)
  * router.get('/stats', cache(), getStats);
- * 
+ *
  * // Cache for 5 minutes
  * router.get('/analytics', cache(300), getAnalytics);
- * 
+ *
  * // Cache with user-specific key
  * router.get('/my-feed', cache(60, { perUser: true }), getMyFeed);
  */
@@ -107,11 +107,43 @@ export function cache(
   };
 }
 
+// ─── PROBLEM: Cache invalidation — per-key DEL and broken SCAN loop ──────────
+//
+// Version 1 (initial): Used a manual SCAN cursor loop calling del() per key:
+//   do {
+//     reply = await client.scan(cursor, { MATCH: pattern }); // cursor as string
+//     for (key of reply.keys) await client.del(key);         // one trip per key
+//   } while (cursor !== '0');
+//
+// Two bugs:
+//   A) cursor comparison: Redis v5 returns cursor as a number, not a string.
+//      Comparing to '0' sometimes produced an infinite loop when cursor was 0.
+//
+//   B) Per-key DEL on Azure Managed Redis produced:
+//      "ERR wrong number of arguments for 'del' command"
+//      This is a server error when key arrives malformed (empty Buffer, etc.).
+//      The error was caught and logged as a warn, but cache invalidation
+//      silently failed on every login — so stale data was never cleared.
+//
+// FIX:
+//   1. Replace manual cursor loop with scanIterator (cursor management is
+//      handled internally by the redis client, cursor type mismatch is gone).
+//   2. Collect all matched keys into an array, then issue a SINGLE batched DEL:
+//        await client.del(keysToDelete)  ← one round trip, not N
+//   3. Guard DEL with keysToDelete.length > 0 to never send DEL with 0 args.
+//   4. Cast each key to String(key) — scanIterator can yield string | Buffer
+//      depending on the client configuration; forcing string is safe.
+//
+// LESSON — Redis array-argument commands (DEL, MGET, UNLINK) must always be
+// called with at least one argument. Batch where possible — it's faster and
+// avoids the per-call overhead on managed Redis services with network latency.
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Invalidate cache entries matching a pattern.
  * Useful for clearing cache when data changes.
- * 
- * @param pattern - Pattern to match (e.g., 'echo:cache:1:*' for org 1)
+ *
+ * @param pattern - Pattern to match (e.g., '1:*' for org 1)
  */
 export async function invalidateCache(pattern: string): Promise<number> {
   if (!isRedisConfigured()) return 0;
@@ -148,7 +180,7 @@ export async function invalidateCache(pattern: string): Promise<number> {
 /**
  * Invalidate all cache entries for an organization.
  * Call this when significant data changes occur.
- * 
+ *
  * @param organizationId - The organization ID
  */
 export async function invalidateOrgCache(organizationId: number): Promise<number> {

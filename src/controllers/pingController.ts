@@ -560,6 +560,77 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+export const resolvePing = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const organizationId = (req as any).organizationId;
+
+    if (!userId || !organizationId) {
+      return res.status(401).json({ error: 'Unauthorized: User or organization context missing' });
+    }
+
+    const ping = await prisma.ping.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!ping) {
+      return res.status(404).json({ error: 'Ping not found' });
+    }
+
+    // Check organization isolation first
+    if (ping.organizationId !== organizationId) {
+      return res.status(404).json({ error: 'Ping not found' });
+    }
+
+    if (ping.authorId !== userId) {
+      return res.status(403).json({ error: 'Forbidden: You do not own this ping' });
+    }
+
+    if (ping.progressStatus === 'RESOLVED') {
+      return res.status(400).json({ error: 'Ping is already resolved' });
+    }
+
+    const updatedPing = await prisma.ping.update({
+      where: { id: parseInt(id) },
+      data: {
+        progressStatus: 'RESOLVED',
+        resolvedAt: new Date(),
+        progressUpdatedAt: new Date(),
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            level: true,
+          },
+        },
+        category: true,
+        _count: {
+          select: { waves: true, comments: true, surges: true },
+        },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+        },
+      },
+    });
+
+    // Invalidate cache after update
+    await invalidateCacheAfterMutation(organizationId);
+
+    return res.status(200).json({
+      message: 'Ping marked as resolved',
+      ping: sanitizePingAuthor(updatedPing)
+    });
+  } catch (error) {
+    logger.error('Error resolving ping', { error, pingId: req.params.id, userId: req.user?.userId });
+    return next(error);
+  }
+};
+
 export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const organizationId = req.user?.organizationId; // Get organizationId from authenticated user

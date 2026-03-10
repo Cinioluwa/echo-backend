@@ -5,7 +5,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import logger from './config/logger.js';
 import { connectDatabase } from './config/db.js';
-import { connectRedis, getConnectedClient } from './config/redis.js';
+import { connectRedis } from './config/redis.js';
 
 // Prefer IPv4 over IPv6 for outbound connections (helps with SMTP providers in some hosted environments).
 try {
@@ -20,17 +20,32 @@ const PORT = env.PORT;
   try {
     await connectDatabase();
 
-    // Start the server immediately — do NOT await Redis before binding the port.
+    // ─── PROBLEM: Redis connection was blocking server startup ─────────────────
     //
-    // Previously we awaited connectRedis() here, which meant the server would
-    // not start until Redis connected (or timed out). Azure App Service's warm-up
-    // probe fires as soon as the container starts; if the server hasn't bound its
-    // port within the probe window, the container is killed with ContainerTimeout.
+    // Original code awaited connectRedis() here before calling app.listen().
+    // This meant the HTTP server would not bind its port until Redis either
+    // connected successfully or timed out (~15s).
     //
-    // Instead, we pass null for redisClient initially (rate limiters fall back to
-    // memory), kick off the Redis connection in the background, and the app starts
-    // serving traffic right away. The Redis-backed rate limiters will take effect
-    // on restart if needed, but in-memory fallback is perfectly acceptable.
+    // On Azure App Service, the warm-up probe fires immediately after the
+    // container starts. The probe repeatedly hits the app's port looking for
+    // any HTTP response. If it gets no response within 230s, Azure kills the
+    // container with ContainerTimeout and marks the deployment as failed.
+    //
+    // In practice, Redis was taking 80-145s to fail (before we fixed the client
+    // type), so the server never bound its port in time → ContainerTimeout crash.
+    // Even with a healthy Redis, a 15s delay on every cold start is unnecessary.
+    //
+    // FIX — Bind the HTTP server immediately (Redis = null → memory fallback for
+    // rate limiters). Connect Redis in the background via a non-awaited Promise.
+    // The warm-up probe now succeeds in <5s. Redis connects in the background
+    // and logs its result — but a Redis failure can never prevent the HTTP server
+    // from accepting traffic.
+    //
+    // LESSON — On any platform with a startup health-check, never block the HTTP
+    // server bind on optional external services (Redis, queues, etc.). Start fast,
+    // degrade gracefully, and let the service come up in the background.
+    // ──────────────────────────────────────────────────────────────────────────
+
     const app = createApp({ redisClient: null });
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server is listening on port ${PORT}`);

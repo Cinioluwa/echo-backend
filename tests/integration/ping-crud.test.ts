@@ -264,6 +264,103 @@ describe('Ping CRUD Operations', () => {
     });
   });
 
+  describe('Resolve Ping', () => {
+    let pingToResolve: any;
+    let otherOrgPing: any;
+
+    beforeAll(async () => {
+      // Create a fresh ping for testing resolution
+      pingToResolve = await createPing({
+        authorId: user1.id,
+        organizationId: org1.id,
+        categoryId: category1.id,
+        title: 'Ping to Resolve',
+        content: 'I need to resolve this'
+      });
+
+      // Create a ping in another org
+      otherOrgPing = await createPing({
+        authorId: user2.id,
+        organizationId: org2.id,
+        categoryId: category2.id,
+        title: 'Other Org Ping to Resolve',
+        content: 'Should not be resolvable by user1'
+      });
+    });
+
+    it('should allow the author to mark their ping as resolved', async () => {
+      const res = await client
+        .patch(`/api/pings/${pingToResolve.id}/resolve`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(200);
+
+      expect(res.body.message).toBe('Ping marked as resolved');
+      expect(res.body.ping.progressStatus).toBe('RESOLVED');
+      expect(res.body.ping.resolvedAt).toBeDefined();
+      expect(res.body.ping.progressUpdatedAt).toBeDefined();
+    });
+
+    it('should NOT allow resolving an already resolved ping', async () => {
+      const res = await client
+        .patch(`/api/pings/${pingToResolve.id}/resolve`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(400);
+
+      expect(res.body.error).toBe('Ping is already resolved');
+    });
+
+    it('should NOT allow a non-author to resolve the ping', async () => {
+      const newPing = await createPing({
+        authorId: user1.id,
+        organizationId: org1.id,
+        categoryId: category1.id,
+        title: 'Another Ping to Resolve',
+        content: 'User 2 will try to resolve this'
+      });
+
+      await client
+        .patch(`/api/pings/${newPing.id}/resolve`)
+        .set('Authorization', `Bearer ${user2Token}`)
+        .expect(404); // Should be 404 because user2 is in a different org
+    });
+
+    it('should NOT allow resolving a ping from another organization', async () => {
+      await client
+        .patch(`/api/pings/${otherOrgPing.id}/resolve`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(404); // Should not find the ping due to org isolation
+    });
+
+    it('should NOT allow another user in the same org to resolve the ping', async () => {
+      // Need a second user in org 1 for this test
+      const user1b = await createUser({
+        organizationId: org1.id,
+        email: 'user1b@org1.edu',
+        firstName: 'User',
+        lastName: 'OneB'
+      });
+
+      const login1bRes = await client
+        .post('/api/users/login')
+        .send({ email: 'user1b@org1.edu', password: 'Password123!' })
+        .expect(200);
+      const user1bToken = login1bRes.body.token;
+
+      const user1bPing = await createPing({
+        authorId: user1b.id,
+        organizationId: org1.id,
+        categoryId: category1.id,
+        title: 'User 1B Ping',
+        content: 'Content'
+      });
+
+      await client
+        .patch(`/api/pings/${user1bPing.id}/resolve`)
+        .set('Authorization', `Bearer ${user1Token}`) // user 1 tries to resolve user 1b's ping
+        .expect(403);
+    });
+  });
+
   describe('Delete Ping', () => {
     let pingToDelete: any;
 

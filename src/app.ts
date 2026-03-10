@@ -86,9 +86,30 @@ export function createApp(options: CreateAppOptions = {}) {
   }
 
 
+  // ─── PROBLEM: Wrong sendCommand adapter for createCluster vs createClient ──
+  //
+  // The original code used createCluster, whose sendCommand signature is:
+  //   sendCommand(firstKey, isReadonly, args[])
+  // ...where firstKey determines which cluster shard handles the command.
+  //
+  // After switching to createClient (standalone), the signature is simply:
+  //   sendCommand(args[])
+  // ...there is no cluster routing — the single endpoint handles everything.
+  //
+  // Passing (undefined, false, args) to a standalone client's sendCommand
+  // caused mis-routed and silently dropped rate-limit commands.
+  //
+  // FIX — makeSendCommand wraps the standalone signature correctly.
+  // RedisStore construction is wrapped in try/catch so a bad store config
+  // cannot prevent the rest of the app from starting.
+  //
+  // LESSON — When switching between standalone and cluster Redis clients, audit
+  // every sendCommand call. The two APIs differ in routing parameters and a
+  // mismatch fails silently rather than throwing.
+  // ──────────────────────────────────────────────────────────────────────────
+  //
   // Only use Redis if a connected client was explicitly passed in.
-  // Using a standalone createClient (not createCluster) for Azure Managed Redis Enterprise.
-  // The standalone sendCommand signature is simply: sendCommand(args: string[]) => Promise
+  // Using standalone createClient (not createCluster) for Azure Managed Redis.
   const redisClient = !options.disableRateLimiting && options.redisClient
     ? options.redisClient
     : null;
@@ -111,6 +132,7 @@ export function createApp(options: CreateAppOptions = {}) {
       });
     }
   }
+
 
   // Azure (and some proxies) forward IP:port in X-Forwarded-For — strip the port if present,
   // then pass through ipKeyGenerator to satisfy express-rate-limit IPv6 validation.

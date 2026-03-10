@@ -8,7 +8,8 @@ import {
     deletePing,
     updatePing,
     updatePingStatus,
-    submitPing
+    submitPing,
+    resolvePing
 } from '../controllers/pingController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
@@ -388,6 +389,52 @@ router.delete('/:id', authMiddleware, organizationMiddleware, validate(pingIdSch
 
 // Update a ping - with ID and body validation
 router.patch('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), validate(updatePingSchema), updatePing);
+
+/**
+ * @openapi
+ * /api/pings/{id}/resolve:
+ *   patch:
+ *     summary: Mark a ping as resolved
+ *     description: |
+ *       Mark a ping as resolved. Only the original author can resolve their ping.
+ *       
+ *       **Authorization**: Ping author only.
+ *     tags:
+ *       - Pings
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Ping marked as resolved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Ping marked as resolved
+ *                 ping:
+ *                   $ref: '#/components/schemas/Ping'
+ *       400:
+ *         description: Ping is already resolved
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized to resolve this ping
+ *       404:
+ *         description: Ping not found
+ *       500:
+ *         description: Internal server error
+ */
+// Resolve a ping (author only) - with ID validation
+router.patch('/:id/resolve', authMiddleware, organizationMiddleware, validate(pingIdSchema), resolvePing);
 
 /**
  * @openapi
