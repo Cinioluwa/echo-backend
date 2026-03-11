@@ -155,7 +155,6 @@ describe('Notifications', () => {
       .send({
         title: 'Notif Announcement',
         content: 'Announcement content',
-        categoryIds: [category.id],
       })
       .expect(201);
 

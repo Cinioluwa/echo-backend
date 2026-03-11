@@ -544,6 +544,41 @@ All data is scoped to your organization (determined by email domain). Users can 
             },
           },
         },
+        AnalyticsSummary: {
+          type: 'object',
+          properties: {
+            total: {
+              type: 'integer',
+            },
+            percentChange: {
+              type: 'number',
+              format: 'float',
+            },
+          },
+        },
+        MonthlyAnalytics: {
+          type: 'object',
+          properties: {
+            totalUsers: { type: 'integer' },
+            waves: { type: 'integer' },
+            surges: { type: 'integer' },
+          },
+        },
+        CategoryMetric: {
+          type: 'object',
+          properties: {
+            count: { type: 'integer' },
+            percentage: { type: 'number', format: 'float' },
+          },
+        },
+        LevelMetric: {
+          type: 'object',
+          properties: {
+            level: { type: 'string' },
+            count: { type: 'integer' },
+            percentage: { type: 'number', format: 'float' },
+          },
+        },
       },
     },
     tags: [

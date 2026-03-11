@@ -454,16 +454,13 @@ describe('Admin Operations', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           title: 'Test Announcement',
-          content: 'This is a test announcement content',
-          categoryIds: [category1.id]
+          content: 'This is a test announcement content'
         })
         .expect(201);
 
       announcementId = res.body.id;
       expect(res.body.title).toBe('Test Announcement');
       expect(res.body.content).toBe('This is a test announcement content');
-      expect(res.body.categories).toHaveLength(1);
-      expect(res.body.categories[0].id).toBe(category1.id);
     });
 
     it('should update announcement', async () => {

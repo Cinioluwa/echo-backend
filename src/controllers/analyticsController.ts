@@ -164,7 +164,7 @@ export const getCategoryAnalytics = async (req: AuthRequest, res: Response, next
       totalPings++;
       
       // Use progressStatus for RESOLVED checks
-      if (ping.progressStatus === ProgressStatus.RESOLVED) {
+      if ((ping.progressStatus as any) === 'RESOLVED') {
         categoryStats[catName].resolvedPings += 1;
         totalResolvedPings++;
       }
