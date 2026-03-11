@@ -1,10 +1,11 @@
 // src/routes/surgeRoutes.ts
 import { Router } from 'express';
-import { toggleSurgeOnPing, toggleSurgeOnWave } from '../controllers/surgeController.js';
+import { toggleSurgeOnPing, toggleSurgeOnWave, toggleSurgeOnComment } from '../controllers/surgeController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { pingParamSchema, waveParamSchema } from '../schemas/waveSchemas.js';
+import { commentParamSchema } from '../schemas/commentSchemas.js';
 
 /**
  * @openapi
@@ -117,6 +118,9 @@ pingSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(pingP
 // Router for wave surges: /api/waves/:waveId/surge
 export const waveSurgeRouter = Router({ mergeParams: true });
 waveSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(waveParamSchema), toggleSurgeOnWave);  // Toggle surge on a wave (like/unlike)
+
+export const commentSurgeRouter = Router({ mergeParams: true });
+commentSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(commentParamSchema), toggleSurgeOnComment);  // Toggle surge on a comment (like/unlike)
 
 // Default export for backward compatibility (wave surges)
 export default waveSurgeRouter;

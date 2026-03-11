@@ -3,6 +3,7 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
+import { emitCommentOnPing, emitCommentOnWave } from '../utils/socketEmitter.js';
 
 const sanitizeComment = (comment: any) => {
   if (!comment) return comment;
@@ -66,6 +67,9 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
 
     // Invalidate cache after creating comment
     await invalidateCacheAfterMutation(organizationId);
+
+    // Emit real-time comment event
+    emitCommentOnPing(parseInt(pingId), sanitizedComment);
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {
@@ -207,6 +211,9 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
 
     // Invalidate cache after creating comment on wave
     await invalidateCacheAfterMutation(organizationId);
+
+    // Emit real-time comment event
+    emitCommentOnWave(parseInt(waveId), sanitizedComment);
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {

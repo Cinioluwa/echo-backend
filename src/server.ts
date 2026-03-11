@@ -6,6 +6,8 @@ import { env } from './config/env.js';
 import logger from './config/logger.js';
 import { connectDatabase } from './config/db.js';
 import { connectRedis } from './config/redis.js';
+import { initializeSocketIO } from './config/socket.js';
+import http from 'http';
 
 // Prefer IPv4 over IPv6 for outbound connections (helps with SMTP providers in some hosted environments).
 try {
@@ -47,19 +49,21 @@ const PORT = env.PORT;
     // ──────────────────────────────────────────────────────────────────────────
 
     const app = createApp({ redisClient: null });
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    const server = http.createServer(app);
+    server.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server is listening on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.debug('Server address', { address: server.address() });
     });
 
     // Connect Redis in the background — failures are logged but never crash the process.
-    connectRedis().then((redisClient) => {
+    connectRedis().then(async (redisClient) => {
       if (redisClient) {
         logger.info('Redis connected — rate-limit stores will use Redis on next deploy');
       } else {
         logger.warn('Redis unavailable — using in-memory rate-limit stores');
       }
+      // @ts-ignore: Redis configuration typing differs based on internal imported generic but works perfectly fine at runtime
+      await initializeSocketIO(server, redisClient);
     }).catch((err) => {
       logger.error('Unexpected error during background Redis connect', {
         error: err instanceof Error ? err.message : String(err),

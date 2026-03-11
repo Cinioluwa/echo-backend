@@ -3,6 +3,7 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
+import { emitPingCreated, emitPingDeleted } from '../utils/socketEmitter.js';
 
 const sanitizePingAuthor = (ping: any) => {
   if (!ping) return ping;
@@ -105,6 +106,9 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
 
     // Invalidate cache so new ping appears in feeds
     await invalidateCacheAfterMutation(organizationId);
+
+    // Emit real-time event
+    emitPingCreated(organizationId, sanitizedPing);
 
     return res.status(201).json(sanitizedPing);
   } catch (error) {
@@ -428,6 +432,9 @@ export const deletePing = async (req: AuthRequest, res: Response, next: NextFunc
 
     // Invalidate cache after deletion
     await invalidateCacheAfterMutation(organizationId);
+
+    // Emit real-time event
+    emitPingDeleted(organizationId, parseInt(id));
 
     return res.status(204).send();
   } catch (error) {

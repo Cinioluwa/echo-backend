@@ -1,4 +1,5 @@
 import type { NotificationType } from '@prisma/client';
+import { emitNotification } from '../utils/socketEmitter.js';
 
 type PrismaLike = {
   notification: {
@@ -22,7 +23,7 @@ export type CreateNotificationInput = {
 };
 
 export const createNotification = async (db: PrismaLike, input: CreateNotificationInput) => {
-  return db.notification.create({
+  const notification = await db.notification.create({
     data: {
       userId: input.userId,
       organizationId: input.organizationId,
@@ -34,6 +35,10 @@ export const createNotification = async (db: PrismaLike, input: CreateNotificati
       announcementId: input.announcementId,
     },
   });
+
+  emitNotification(input.userId, notification);
+
+  return notification;
 };
 
 export const createAnnouncementNotificationsForOrg = async (

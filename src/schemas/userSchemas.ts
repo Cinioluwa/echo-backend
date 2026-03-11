@@ -64,6 +64,13 @@ export const resetPasswordSchema = z.object({
   }),
 });
 
+export const changePasswordSchema = z.object({
+  body: z.object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters long'),
+  }),
+});
+
 export const googleAuthSchema = z.object({
   body: z.object({
     idToken: z.string().min(10, 'Google ID token is required'),
@@ -118,5 +125,11 @@ export const organizationAdminAccessSchema = z.object({
     password: z.string().min(8, 'Password must be at least 8 characters long'),
     reason: z.string().min(5, 'Reason must be at least 5 characters').max(500).optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
+  }),
+});
+
+export const userAnalyticsSchema = z.object({
+  query: z.object({
+    period: z.enum(['current', 'previous']).optional().default('current'),
   }),
 });

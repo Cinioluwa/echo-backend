@@ -41,3 +41,9 @@ export const getCommentsForWaveSchema = z.object({
     waveId: z.string().regex(/^\d+$/, 'Wave ID must be a number'),
   }),
 });
+
+export const commentParamSchema = z.object({
+  params: z.object({
+    commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number'),
+  }),
+});

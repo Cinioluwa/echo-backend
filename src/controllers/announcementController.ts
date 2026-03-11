@@ -3,10 +3,11 @@ import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { createAnnouncementNotificationsForOrg } from '../services/notificationService.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
+import { emitAnnouncement } from '../utils/socketEmitter.js';
 
 export const createAnnouncement = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const { title, content, categoryIds } = req.body;
+        const { title, content } = req.body;
         const userId = req.user!.userId; // Non-null assertion since middleware validates this
         const organizationId = req.organizationId!;
 
@@ -17,12 +18,8 @@ export const createAnnouncement = async (req: AuthRequest, res: Response, next: 
                     content,
                     authorId: userId,
                     organizationId,
-                    categories: {
-                        connect: categoryIds?.map((id: number) => ({ id })) || [],
-                    },
                 },
                 include: {
-                    categories: true,
                     author: {
                         select: {
                             firstName: true,
@@ -46,6 +43,9 @@ export const createAnnouncement = async (req: AuthRequest, res: Response, next: 
         // Invalidate cache after creating announcement
         await invalidateCacheAfterMutation(organizationId);
 
+        // Emit real-time announcement event
+        emitAnnouncement(organizationId, newAnnouncement);
+
         return res.status(201).json(newAnnouncement);
     } catch (error) {
         return next(error);
@@ -54,20 +54,9 @@ export const createAnnouncement = async (req: AuthRequest, res: Response, next: 
 
 export const getAnnouncements = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const { categoryId } = req.query;
-
         const whereClause: any = {
             organizationId: req.organizationId!,
         };
-
-        // Filter by specific category if provided
-        if (categoryId) {
-            whereClause.categories = {
-                some: {
-                    id: parseInt(categoryId as string),
-                },
-            };
-        }
 
         const announcements = await prisma.announcement.findMany({
             where: whereClause,
@@ -79,7 +68,6 @@ export const getAnnouncements = async (req: AuthRequest, res: Response, next: Ne
                         lastName: true,
                     },
                 },
-                categories: true,
             },
             });
             return res.status(200).json(announcements);
@@ -91,7 +79,7 @@ export const getAnnouncements = async (req: AuthRequest, res: Response, next: Ne
 export const updateAnnouncement = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const { title, content, categoryIds } = req.body;
+        const { title, content } = req.body;
 
         const updatedAnnouncement = await prisma.announcement.update({
             where: { 
@@ -101,12 +89,8 @@ export const updateAnnouncement = async (req: AuthRequest, res: Response, next: 
             data: {
                 title,
                 content,
-                categories: {
-                    set: categoryIds?.map((id: number) => ({ id })) || [],
-                },
             },
             include: {
-                categories: true,
                 author: {
                     select: {
                         firstName: true,

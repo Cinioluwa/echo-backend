@@ -151,7 +151,7 @@ describe('Selection-only onboarding', () => {
       select: { name: true },
     });
 
-    const names = categories.map((category) => category.name);
+    const names = categories.map((category: { name: string }) => category.name);
     expect(names).toContain('General');
     expect(names).toContain('Academics');
     expect(names).toContain('Facilities');

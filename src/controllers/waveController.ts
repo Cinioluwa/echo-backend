@@ -3,6 +3,7 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
+import { emitWaveCreated, emitWaveDeleted } from '../utils/socketEmitter.js';
 
 // @desc    Create a new wave (solution) for a ping
 // @route   POST /api/pings/:pingId/waves
@@ -71,6 +72,8 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
 
     // Invalidate cache after creating wave
     await invalidateCacheAfterMutation(organizationId);
+
+    emitWaveCreated(organizationId, newWave);
 
     return res.status(201).json(newWave);
   } catch (error) {
@@ -387,6 +390,8 @@ export const deleteWave = async (req: AuthRequest, res: Response, next: NextFunc
 
     // Invalidate cache after deletion
     await invalidateCacheAfterMutation(organizationId);
+
+    emitWaveDeleted(organizationId, parseInt(id));
 
     return res.status(204).send();
   } catch (error) {

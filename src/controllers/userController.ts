@@ -779,6 +779,57 @@ export const resetPassword = async (
     return next(error);
   }
 };
+export const changePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authReq = req as AuthRequest;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!authReq.user?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: authReq.user.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({
+        error: 'This account uses Google Sign-In and does not have a password.',
+        code: 'GOOGLE_AUTH_ACCOUNT',
+      });
+    }
+
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+
+    if (!passwordMatches) {
+      return res.status(400).json({ error: 'Incorrect current password' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    logger.info('User changed password', {
+      userId: user.id,
+      requestId: (req as any).requestId,
+    });
+
+    return res.status(200).json({ message: 'Password updated successfully.' });
+  } catch (error) {
+    return next(error);
+  }
+};
 
 export const requestOrganizationOnboarding = async (
   req: Request,
@@ -1593,6 +1644,152 @@ export const getMyComments = async (req: AuthRequest, res: Response, next: NextF
     });
   } catch (error) {
     logger.error('Error fetching user comments', { error, userId: req.user?.userId });
+    return next(error);
+  }
+};
+
+// @desc    Get user analytics (surges, comments, waves) for current or previous week
+// @route   GET /api/users/me/analytics
+// @access  Private
+// @example /api/users/me/analytics?period=previous
+export const getMyAnalytics = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    const period = req.query.period as 'current' | 'previous' || 'current';
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Determine date range for the requested week
+    // We assume weeks start on Sunday
+    const now = new Date();
+    // Normalize to midnight UTC to ensure consistent bucketing
+    now.setUTCHours(0, 0, 0, 0);
+
+    const dayOfWeek = now.getUTCDay(); // 0 (Sun) - 6 (Sat)
+    
+    // Start of current week (Sunday)
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setUTCDate(now.getUTCDate() - dayOfWeek);
+    
+    // Start of previous week (Sunday before)
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setUTCDate(currentWeekStart.getUTCDate() - 7);
+
+    // Set query boundaries based on requested period
+    let startDate: Date;
+    let endDate: Date;
+
+    if (period === 'previous') {
+      startDate = previousWeekStart;
+      endDate = currentWeekStart; // Exclusive bound: up to 11:59:59 PM Saturday
+    } else {
+      startDate = currentWeekStart;
+      // End date for current week is 7 days after start
+      endDate = new Date(currentWeekStart);
+      endDate.setUTCDate(currentWeekStart.getUTCDate() + 7);
+    }
+
+    // Parallelize all 4 counts over the date range
+    const [
+      totalSurges,
+      totalComments,
+      totalWaves,
+      periodSurges,
+      periodComments,
+      periodWaves
+    ] = await Promise.all([
+      // Granular All-Time Totals
+      prisma.surge.count({ where: { userId } }),
+      prisma.comment.count({ where: { authorId: userId, isAnonymous: false } }),
+      prisma.wave.count({ where: { authorId: userId, isAnonymous: false } }),
+
+      // Specific Period Queries (Current or Previous Week bounding)
+      prisma.surge.findMany({
+        where: {
+          userId,
+          createdAt: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+        select: { createdAt: true },
+      }),
+      prisma.comment.findMany({
+        where: {
+          authorId: userId,
+          isAnonymous: false,
+          createdAt: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+        select: { createdAt: true },
+      }),
+      prisma.wave.findMany({
+        where: {
+          authorId: userId,
+          isAnonymous: false,
+          createdAt: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    // Construct exactly 7 daily buckets for the requested week
+    const dailyMap = new Map<string, {
+      date: string;
+      day: string;
+      surges: number;
+      comments: number;
+      waves: number;
+    }>();
+
+    const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    for (let i = 0; i < 7; i++) {
+        const bucketDate = new Date(startDate);
+        bucketDate.setUTCDate(startDate.getUTCDate() + i);
+        const dateStr = bucketDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
+        dailyMap.set(dateStr, {
+            date: dateStr,
+            day: shortDays[bucketDate.getUTCDay()],
+            surges: 0,
+            comments: 0,
+            waves: 0,
+        });
+    }
+
+    // Helper to bucket results into mapping
+    const bucketItems = (items: { createdAt: Date }[], key: 'surges' | 'comments' | 'waves') => {
+      items.forEach((item) => {
+        const dateStr = item.createdAt.toISOString().split('T')[0];
+        const bucket = dailyMap.get(dateStr);
+        if (bucket) {
+          bucket[key] += 1;
+        }
+      });
+    };
+
+    bucketItems(periodSurges, 'surges');
+    bucketItems(periodComments, 'comments');
+    bucketItems(periodWaves, 'waves');
+
+    // Return the tech-lead's exact specified structure
+    return res.status(200).json({
+      totals: {
+        surges: totalSurges,
+        comments: totalComments,
+        waves: totalWaves,
+      },
+      daily: Array.from(dailyMap.values()),
+    });
+  } catch (error) {
+    logger.error(`Error fetching user analytics for period: ${req.query.period}`, { error, userId: req.user?.userId });
     return next(error);
   }
 };

@@ -16,7 +16,9 @@ import {
   updateCurrentUser, 
   getCurrentUser,
   getMySurges,
-  getMyComments
+  getMyComments,
+  getMyAnalytics,
+  changePassword
 } from '../controllers/userController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
@@ -33,6 +35,8 @@ import {
   onboardingOrganizationLookupSchema,
   organizationAdminAccessSchema,
   organizationClaimSchema,
+  changePasswordSchema,
+  userAnalyticsSchema,
 } from '../schemas/userSchemas.js';
 
 const router = Router();
@@ -781,6 +785,47 @@ router.route('/me')
 
 /**
  * @openapi
+ * /api/users/me/password:
+ *   patch:
+ *     summary: Change current user password
+ *     description: |
+ *       Update the authenticated user's password.
+ *       Requires the current password for verification.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *       400:
+ *         description: Incorrect password or invalid input
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/me/password', authMiddleware, validate(changePasswordSchema), changePassword);
+
+/**
+ * @openapi
  * /api/users/me/surges:
  *   get:
  *     summary: Get all items I've surged (liked)
@@ -842,5 +887,65 @@ router.get('/me/surges', authMiddleware, getMySurges);      // Get all my surges
  *         description: Internal server error
  */
 router.get('/me/comments', authMiddleware, getMyComments);  // Get all my comments
+
+/**
+ * @openapi
+ * /api/users/me/analytics:
+ *   get:
+ *     summary: Get My Analytics
+ *     description: Returns total and daily buckets of surges, comments, and waves grouped by week (current or previous).
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [current, previous]
+ *           default: current
+ *         description: The week period to fetch analytics for.
+ *     responses:
+ *       200:
+ *         description: User analytics successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totals:
+ *                   type: object
+ *                   properties:
+ *                     surges:
+ *                       type: integer
+ *                     comments:
+ *                       type: integer
+ *                     waves:
+ *                       type: integer
+ *                 daily:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       date: 
+ *                         type: string
+ *                         example: "2026-03-02"
+ *                       day: 
+ *                         type: string
+ *                         example: "Sun"
+ *                       surges:
+ *                         type: integer
+ *                       comments:
+ *                         type: integer
+ *                       waves:
+ *                         type: integer
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/me/analytics', authMiddleware, validate(userAnalyticsSchema), getMyAnalytics);
 
 export default router;
