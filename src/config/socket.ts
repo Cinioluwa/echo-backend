@@ -2,6 +2,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import type { Server as HttpServer } from 'http';
 import type { RedisClientType } from './redis.js';
+import { buildRedisClient } from './redis.js';
 import { createAdapter } from '@socket.io/redis-adapter';
 import jwt from 'jsonwebtoken';
 import prisma from './db.js';
@@ -39,9 +40,13 @@ export async function initializeSocketIO(
   });
 
   // ─── Redis Adapter ───
+  // Upstash does NOT support client.duplicate().
+  // We build two independent clients from the same URL instead.
   if (redisClient) {
-    const pubClient = redisClient.duplicate();
-    const subClient = redisClient.duplicate();
+    const pubClient = buildRedisClient();
+    const subClient = buildRedisClient();
+    pubClient.on('error', (err: Error) => logger.warn('Redis pub error', { error: err.message }));
+    subClient.on('error', (err: Error) => logger.warn('Redis sub error', { error: err.message }));
     await Promise.all([pubClient.connect(), subClient.connect()]);
     io.adapter(createAdapter(pubClient, subClient));
     logger.info('Socket.IO initialized with Redis adapter');

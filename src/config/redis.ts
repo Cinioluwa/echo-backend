@@ -2,57 +2,26 @@ import { createClient } from 'redis';
 import { env } from './env.js';
 import logger from './logger.js';
 
-// ─── PROBLEM HISTORY & LESSONS LEARNED ────────────────────────────────────────
+// ─── REDIS SETUP NOTES ─────────────────────────────────────────────────────
 //
-// PROBLEM 1 — Wrong client type: createCluster vs createClient
-// ─────────────────────────────────────────────────────────────
-// Original code used `createCluster`, which is designed for OSS-style Redis
-// clusters where the client discovers all shard nodes via CLUSTER SLOTS/SHARDS,
-// and then opens a direct TCP/TLS connection to each discovered node.
+// Provider: Upstash Redis (migrated from Azure Managed Redis)
 //
-// The Azure resource (Microsoft.Cache/redisEnterprise, Balanced B0) exposes a
-// SINGLE public endpoint: echo.westeurope.redis.azure.net:10000
-// The clustering policy is OSSCluster, but Azure's implementation routes
-// commands through a managed load balancer — shard nodes are internal pod IPs
-// (10.x.x.x) that are NOT reachable from outside the VNet (e.g. App Service).
+// We use createClient (standalone), not createCluster. Upstash exposes a
+// single TLS endpoint — there is no cluster-node discovery step needed.
+// The `rediss://` scheme in REDIS_URL enables TLS automatically.
 //
-// What happened:
-//   1. createCluster connected to port 10000 ✓
-//   2. Sent CLUSTER SLOTS → received internal pod IPs
-//   3. Tried to open TLS connections to those unreachable IPs
-//   4. Got garbage data back (TLS/TCP noise on a non-TLS socket)
-//   5. The RESP decoder threw synchronously inside a socket data handler
-//   6. Became an uncaughtException → process.exit(1) → ContainerTimeout crash
+// IMPORTANT — Upstash does NOT support client.duplicate().
+// Do NOT call redisClient.duplicate() anywhere (e.g. for Socket.IO pub/sub).
+// Instead, build a second independent createClient() for the sub role.
+// See socket.ts where pubClient and subClient are created separately.
 //
-// FIX — Use createClient (standalone). The single Azure endpoint handles shard
-// routing transparently at the proxy layer. The client never sees the internal
-// shard topology, so this problem cannot occur.
-//
-// LESSON — For Azure Managed Redis Enterprise, always use createClient regardless
-// of the clustering policy shown in the portal. The OSSCluster policy describes
-// the server-side sharding strategy, not the client connectivity model.
-// If internal shard nodes are not directly accessible, createCluster will crash.
+// Error handling:
+//   - The `error` listener only logs, never rethrows, to avoid uncaughtException.
+//   - connectRedis() wraps in try/catch and resets state on failure.
+//   - server.ts treats Redis as optional; a failed Redis connect does not
+//     prevent the HTTP server from binding.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-//
-// PROBLEM 2 — RESP decoder crash was an uncaught exception
-// ─────────────────────────────────────────────────────────
-// The `error` event listener on the Redis client only handles errors emitted
-// through the Node.js EventEmitter pipeline. A synchronous throw inside the
-// RESP decoder (socket `data` handler) bypasses the error event and becomes
-// an uncaughtException, which terminates the process in Node 15+.
-//
-// FIX — Switching to createClient eliminates the root cause. Additionally:
-//   - The error listener now only logs (never rethrows)
-//   - connectRedis() wraps everything in try/catch and resets state on failure
-//   - server.ts no longer awaits Redis before binding the port (so a Redis
-//     failure can never prevent the HTTP server from starting)
-//
-// LESSON — Never let third-party library errors propagate to uncaughtException
-// in a long-running server. Always attach an `error` listener to every socket
-// and EventEmitter, and treat Redis as an optional enhancement, not a hard dep.
-//
-// ──────────────────────────────────────────────────────────────────────────────
 
 export type RedisClientType = ReturnType<typeof createClient>;
 
@@ -68,18 +37,22 @@ export function getConnectedClient(): RedisClientType | null {
   return client;
 }
 
-function buildRedisClient(): RedisClientType {
-  if (!env.REDIS_URL) {
+/**
+ * Build a single standalone Redis client for Upstash.
+ * Pass the URL directly — the `rediss://` scheme handles TLS.
+ * Do NOT call .duplicate() on the returned client; Upstash does not support it.
+ */
+export function buildRedisClient(url?: string): RedisClientType {
+  const redisUrl = url ?? env.REDIS_URL;
+  if (!redisUrl) {
     throw new Error('REDIS_URL is not defined');
   }
-  // `rediss://` scheme enables TLS automatically.
-  // rejectUnauthorized: false — Azure shard-node certs are self-signed.
-  // reconnectStrategy — cap retries at 3 so a broken Redis connection does not
-  // keep the process spinning indefinitely with backoff loops.
   return createClient({
-    url: env.REDIS_URL,
+    url: redisUrl,
     socket: {
       tls: true,
+      // Upstash uses publicly-trusted certs — rejectUnauthorized can stay true,
+      // but false is harmless and keeps the config lenient for dev environments.
       rejectUnauthorized: false,
       connectTimeout: 10_000,
       reconnectStrategy: (retries) => {
