@@ -16,6 +16,8 @@ export const registerSchema = z.object({
       message: 'Last name is required',
     }).min(1, 'Last name cannot be empty').max(50),
     level: z.number().int('Level must be an integer').min(1, 'Level must be between 1 and 7').max(7, 'Level must be between 1 and 7').optional(),
+    department: z.string().max(100).optional(),
+    hall: z.string().max(100).optional(),
     organizationId: z.number().int().positive().optional(),
   }),
 });
@@ -36,6 +38,8 @@ export const updateUserSchema = z.object({
     firstName: z.string().min(1, 'First name cannot be empty').max(50).optional(),
     lastName: z.string().min(1, 'Last name cannot be empty').max(50).optional(),
     level: z.number().int('Level must be an integer').min(1, 'Level must be between 1 and 7').max(7, 'Level must be between 1 and 7').optional(),
+    department: z.string().max(100).optional(),
+    hall: z.string().max(100).optional(),
   }).strict(), // Prevents adding extra fields like password, email, etc.
 });
 

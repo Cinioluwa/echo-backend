@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { appendPingBadges } from '../utils/pingBadges.js';
+import { appendWaveBadges } from '../utils/waveBadges.js';
 
 const sanitizePublicPing = (ping: any) => ({
   ...ping,
@@ -56,7 +58,9 @@ export async function getPublicResolutionLog(req: AuthRequest, res: Response, ne
           category: { select: { id: true, name: true } },
           officialResponse: { select: { id: true, content: true, createdAt: true } },
           waves: {
-            where: { status: 'APPROVED' },
+            // A ping is considered resolved when a child wave is marked COMPLETED
+            // (see admin wave status update rule).
+            where: { status: 'COMPLETED' },
             orderBy: [{ createdAt: 'desc' }],
             take: 1,
             select: { id: true, solution: true, createdAt: true },
@@ -150,8 +154,10 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
       hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
     }));
 
+    const itemsWithBadges = await appendPingBadges(sanitizedItems, organizationId);
+
     res.status(200).json({
-      data: sanitizedItems,
+      data: itemsWithBadges,
       pagination: top
         ? { top, sort }
         : { page: Math.floor(skip / limit) + 1, limit, total, sort },
@@ -232,8 +238,10 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
       surges: undefined,
     }));
 
+    const dataWithBadges = await appendWaveBadges(data, organizationId);
+
     res.status(200).json({
-      data,
+      data: dataWithBadges,
       pagination: top
         ? { top, sort }
         : { page: Math.floor(skip / limit) + 1, limit, total, sort },

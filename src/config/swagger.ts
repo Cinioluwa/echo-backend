@@ -246,10 +246,6 @@ All data is scoped to your organization (determined by email domain). Users can 
             ping: {
               $ref: '#/components/schemas/Ping',
             },
-            isAnonymous: {
-              type: 'boolean',
-              description: 'Whether the wave is anonymous',
-            },
             status: {
               type: 'string',
               enum: ['PENDING', 'APPROVED', 'DECLINED', 'POSTED'],
@@ -272,7 +268,7 @@ All data is scoped to your organization (determined by email domain). Users can 
                 { $ref: '#/components/schemas/User' },
                 {
                   nullable: true,
-                  description: 'Author (null if anonymous)',
+                  description: 'Author',
                 },
               ],
             },

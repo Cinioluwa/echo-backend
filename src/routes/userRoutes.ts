@@ -20,6 +20,10 @@ import {
   getMyAnalytics,
   changePassword
 } from '../controllers/userController.js';
+import {
+  getMyNotificationPreferences,
+  patchMyNotificationPreferences,
+} from '../controllers/notificationPreferenceController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { env } from '../config/env.js';
@@ -38,6 +42,10 @@ import {
   changePasswordSchema,
   userAnalyticsSchema,
 } from '../schemas/userSchemas.js';
+import {
+  getNotificationPreferencesSchema,
+  patchNotificationPreferencesSchema,
+} from '../schemas/notificationPreferenceSchemas.js';
 
 const router = Router();
 
@@ -120,6 +128,14 @@ router.get('/organizations', validate(onboardingOrganizationLookupSchema), listO
  *               lastName:
  *                 type: string
  *                 example: Doe
+ *               department:
+ *                 type: string
+ *                 description: Academic department
+ *                 example: Computer Science
+ *               hall:
+ *                 type: string
+ *                 description: Residential hall
+ *                 example: Eni-Njoku Hall
  *     responses:
  *       201:
  *         description: User registered successfully. Check email for verification link.
@@ -714,7 +730,7 @@ router.post(
  *     summary: Update current user profile
  *     description: |
  *       Update the authenticated user's profile information.
- *       Currently supports updating firstName and lastName.
+ *       Currently supports updating firstName, lastName, level, department, and hall.
  *     tags:
  *       - Users
  *     security:
@@ -732,6 +748,18 @@ router.post(
  *               lastName:
  *                 type: string
  *                 example: Doe
+ *               level:
+ *                 type: integer
+ *                 description: User's level (1-7)
+ *                 example: 3
+ *               department:
+ *                 type: string
+ *                 description: Academic department
+ *                 example: Computer Science
+ *               hall:
+ *                 type: string
+ *                 description: Residential hall
+ *                 example: Eni-Njoku Hall
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -782,6 +810,50 @@ router.route('/me')
   .get(authMiddleware, getCurrentUser)                                   // Get current user profile
   .patch(authMiddleware, validate(updateUserSchema), updateCurrentUser)  // Update profile (firstName/lastName) - with validation
   .delete(authMiddleware, deleteCurrentUser);                            // Delete account
+
+/**
+ * @openapi
+ * /api/users/me/notification-preferences:
+ *   get:
+ *     summary: Get my notification preferences
+ *     description: Retrieve the authenticated user's notification preferences (defaults created if missing).
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notification preferences
+ *   patch:
+ *     summary: Update my notification preferences
+ *     description: Partially update the authenticated user's notification preferences.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               waveStatusUpdated:
+ *                 type: boolean
+ *               officialResponse:
+ *                 type: boolean
+ *               announcement:
+ *                 type: boolean
+ *               commentSurge:
+ *                 type: boolean
+ *               pingCreated:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Updated notification preferences
+ */
+router.get('/me/notification-preferences', authMiddleware, validate(getNotificationPreferencesSchema), getMyNotificationPreferences);
+router.patch('/me/notification-preferences', authMiddleware, validate(patchNotificationPreferencesSchema), patchMyNotificationPreferences);
 
 /**
  * @openapi

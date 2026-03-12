@@ -20,9 +20,8 @@ export const createWaveSchema = z.object({
       })
       .min(3, 'Solution must be at least 3 characters')
       .max(10000, 'Solution is too long'),
-    isAnonymous: z.boolean().optional().default(false),
     mediaIds: z.array(z.coerce.number().int().positive()).max(5, 'Maximum 5 media files allowed').optional(),
-  }),
+  }).strict(),
 });
 
 // Params schema for standalone wave id
@@ -47,12 +46,20 @@ export const updateWaveSchema = z.object({
       .min(3, 'Solution must be at least 3 characters')
       .max(10000, 'Solution is too long')
       .optional(),
-    isAnonymous: z.boolean().optional(),
-  }),
+  }).strict(),
 });
 
 export const updateWaveStatusSchema = z.object({
   body: z.object({
-    status: z.enum(['POSTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED']),
+    status: z.enum(['POSTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD']),
+    reason: z.string().optional(),
   }),
+}).superRefine((data, ctx) => {
+  if (data.body.status === 'REJECTED' && !data.body.reason) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Reason is required when rejecting a wave',
+      path: ['body', 'reason'],
+    });
+  }
 });

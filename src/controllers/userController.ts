@@ -73,7 +73,7 @@ export const registerUser = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password, firstName, lastName, level, organizationId } = req.body;
+    const { email, password, firstName, lastName, level, department, hall, organizationId } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -183,6 +183,8 @@ export const registerUser = async (
           firstName: normalizeName(firstName),
           lastName: normalizeName(lastName),
           level: typeof level === 'number' ? level : null,
+          department,
+          hall,
           organizationId: organization.id,
           status: 'PENDING',
         },
@@ -463,6 +465,8 @@ export const loginWithGoogle = async (
           firstName: normalizeName(derivedFirstName),
           lastName: normalizeName(derivedLastName),
           organizationId: organization.id,
+          department: null,
+          hall: null,
           status: effectiveJoinPolicy === 'REQUIRES_APPROVAL' ? 'PENDING' : 'ACTIVE',
           isVerified: true,
         },
@@ -1421,7 +1425,7 @@ export const deleteCurrentUser = async (req: AuthRequest, res: Response, next: N
 export const updateCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const { firstName, lastName, level } = req.body;
+    const { firstName, lastName, level, department, hall } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized: User ID not found' });
@@ -1429,7 +1433,7 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { firstName, lastName, level },
+      data: { firstName, lastName, level, department, hall },
     });
     const { password: _pw, ...safeUser } = updatedUser;
 
@@ -1457,6 +1461,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         role: true,         // ← add: needed for role-gating on the UI
         status: true,       // ← add: so UI knows if PENDING / ACTIVE
         level: true,
+        department: true,
+        hall: true,
         organizationId: true,
         createdAt: true,
         // ← add: fetch the most recent join request for this user
@@ -1703,7 +1709,7 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response, next: Next
       // Granular All-Time Totals
       prisma.surge.count({ where: { userId } }),
       prisma.comment.count({ where: { authorId: userId, isAnonymous: false } }),
-      prisma.wave.count({ where: { authorId: userId, isAnonymous: false } }),
+      prisma.wave.count({ where: { authorId: userId } }),
 
       // Specific Period Queries (Current or Previous Week bounding)
       prisma.surge.findMany({
@@ -1730,7 +1736,6 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response, next: Next
       prisma.wave.findMany({
         where: {
           authorId: userId,
-          isAnonymous: false,
           createdAt: {
             gte: startDate,
             lt: endDate,

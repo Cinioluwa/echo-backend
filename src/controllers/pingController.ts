@@ -4,6 +4,7 @@ import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitPingCreated, emitPingDeleted } from '../utils/socketEmitter.js';
+import { appendPingBadges } from '../utils/pingBadges.js';
 
 const sanitizePingAuthor = (ping: any) => {
   if (!ping) return ping;
@@ -185,8 +186,10 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
       };
     });
 
+    const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
+
     return res.status(200).json({
-      data: sanitizedPings,
+      data: itemsWithBadges,
       pagination: {
         totalPings,
         totalPages,
@@ -239,9 +242,10 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
     const totalPages = Math.ceil(totalPings / limit);
 
     const sanitizedPings = pings.map(sanitizePingAuthor);
+    const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
 
     return res.status(200).json({
-      data: sanitizedPings,
+      data: itemsWithBadges,
       pagination: {
         totalPings,
         totalPages,
@@ -315,9 +319,10 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
     const totalPages = Math.ceil(totalPings / limit);
 
     const sanitizedPings = pings.map(sanitizePingAuthor);
+    const itemsWithBadges = await appendPingBadges(sanitizedPings, organizationId!);
 
     return res.status(200).json({
-      data: sanitizedPings,
+      data: itemsWithBadges,
       pagination: {
         totalPings,
         totalPages,
@@ -393,10 +398,12 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
     const sanitizedPing = {
       ...sanitizePingAuthor(ping),
       comments: sanitizeComments(ping.comments),
-      hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
+      hasSurged: userId ? (ping.surges && !!ping.surges.length) : false,
     };
 
-    return res.status(200).json(sanitizedPing);
+    const [pingWithBadges] = await appendPingBadges([sanitizedPing], organizationId!);
+
+    return res.status(200).json(pingWithBadges);
   } catch (error) {
     logger.error('Error fetching ping', { error, pingId: req.params.id });
     return next(error);
@@ -684,8 +691,10 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
 
     const totalPages = Math.ceil(totalPings / limit);
 
+    const itemsWithBadges = await appendPingBadges(pings, organizationId!);
+
     return res.status(200).json({
-      data: pings,
+      data: itemsWithBadges,
       pagination: {
         totalPings,
         totalPages,

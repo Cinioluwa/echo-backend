@@ -44,6 +44,8 @@ model User {
   firstName      String?
   lastName       String?
   level          Int?
+  department     String?
+  hall           String?
   password       String?  // Optional for Google OAuth users
   googleId       String?  @unique // Google's unique user identifier
   profilePicture String?  // Store Google profile picture URL
@@ -73,12 +75,26 @@ model User {
   reviewedOrganizationClaims OrganizationClaim[] @relation("OrganizationClaimReviewer")
   notifications       Notification[]
   media               Media[]
+  notificationPreference          NotificationPreference?
 
   @@unique([email, organizationId]) // Email unique per org
 
   // New performance indexes
   @@index([organizationId, email])
   @@index([organizationId, role])
+}
+
+model NotificationPreference {
+  id Int @id @default(autoincrement())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int @unique
+  waveStatusUpdated Boolean @default(true)
+  officialResponse Boolean @default(true)
+  announcement Boolean @default(true)
+  commentSurge Boolean @default(true)
+  pingCreated Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Dynamic Category Model (Replaces Enum)
@@ -149,7 +165,6 @@ model Wave {
   surgeCount       Int      @default(0)
   flaggedForReview Boolean  @default(false)
   createdAt        DateTime @default(now())
-  isAnonymous      Boolean  @default(false)
 
   ping             Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
   pingId           Int
@@ -165,6 +180,7 @@ model Wave {
   flaggedById      Int?
   notifications    Notification[]
   media            Media[]
+  reason           String?      // Populated when status is REJECTED or ON_HOLD
 
   // Database indexes for query performance
   @@index([pingId])                  // Foreign key for getWavesForPing
@@ -385,7 +401,11 @@ enum Status {
   UNDER_REVIEW
   APPROVED
   REJECTED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
 }
+
 
 enum ProgressStatus {
   NONE
@@ -423,6 +443,7 @@ enum NotificationType {
   WAVE_APPROVED
   OFFICIAL_RESPONSE_POSTED
   ANNOUNCEMENT_POSTED
+  WAVE_STATUS_UPDATED
 }
 
 enum JoinPolicy {

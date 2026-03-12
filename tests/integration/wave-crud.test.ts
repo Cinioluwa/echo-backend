@@ -76,7 +76,6 @@ describe('Wave CRUD Operations', () => {
     it('should create a wave successfully', async () => {
       const waveData = {
         solution: 'This is a great solution to the problem',
-        isAnonymous: false,
       };
 
       const res = await client
@@ -86,28 +85,23 @@ describe('Wave CRUD Operations', () => {
         .expect(201);
 
       expect(res.body.solution).toBe(waveData.solution);
-      expect(res.body.isAnonymous).toBe(waveData.isAnonymous);
       expect(res.body.pingId).toBe(ping1.id);
       expect(res.body.organizationId).toBe(org1.id);
       expect(res.body.viewCount).toBe(0);
       expect(res.body.surgeCount).toBe(0);
     });
 
-    it('should create an anonymous wave', async () => {
+    it('should reject anonymous wave payloads', async () => {
       const waveData = {
         solution: 'This is an anonymous solution',
         isAnonymous: true,
       };
 
-      const res = await client
+      await client
         .post(`/api/pings/${ping1.id}/waves`)
         .set('Authorization', `Bearer ${user1Token}`)
         .send(waveData)
-        .expect(201);
-
-      expect(res.body.solution).toBe(waveData.solution);
-      expect(res.body.isAnonymous).toBe(true);
-      expect(res.body.pingId).toBe(ping1.id);
+        .expect(400);
     });
 
     it('should require solution', async () => {
@@ -237,7 +231,6 @@ describe('Wave CRUD Operations', () => {
     it('should update wave successfully', async () => {
       const updateData = {
         solution: 'Updated solution',
-        isAnonymous: true,
       };
 
       const res = await client
@@ -247,7 +240,6 @@ describe('Wave CRUD Operations', () => {
         .expect(200);
 
       expect(res.body.solution).toBe(updateData.solution);
-      expect(res.body.isAnonymous).toBe(updateData.isAnonymous);
     });
 
     it('should NOT allow updating other user waves', async () => {
@@ -288,7 +280,6 @@ describe('Wave CRUD Operations', () => {
         .expect(200);
 
       expect(res.body.solution).toBe('Partially updated solution');
-      expect(res.body.isAnonymous).toBe(true); // Should remain unchanged
     });
   });
 

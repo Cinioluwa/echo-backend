@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getWaveById, updateWave, deleteWave } from '../controllers/waveController.js';
+import { getMyWaves, getWaveById, updateWave, deleteWave } from '../controllers/waveController.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { waveIdParamSchema, updateWaveSchema } from '../schemas/waveSchemas.js';
 import authMiddleware from '../middleware/authMiddleware.js';
@@ -7,6 +7,33 @@ import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { cache } from '../middleware/cacheMiddleware.js';
 
 const waveStandaloneRouter = Router();
+
+/**
+ * @openapi
+ * /api/waves/me:
+ *   get:
+ *     summary: Get my waves
+ *     description: Retrieve waves authored by the authenticated user (paginated).
+ *     tags:
+ *       - Waves
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: User waves retrieved successfully
+ */
+waveStandaloneRouter.get('/me', authMiddleware, organizationMiddleware, cache(30, { perUser: true }), getMyWaves);
 
 /**
  * @openapi

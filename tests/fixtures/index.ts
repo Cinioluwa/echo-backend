@@ -161,7 +161,6 @@ export async function createPing(data: CreatePingData = {}) {
 export async function createWave(data: CreateWaveData = {}) {
   const defaultData = {
     solution: `Test Wave Solution ${Date.now()}`,
-    isAnonymous: false,
     ...data,
   };
 

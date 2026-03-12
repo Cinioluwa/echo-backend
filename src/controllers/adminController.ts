@@ -640,11 +640,12 @@ export const getAllWavesAsAdmin = async (req: AuthRequest, res: Response, next: 
     }
 };
 
+// @ts-ignore - Status values mapped safely
 export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const organizationId = req.organizationId!;
         const waveId = parseInt(req.params.id);
-        const { status } = req.body as { status: Status };
+        const { status, reason } = req.body as { status: Status; reason?: string };
 
         if (!Object.values(Status).includes(status)) {
             return res.status(400).json({ error: 'Invalid wave status' });
@@ -660,7 +661,7 @@ export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, n
         }
 
         const pingForNotify =
-            status === Status.APPROVED
+            status !== Status.POSTED
                 ? await prisma.ping.findFirst({
                     where: { id: wave.pingId, organizationId },
                     select: {
@@ -680,17 +681,19 @@ export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, n
                 data: {
                     status,
                     flaggedForReview: status === Status.UNDER_REVIEW,
+                    reason: reason || null, // Capture reason for REJECTED / ON_HOLD
                 },
                 select: {
                     id: true,
                     pingId: true,
                     status: true,
                     flaggedForReview: true,
+                    reason: true,
                 },
             });
 
-            // Product rule: approving a wave resolves its parent ping.
-            if (status === Status.APPROVED) {
+            // Product rule: Only COMPLETED waves resolve their parent ping.
+            if (status === Status.COMPLETED) {
                 await tx.ping.updateMany({
                     where: { id: updatedWave.pingId, organizationId },
                     data: {
@@ -704,30 +707,39 @@ export const updateWaveStatusAsAdmin = async (req: AuthRequest, res: Response, n
                     where: { pingId: updatedWave.pingId, organizationId },
                     data: { isResolved: true },
                 });
+            }
 
-                if (pingForNotify) {
-                    await createNotification(tx as any, {
-                        userId: pingForNotify.authorId,
-                        organizationId,
-                        type: 'WAVE_APPROVED',
-                        title: 'Wave approved',
-                        body: `A wave was approved for: ${pingForNotify.title}`,
-                        pingId: pingForNotify.id,
-                        waveId: updatedWave.id,
-                    });
-                }
+            // Send notification for ALL status transitions (except POSTED)
+            if (pingForNotify && status !== Status.POSTED) {
+                // Using WAVE_APPROVED for now to avoid enum expansion, or map to it
+                const type = status === Status.APPROVED ? 'WAVE_APPROVED' : 'WAVE_STATUS_UPDATED';
+                
+                // Format status for display: UNDER_REVIEW -> Under review
+                const formattedStatus = status.replace('_', ' ').toLowerCase();
+                
+                await createNotification(tx as any, {
+                    userId: pingForNotify.authorId,
+                    organizationId,
+                    type: type as any,
+                    title: `Wave status updated: ${formattedStatus}`,
+                    body: `A wave for your ping "${pingForNotify.title}" is now ${formattedStatus}.${reason ? ` Reason: ${reason}` : ''}`,
+                    pingId: pingForNotify.id,
+                    waveId: updatedWave.id,
+                });
             }
 
             return updatedWave;
         });
 
-        if (status === Status.APPROVED && pingForNotify?.author?.email) {
+        if (pingForNotify?.author?.email && status !== Status.POSTED) {
             const to = pingForNotify.author.email;
-            const subject = 'A wave was approved on your Echo ping';
+            const formattedStatus = status.replace('_', ' ').toLowerCase();
+            const subject = `Update on your Echo ping: Wave is now ${formattedStatus}`;
             const html = `<p>Hi${pingForNotify.author.firstName ? ` ${pingForNotify.author.firstName}` : ''},</p>
-<p>A wave was approved for your ping:</p>
-<p><strong>${pingForNotify.title}</strong></p>
-<p>You can open Echo to see the update.</p>`;
+<p>A wave for your ping has been updated to <strong>${formattedStatus}</strong>.</p>
+<p><strong>Ping:</strong> ${pingForNotify.title}</p>
+${reason ? `<p><strong>Note:</strong> ${reason}</p>` : ''}
+<p>You can open Echo to see the full update.</p>`;
             setImmediate(() => {
                 sendEmail({ to, subject, html }).catch(() => {
                     // Best-effort.

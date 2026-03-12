@@ -59,7 +59,7 @@ describe('Public Resolution Log', () => {
     await client
       .patch(`/api/admin/waves/${wave.id}/status`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'APPROVED' })
+      .send({ status: 'COMPLETED' })
       .expect(200);
   });
 

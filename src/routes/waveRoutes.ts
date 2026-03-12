@@ -48,10 +48,6 @@ const router = Router({ mergeParams: true });
  *                 type: string
  *                 description: The proposed solution or response
  *                 example: We could install WiFi signal boosters in the library to improve connectivity.
- *               isAnonymous:
- *                 type: boolean
- *                 description: Whether to post anonymously
- *                 default: false
  *     responses:
  *       201:
  *         description: Wave created successfully

@@ -9,6 +9,10 @@ type PrismaLike = {
   user?: {
     findMany: (args: any) => Promise<any[]>;
   };
+  notificationPreference?: {
+    findUnique: (args: any) => Promise<any | null>;
+    upsert: (args: any) => Promise<any>;
+  };
 };
 
 export type CreateNotificationInput = {
@@ -22,7 +26,40 @@ export type CreateNotificationInput = {
   announcementId?: number;
 };
 
-export const createNotification = async (db: PrismaLike, input: CreateNotificationInput) => {
+const DEFAULT_PREFERENCES = {
+  waveStatusUpdated: true,
+  officialResponse: true,
+  announcement: true,
+  commentSurge: true,
+  pingCreated: true,
+} as const;
+
+const isAllowedByPreferences = async (db: PrismaLike, input: CreateNotificationInput): Promise<boolean> => {
+  if (!db.notificationPreference) return true;
+
+  const prefs = await db.notificationPreference.upsert({
+    where: { userId: input.userId },
+    update: {},
+    create: { userId: input.userId, ...DEFAULT_PREFERENCES },
+  });
+
+  switch (input.type) {
+    case 'WAVE_APPROVED':
+    case 'WAVE_STATUS_UPDATED':
+      return Boolean(prefs.waveStatusUpdated);
+    case 'OFFICIAL_RESPONSE_POSTED':
+      return Boolean(prefs.officialResponse);
+    case 'ANNOUNCEMENT_POSTED':
+      return Boolean(prefs.announcement);
+    default:
+      return true;
+  }
+};
+
+export const createNotification = async (db: PrismaLike, input: CreateNotificationInput): Promise<any | null> => {
+  const allowed = await isAllowedByPreferences(db, input);
+  if (!allowed) return null;
+
   const notification = await db.notification.create({
     data: {
       userId: input.userId,
@@ -60,16 +97,29 @@ export const createAnnouncementNotificationsForOrg = async (
       organizationId: params.organizationId,
       ...(params.excludeUserId ? { id: { not: params.excludeUserId } } : {}),
     },
-    select: { id: true },
+    select: {
+      id: true,
+      notificationPreference: db.notificationPreference
+        ? { select: { announcement: true } }
+        : undefined,
+    },
   });
 
   if (!users.length) {
     return { count: 0 };
   }
 
+  const recipients = users
+    .filter((u) => u.notificationPreference?.announcement !== false)
+    .map((u) => u.id);
+
+  if (!recipients.length) {
+    return { count: 0 };
+  }
+
   return db.notification.createMany({
-    data: users.map((u) => ({
-      userId: u.id,
+    data: recipients.map((userId) => ({
+      userId,
       organizationId: params.organizationId,
       type: 'ANNOUNCEMENT_POSTED',
       title: params.title,

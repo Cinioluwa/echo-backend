@@ -4,6 +4,7 @@ import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitWaveCreated, emitWaveDeleted } from '../utils/socketEmitter.js';
+import { appendWaveBadges } from '../utils/waveBadges.js';
 
 // @desc    Create a new wave (solution) for a ping
 // @route   POST /api/pings/:pingId/waves
@@ -11,7 +12,7 @@ import { emitWaveCreated, emitWaveDeleted } from '../utils/socketEmitter.js';
 export const createWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
-    const { solution, isAnonymous = false, mediaIds } = req.body;
+    const { solution, mediaIds } = req.body;
     const organizationId = req.user?.organizationId; // From authMiddleware
     const userId = req.user?.userId;
 
@@ -39,7 +40,6 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
         solution,
         pingId: parseInt(pingId),
         organizationId,
-        isAnonymous,
         authorId: userId,
       },
       include: {
@@ -173,8 +173,10 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
       };
     });
 
+    const itemsWithBadges = await appendWaveBadges(sanitizedWaves, organizationId!);
+
     return res.status(200).json({
-      data: sanitizedWaves,
+      data: itemsWithBadges,
       pagination: {
         totalWaves,
         totalPages,
@@ -186,6 +188,77 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
     });
   } catch (error) {
     logger.error('Error fetching waves', { error, pingId: req.params.pingId });
+    return next(error);
+  }
+};
+
+// @desc    Get waves authored by the current user
+// @route   GET /api/waves/me
+// @access  Private
+export const getMyWaves = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
+
+    if (!userId || !organizationId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    let limit = parseInt(req.query.limit as string) || 20;
+    if (limit > 100) limit = 100;
+    const skip = (page - 1) * limit;
+
+    const whereClause = {
+      organizationId,
+      authorId: userId,
+    };
+
+    const [waves, totalWaves] = await prisma.$transaction([
+      prisma.wave.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: [{ createdAt: 'desc' }],
+        include: {
+          ping: {
+            select: {
+              id: true,
+              title: true,
+              createdAt: true,
+              category: { select: { id: true, name: true } },
+            },
+          },
+          _count: { select: { comments: true, surges: true } },
+          surges: { where: { userId }, select: { id: true } },
+        },
+      }),
+      prisma.wave.count({ where: whereClause }),
+    ]);
+
+    const totalPages = Math.ceil(totalWaves / limit);
+
+    const sanitized = waves.map((wave) => ({
+      ...wave,
+      hasSurged: Array.isArray(wave.surges) ? wave.surges.length > 0 : false,
+      surges: undefined,
+    }));
+
+    const withBadges = await appendWaveBadges(sanitized, organizationId);
+
+    return res.status(200).json({
+      data: withBadges,
+      pagination: {
+        totalWaves,
+        totalPages,
+        currentPage: page,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
+  } catch (error) {
+    logger.error('Error fetching user waves', { error, userId: req.user?.userId });
     return next(error);
   }
 };
@@ -253,7 +326,7 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
     });
 
     // Return the previously fetched data with an adjusted viewCount to avoid an extra roundtrip
-    return res.status(200).json({
+    const sanitizedWave = {
       ...wave,
       viewCount: wave.viewCount + 1,
       hasSurged: userId ? (wave.surges && wave.surges.length > 0) : false,
@@ -261,7 +334,11 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
         ...wave.ping,
         hasSurged: userId ? (wave.ping.surges && wave.ping.surges.length > 0) : false,
       } : undefined,
-    });
+    };
+
+    const [waveWithBadges] = await appendWaveBadges([sanitizedWave], organizationId);
+
+    return res.status(200).json(waveWithBadges);
   } catch (error) {
     logger.error('Error fetching wave', { error, waveId: req.params.id });
     return next(error);
@@ -281,7 +358,7 @@ export const updateWave = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(400).json({ error: 'Request body is required' });
     }
 
-    const { solution, isAnonymous } = req.body;
+    const { solution } = req.body;
 
     const wave = await prisma.wave.findUnique({
       where: { id: parseInt(id) },
@@ -308,7 +385,6 @@ export const updateWave = async (req: AuthRequest, res: Response, next: NextFunc
 
     const updateData: any = {};
     if (solution !== undefined) updateData.solution = solution;
-    if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
 
     const updatedWave = await prisma.wave.update({
       where: { id: parseInt(id) },

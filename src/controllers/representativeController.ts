@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { Status } from '@prisma/client';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { appendPingBadges } from '../utils/pingBadges.js';
 
 const sanitizePingAuthor = (ping: any) => ({
     ...ping,
@@ -45,9 +46,10 @@ export const getSubmittedPings = async (req: AuthRequest, res: Response, next: N
         const totalPages = Math.ceil(totalPings / limit);
 
         const sanitizedPings = pings.map(sanitizePingAuthor);
+        const pingsWithBadges = await appendPingBadges(sanitizedPings, req.organizationId!);
 
         return res.status(200).json({
-            data: sanitizedPings,
+            data: pingsWithBadges,
             pagination: {
                 totalPings,
                 totalPages,
