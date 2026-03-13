@@ -115,6 +115,7 @@ export const organizationClaimSchema = z.object({
     lastName: z.string().min(1, 'Last name is required').max(50),
     password: z.string().min(8, 'Password must be at least 8 characters long'),
     metadata: z.record(z.string(), z.unknown()).optional(),
+    invitationToken: z.string().optional(),
   }),
 });
 

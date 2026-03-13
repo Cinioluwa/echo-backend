@@ -314,10 +314,44 @@ export const buildJoinRequestRejectedEmail = (organizationName: string, reason?:
 			<p>— The Echo Team</p>
 		`,
 		text: `Hi,
-
+		
 Unfortunately, your request to join ${organizationName} on Echo was not approved.
 ${reasonText}
 If you believe this was a mistake, please contact your organization admin for more information.
+
+— The Echo Team`,
+	};
+};
+
+export const buildLeaderInvitationEmail = (
+	organizationName: string,
+	token: string,
+	organizationId: number
+) => {
+	const appUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+	const invitationUrl = `${appUrl}/onboarding?invitationToken=${token}&orgId=${organizationId}`;
+
+	return {
+		subject: `Invitation to lead ${organizationName} on Echo`,
+		html: `
+			<p>Hi,</p>
+			<p>You have been invited to claim the leadership role for <strong>${organizationName}</strong> on Echo.</p>
+			<p>Echo is a platform for community engagement and issue resolution.</p>
+			<p><a href="${invitationUrl}">Click here to claim your organization</a></p>
+			<p>If the button above does not work, copy and paste this link into your browser:</p>
+			<p>${invitationUrl}</p>
+			<p>This invitation expires in 7 days.</p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,
+
+You have been invited to claim the leadership role for ${organizationName} on Echo.
+
+Echo is a platform for community engagement and issue resolution.
+
+Claim your organization here: ${invitationUrl}
+
+This invitation expires in 7 days.
 
 — The Echo Team`,
 	};

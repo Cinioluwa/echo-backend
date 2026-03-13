@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { getPublicPings, getPublicWaves, getPublicResolutionLog } from '../controllers/publicController.js';
+import { inviteLeader } from '../controllers/organizationController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import cache from '../middleware/cacheMiddleware.js';
+import { validate } from '../middleware/validationMiddleware.js';
+import { inviteLeaderSchema } from '../schemas/publicSchemas.js';
 
 const router = Router();
 
@@ -203,5 +206,51 @@ router.get('/stream', authMiddleware, organizationMiddleware, cache(30), getPubl
  */
 // Resolution Log (resolved pings) - now requires auth
 router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60), getPublicResolutionLog);
+
+/**
+ * @openapi
+ * /api/public/organizations/{id}/invite-leader:
+ *   post:
+ *     summary: Invite a potential leader to claim an organization
+ *     description: |
+ *       Allows any authenticated user to send an invitation email to a potential leader
+ *       to claim and lead a specific organization.
+ *       
+ *       **Authentication required**: User must be logged in.
+ *     tags:
+ *       - Public
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Organization ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: potential.leader@example.com
+ *     responses:
+ *       201:
+ *         description: Invitation sent successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Organization not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/organizations/:id/invite-leader', authMiddleware, validate(inviteLeaderSchema), inviteLeader);
 
 export default router;

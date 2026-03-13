@@ -990,7 +990,7 @@ export const submitOrganizationClaim = async (
       return res.status(400).json({ error: 'Invalid organization id' });
     }
 
-    const { email, firstName, lastName, password, metadata } = req.body;
+    const { email, firstName, lastName, password, metadata, invitationToken } = req.body;
 
     let requesterDomain: string;
     try {
@@ -1090,6 +1090,30 @@ export const submitOrganizationClaim = async (
         return { kind: 'duplicate_pending' as const };
       }
 
+      if (invitationToken) {
+        const invitation = await tx.invitation.findUnique({
+          where: { token: invitationToken as string },
+        });
+
+        if (
+          !invitation ||
+          invitation.organizationId !== organizationId ||
+          invitation.expiresAt < new Date() ||
+          invitation.status !== 'PENDING'
+        ) {
+          return { kind: 'invalid_invitation' as const };
+        }
+
+        if (invitation.email.toLowerCase() !== normalizedEmail) {
+          return { kind: 'invitation_email_mismatch' as const };
+        }
+
+        await tx.invitation.update({
+          where: { id: invitation.id },
+          data: { status: 'ACCEPTED' },
+        });
+      }
+
       const claim = await tx.organizationClaim.create({
         data: {
           organizationId,
@@ -1098,6 +1122,8 @@ export const submitOrganizationClaim = async (
           metadata: {
             ...(metadata ?? {}),
             requestType: CLAIM_REQUEST_INITIAL,
+            invitationToken: invitationToken ?? undefined,
+            isInvitedClaim: !!invitationToken,
           },
         },
       });
@@ -1114,6 +1140,14 @@ export const submitOrganizationClaim = async (
 
     if (claimResult.kind === 'org_not_found') {
       return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    if (claimResult.kind === 'invalid_invitation') {
+      return res.status(400).json({ error: 'Invalid or expired invitation token' });
+    }
+
+    if (claimResult.kind === 'invitation_email_mismatch') {
+      return res.status(403).json({ error: 'Invitation email does not match claim email' });
     }
 
     if (claimResult.kind === 'already_claimed') {

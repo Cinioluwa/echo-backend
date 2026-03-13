@@ -215,6 +215,38 @@ export async function createComment(data: CreateCommentData = {}) {
   });
 }
 
+export interface CreateInvitationData {
+  email?: string;
+  token?: string;
+  role?: Role;
+  status?: string;
+  expiresAt?: Date;
+  organizationId?: number;
+}
+
+/**
+ * Factory for creating test invitations
+ */
+export async function createInvitation(data: CreateInvitationData = {}) {
+  const defaultData = {
+    email: `invited${Date.now()}@example.edu`,
+    token: `token-${Date.now()}`,
+    role: Role.ADMIN,
+    status: 'PENDING',
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    ...data,
+  };
+
+  if (!defaultData.organizationId) {
+    const org = await createOrganization();
+    defaultData.organizationId = org.id;
+  }
+
+  return await getPrismaClient().invitation.create({
+    data: defaultData as any,
+  });
+}
+
 export async function cleanupTestData() {
   await getPrismaClient().$transaction([
     getPrismaClient().notification.deleteMany(),
@@ -227,6 +259,7 @@ export async function cleanupTestData() {
     getPrismaClient().organizationClaim.deleteMany(),
     getPrismaClient().organizationJoinRequest.deleteMany(),
     getPrismaClient().organizationRequest.deleteMany(),
+    getPrismaClient().invitation.deleteMany(),
     getPrismaClient().user.deleteMany(),
     getPrismaClient().organization.deleteMany(),
   ]);
