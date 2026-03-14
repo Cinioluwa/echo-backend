@@ -113,6 +113,20 @@ All data is scoped to your organization (determined by email domain). Users can 
               nullable: true,
               description: 'User level (e.g., student year)',
             },
+            department: {
+              type: 'string',
+              nullable: true,
+              description: 'User department',
+            },
+            hall: {
+              type: 'string',
+              nullable: true,
+              description: 'User residence hall',
+            },
+            status: {
+              type: 'string',
+              description: 'User account status (e.g., ACTIVE, PENDING)',
+            },
             createdAt: {
               type: 'string',
               format: 'date-time',
