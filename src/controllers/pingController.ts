@@ -360,6 +360,14 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
         },
         waves: {
           include: {
+            author: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
             _count: { select: { surges: true, comments: true } },
           },
         },
