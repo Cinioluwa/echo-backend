@@ -204,12 +204,12 @@ npm run seed:orgs:nigeria
 Seed behavior:
 - Upserts preconfigured Nigerian institutions into `Organization`.
 - Creates unclaimed institutions with `isClaimVerified=false` and `categoryCustomizationLocked=true`.
-- Ensures default categories (`General`, `Academics`, `Facilities`) exist for each seeded organization.
-
-## Project structure
-
-```
-echo-backend/
+- Ensures default categories (`General`, `Academics`, `Facilities`) exist for each seeded organizati├── docs/                        # Project documentation
+│   ├── api/                    # Swagger and API related docs
+│   ├── auth/                   # Google OAuth and authentication docs
+│   ├── testing/                # Manual, Postman, and standards docs
+│   ├── architecture/           # Websocket and core system docs
+│   └── project/                # Status, roadmap, and readiness docs
 ├── src/
 │   ├── server.ts                # App entry (Express + middlewares + routes)
 │   ├── app.ts                   # Express app factory (for testing)
@@ -234,7 +234,10 @@ echo-backend/
 │   └── playwright.config.ts     # Playwright config
 ├── logs/                        # Winston log files (error.log, combined.log in prod)
 ├── Dockerfile                   # Build a production image (connects to Neon)
-├── setup-multitenancy-tests.js  # Seed script for test data
+├── package.json                 # Scripts and deps
+├── tsconfig.json                # TS config (NodeNext)
+├── tsconfig.build.json          # TS config for production builds
+└── setup-multitenancy-tests.js  # Seed script for test datancy-tests.js  # Seed script for test data
 ├── package.json                 # Scripts and deps
 ├── tsconfig.json                # TS config (NodeNext)
 └── tsconfig.build.json          # TS config for production builds
@@ -274,7 +277,7 @@ Validated at startup via Zod (`src/config/env.ts`). Required unless noted.
 **Frontend local dev:**
 - If the frontend runs on Vite, allow origin `http://localhost:5173` (already in backend CORS allowlist) and add it in Google Console Authorized JavaScript origins.
 
-**📝 Note**: See `GOOGLE_AUTH_IMPLEMENTATION.md` and `GOOGLE_AUTH_TESTING_GUIDE.md` for Google OAuth setup. Email is optional but required for password resets and organization requests.
+**📝 Note**: See [implementation.md](docs/auth/implementation.md) and [testing.md](docs/auth/testing.md) for Google OAuth setup. Email is optional but required for password resets and organization requests.
 
 ## 📚 API Documentation (Swagger/OpenAPI)
 
@@ -736,7 +739,7 @@ Test credentials (password for all: `password123`):
 Notes:
 - The script uses upserts, so it's safe to re-run.
 - Organization membership is determined by the email domain in your flows. Use the above domains for testing isolation.
-- See `MULTITENANCY_TESTING.md` for a checklist and test ideas.
+- See [multitenancy.md](docs/testing/multitenancy.md) for a checklist and test ideas.
 
 ## Pre-deploy: Redis rate limiting (for scaling)
 
