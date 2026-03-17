@@ -132,6 +132,12 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
               lastName: true,
             },
           },
+          surges: {
+            select: {
+              id: true,
+              userId: true,
+            },
+          },
         },
       }),
       prisma.comment.count({ where: whereClause }),
@@ -140,8 +146,15 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalComments / limit);
 
-    // Sanitize anonymous comments
-    const sanitizedComments = comments.map(sanitizeComment);
+    // Sanitize and add hasSurged status
+    const currentUserId = req.user?.userId;
+    const sanitizedComments = comments.map((comment: any) => {
+      const sanitized = sanitizeComment(comment);
+      return {
+        ...sanitized,
+        hasSurged: comment.surges?.some((s: any) => s.userId === currentUserId) ?? false,
+      };
+    });
 
     return res.status(200).json({
       data: sanitizedComments,
@@ -275,6 +288,12 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
               lastName: true,
             },
           },
+          surges: {
+            select: {
+              id: true,
+              userId: true,
+            },
+          },
         },
       }),
       prisma.comment.count({ where: whereClause }),
@@ -283,8 +302,15 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
     // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalComments / limit);
 
-    // Sanitize anonymous comments
-    const sanitizedComments = comments.map(sanitizeComment);
+    // Sanitize and add hasSurged status
+    const currentUserId = req.user?.userId;
+    const sanitizedComments = comments.map((comment: any) => {
+      const sanitized = sanitizeComment(comment);
+      return {
+        ...sanitized,
+        hasSurged: comment.surges?.some((s: any) => s.userId === currentUserId) ?? false,
+      };
+    });
 
     return res.status(200).json({
       data: sanitizedComments,
