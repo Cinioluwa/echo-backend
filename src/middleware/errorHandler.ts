@@ -11,6 +11,14 @@ export default function errorHandler(err: unknown, req: Request, res: Response, 
   }
 
   // Log error with context
+  console.error(`DEBUG: errorHandler [${req.method}] ${req.url}`, {
+    requestId,
+    error: err instanceof Error ? {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+    } : err,
+  });
   logger.error('Error caught by error handler', {
     requestId,
     method: req.method,

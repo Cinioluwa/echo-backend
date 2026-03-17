@@ -5,6 +5,10 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import { appendFileSync } from 'node:fs';
 import { RedisStore } from 'rate-limit-redis';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
 import { requestLogger } from './middleware/requestLogger.js';
 import logger from './config/logger.js';
 import { env } from './config/env.js';
@@ -220,14 +224,20 @@ export function createApp(options: CreateAppOptions = {}) {
     next();
   }, ...writeLimiter, userRoutes);
   app.use('/api/auth', ...writeLimiter, authRoutes);
-  app.use('/api/pings', ...writeLimiter, pingRoutes);
-  app.use('/api/pings/:pingId/waves', ...writeLimiter, waveRoutes);
-  app.use('/api/waves', waveStandaloneRoutes);
   app.use('/api/pings/:pingId/comments', ...writeLimiter, pingCommentRouter);
+
   app.use('/api/waves/:waveId/comments', ...writeLimiter, waveCommentRouter);
+
   app.use('/api/pings/:pingId/surge', ...writeLimiter, pingSurgeRouter);
   app.use('/api/waves/:waveId/surge', ...writeLimiter, waveSurgeRouter);
   app.use('/api/comments/:commentId/surge', ...writeLimiter, commentSurgeRouter);
+  app.use('/api/pings/:pingId/waves', ...writeLimiter, waveRoutes);
+
+  app.use('/api/pings', (req, res, next) => {
+    console.log(`DEBUG: Route match: /api/pings [${req.method}] ${req.originalUrl}`);
+    next();
+  }, ...writeLimiter, pingRoutes);
+  app.use('/api/waves', waveStandaloneRoutes);
   app.use('/api/pings/:pingId/official-response', ...writeLimiter, officialResponseRoutes);
   app.use('/api/admin', ...writeLimiter, adminRoutes);
   app.use('/api/super-admin', ...writeLimiter, superAdminRoutes);

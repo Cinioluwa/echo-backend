@@ -40,7 +40,6 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
         },
       },
     });
-    console.log('DEBUG: authMiddleware: user from DB', { user });
 
     if (!user || user.status !== 'ACTIVE') {
       return res.status(401).json({ error: 'Unauthorized: Account inactive' });
@@ -59,7 +58,6 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
       organizationId: user.organizationId,
       role: user.role,
     };
-    console.log('DEBUG: authMiddleware: req.user set', { user: (req as AuthRequest).user });
     next(); // Proceed to the next function (the controller)
   } catch {
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });

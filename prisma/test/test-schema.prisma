@@ -199,6 +199,7 @@ model Comment {
   content        String
   createdAt      DateTime @default(now())
   isAnonymous    Boolean  @default(false)
+  surgeCount     Int      @default(0)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
@@ -209,6 +210,8 @@ model Comment {
   pingId         Int?
   wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
   waveId         Int?
+
+  surges         Surge[]
 
   // Database indexes for query performance
   @@index([pingId])                  // Foreign key for getCommentsForPing
@@ -234,16 +237,20 @@ model Surge {
   pingId         Int?
   wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
   waveId         Int?
+  comment        Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId      Int?
 
   // Database indexes for query performance
   @@index([userId])            // Find user's surges
   @@index([organizationId])    // Multitenancy filter
   @@index([pingId, userId])    // Check if user surged a ping (toggle surge)
   @@index([waveId, userId])    // Check if user surged a wave (toggle surge)
+  @@index([commentId, userId]) // Check if user surged a comment (toggle surge)
 
   // New performance indexes
   @@index([organizationId, pingId])
   @@index([organizationId, userId])
+  @@index([organizationId, commentId])
 }
 
 model OfficialResponse {
