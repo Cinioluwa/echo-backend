@@ -1492,6 +1492,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         email: true,
         firstName: true,
         lastName: true,
+        profilePicture: true,
         role: true,         // ← add: needed for role-gating on the UI
         status: true,       // ← add: so UI knows if PENDING / ACTIVE
         level: true,
