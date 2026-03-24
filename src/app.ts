@@ -64,7 +64,8 @@ export function createApp(options: CreateAppOptions = {}) {
     'https://echo-ng.com',
     'https://www.echo-ng.com',
     'https://tryecho.online',
-    'https://webapp-echo.vercel.app'
+    'https://webapp-echo.vercel.app',
+    'https://app.echo-ng.com'
   ];
 
   const allowedOrigins = env.ALLOWED_ORIGINS || defaultAllowedOrigins;

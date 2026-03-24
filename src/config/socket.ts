@@ -28,7 +28,8 @@ export async function initializeSocketIO(
     'https://echo-ng.com',
     'https://www.echo-ng.com',
     'https://tryecho.online',
-    'https://webapp-echo.vercel.app'
+    'https://webapp-echo.vercel.app',
+    'https://app.echo-ng.com'
   ];
 
   io = new SocketIOServer(httpServer, {
