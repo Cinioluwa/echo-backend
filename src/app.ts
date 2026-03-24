@@ -12,6 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 import { requestLogger } from './middleware/requestLogger.js';
 import logger from './config/logger.js';
 import { env } from './config/env.js';
+import { getAllowedOrigins } from './config/cors.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -56,19 +57,7 @@ export function createApp(options: CreateAppOptions = {}) {
   const enableRequestFileLog = process.env.REQUEST_FILE_LOG === 'true';
   const enableRouteDebugLog = process.env.DEBUG_ROUTE_LOG === 'true';
 
-  const defaultAllowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://echo-ng.com',
-    'https://www.echo-ng.com',
-    'https://tryecho.online',
-    'https://webapp-echo.vercel.app',
-    'https://app.echo-ng.com'
-  ];
-
-  const allowedOrigins = env.ALLOWED_ORIGINS || defaultAllowedOrigins;
+  const allowedOrigins = getAllowedOrigins();
 
   app.use(cors({
     origin: (origin, callback) => {
@@ -76,7 +65,10 @@ export function createApp(options: CreateAppOptions = {}) {
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        // Helpful for debugging Render/Vercel logs
+        const error = new Error(`Not allowed by CORS: ${origin}`);
+        logger.error('CORS rejection', { origin, url: '/api/cors-rejection' });
+        callback(error);
       }
     },
     credentials: true

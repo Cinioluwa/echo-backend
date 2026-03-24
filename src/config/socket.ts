@@ -9,6 +9,8 @@ import prisma from './db.js';
 import logger from './logger.js';
 import { env } from './env.js';
 
+import { getAllowedOrigins } from './cors.js';
+
 let io: SocketIOServer | null = null;
 
 export function getIO(): SocketIOServer {
@@ -20,17 +22,7 @@ export async function initializeSocketIO(
   httpServer: HttpServer,
   redisClient: RedisClientType | null
 ): Promise<SocketIOServer> {
-  const allowedOrigins = env.ALLOWED_ORIGINS || [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://echo-ng.com',
-    'https://www.echo-ng.com',
-    'https://tryecho.online',
-    'https://webapp-echo.vercel.app',
-    'https://app.echo-ng.com'
-  ];
+  const allowedOrigins = getAllowedOrigins();
 
   io = new SocketIOServer(httpServer, {
     cors: {
