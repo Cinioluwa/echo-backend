@@ -733,9 +733,10 @@ export const resetPassword = async (
   next: NextFunction
 ) => {
   try {
-    const { token, password } = req.body;
+    const { token, password, newPassword } = req.body;
+    const finalPassword = password || newPassword;
 
-    if (typeof token !== 'string' || typeof password !== 'string') {
+    if (typeof token !== 'string' || typeof finalPassword !== 'string') {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
 
@@ -752,7 +753,7 @@ export const resetPassword = async (
         return null;
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(finalPassword, 10);
 
       const updatedUser = await tx.user.update({
         where: { id: tokenRecord.userId },
