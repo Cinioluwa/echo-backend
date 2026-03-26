@@ -77,6 +77,7 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
             firstName: true,
             lastName: true,
             level: true,
+            profilePicture: true,
           },
         },
         category: true,
@@ -158,6 +159,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
               firstName: true,
               lastName: true,
               level: true,
+              profilePicture: true,
             },
           },
           category: true,
@@ -231,6 +233,15 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
           createdAt: 'desc',
         },
         include: {
+          author: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              profilePicture: true,
+            },
+          },
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
@@ -305,7 +316,8 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
               id: true,
               email: true,
               firstName: true,
-              lastName: true
+              lastName: true,
+              profilePicture: true
             },
           },
           _count: {
@@ -356,6 +368,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
             email: true,
             firstName: true,
             lastName: true,
+            profilePicture: true,
           },
         },
         waves: {
@@ -366,6 +379,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
                 email: true,
                 firstName: true,
                 lastName: true,
+                profilePicture: true,
               },
             },
             _count: { select: { surges: true, comments: true } },
@@ -379,6 +393,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
                 email: true,
                 firstName: true,
                 lastName: true,
+                profilePicture: true,
               },
             },
           },
@@ -391,6 +406,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
                 email: true,
                 firstName: true,
                 lastName: true,
+                profilePicture: true,
               },
             },
           },
@@ -628,6 +644,7 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
             firstName: true,
             lastName: true,
             level: true,
+            profilePicture: true,
           },
         },
         category: true,
@@ -687,6 +704,7 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
               email: true,
               firstName: true,
               lastName: true,
+              profilePicture: true,
             },
           },
           _count: {
