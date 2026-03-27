@@ -306,4 +306,82 @@ describe('Comment CRUD Operations', () => {
       expect(comment.author).toBeNull();
     });
   });
+
+  describe('Delete Comment', () => {
+    it('should allow author to delete their own comment', async () => {
+      const comment = await createComment({
+        pingId: ping1.id,
+        organizationId: org1.id,
+        authorId: user1.id,
+        content: 'Own comment to delete'
+      });
+
+      await client
+        .delete(`/api/comments/${comment.id}`)
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(204);
+
+      // Verify it's gone
+      const prismaModule = await import('../../src/config/db.js');
+      const prisma = prismaModule.default;
+      const deleted = await prisma.comment.findUnique({ where: { id: comment.id } });
+      expect(deleted).toBeNull();
+    });
+
+    it('should NOT allow other user to delete someone else\'s comment', async () => {
+      const userOther = await createUser({
+        organizationId: org1.id,
+        email: 'other@org1.edu'
+      });
+      const loginRes = await client
+        .post('/api/users/login')
+        .send({ email: userOther.email, password: 'Password123!' })
+        .expect(200);
+      const otherToken = loginRes.body.token;
+
+      const comment = await createComment({
+        pingId: ping1.id,
+        organizationId: org1.id,
+        authorId: user1.id,
+        content: 'Comment by user1'
+      });
+
+      await client
+        .delete(`/api/comments/${comment.id}`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .expect(403);
+    });
+
+    it('should allow admin to delete any comment in their org', async () => {
+      const adminUser = await createUser({
+        organizationId: org1.id,
+        email: 'admin@org1.edu',
+        role: 'ADMIN'
+      });
+      const loginRes = await client
+        .post('/api/users/login')
+        .send({ email: adminUser.email, password: 'Password123!' })
+        .expect(200);
+      const adminToken = loginRes.body.token;
+
+      const comment = await createComment({
+        pingId: ping1.id,
+        organizationId: org1.id,
+        authorId: user1.id,
+        content: 'User comment for admin to delete'
+      });
+
+      await client
+        .delete(`/api/comments/${comment.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(204);
+    });
+
+    it('should return 404 for non-existent comment', async () => {
+      await client
+        .delete('/api/comments/99999')
+        .set('Authorization', `Bearer ${user1Token}`)
+        .expect(404);
+    });
+  });
 });

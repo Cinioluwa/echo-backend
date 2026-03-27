@@ -52,6 +52,8 @@ model User {
   isVerified     Boolean  @default(false) // Email verification status
   role           Role     @default(USER)
   status         String   @default("PENDING") // PENDING, ACTIVE
+  displayName    String?
+  displayNameUpdatedAt DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -76,6 +78,7 @@ model User {
   notifications       Notification[]
   media               Media[]
   notificationPreference          NotificationPreference?
+  displayNameHistories DisplayNameHistory[]
 
   @@unique([email, organizationId]) // Email unique per org
 
@@ -496,5 +499,16 @@ model Media {
   @@index([organizationId])
   @@index([pingId])
   @@index([waveId])
+  @@index([userId])
+}
+
+model DisplayNameHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  changedAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
