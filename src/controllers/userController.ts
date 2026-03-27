@@ -1460,12 +1460,81 @@ export const deleteCurrentUser = async (req: AuthRequest, res: Response, next: N
 export const updateCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const { firstName, lastName, level, department, hall } = req.body;
+    const { firstName, lastName, level, department, hall, displayName } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized: User ID not found' });
     }
 
+    // --- Display Name Mutation Logic ---
+    if (displayName !== undefined) {
+      const { containsReservedKeyword } = await import('../constants/reservedKeywords.js');
+
+      // 1. Blocklist check
+      if (containsReservedKeyword(displayName)) {
+        return res.status(400).json({
+          error: 'That display name contains a reserved word and cannot be used.',
+          code: 'DISPLAY_NAME_RESERVED',
+        });
+      }
+
+      // 2. Cooldown check
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { displayName: true, displayNameUpdatedAt: true, createdAt: true },
+      });
+
+      if (currentUser) {
+        const lastChanged = currentUser.displayNameUpdatedAt ?? currentUser.createdAt;
+        const now = new Date();
+        const msElapsed = now.getTime() - new Date(lastChanged).getTime();
+        const GRACE_PERIOD_MS = 15 * 60 * 1000;       // 15 minutes
+        const COOLDOWN_MS     = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+        const isWithinGrace   = msElapsed <= GRACE_PERIOD_MS;
+        const isWithinCooldown = msElapsed > GRACE_PERIOD_MS && msElapsed < COOLDOWN_MS;
+
+        if (isWithinCooldown && currentUser.displayName !== null) {
+          const cooldownEndsAt = new Date(new Date(lastChanged).getTime() + COOLDOWN_MS);
+          return res.status(429).json({
+            error: 'You can only change your display name once every 30 days. The 15-minute correction window has passed.',
+            code: 'DISPLAY_NAME_COOLDOWN',
+            cooldownEndsAt: cooldownEndsAt.toISOString(),
+          });
+        }
+
+        // Persist: transactionally update name + log history
+        const updatedUser = await prisma.$transaction(async (tx) => {
+          // Archive old name if one exists
+          if (currentUser.displayName && currentUser.displayName !== displayName) {
+            await tx.displayNameHistory.create({
+              data: {
+                name: currentUser.displayName,
+                userId,
+              },
+            });
+          }
+
+          return tx.user.update({
+            where: { id: userId },
+            data: {
+              displayName,
+              displayNameUpdatedAt: new Date(),
+              ...(firstName !== undefined && { firstName }),
+              ...(lastName !== undefined && { lastName }),
+              ...(level !== undefined && { level }),
+              ...(department !== undefined && { department }),
+              ...(hall !== undefined && { hall }),
+            },
+          });
+        });
+
+        const { password: _pw, ...safeUser } = updatedUser;
+        return res.status(200).json({ user: safeUser });
+      }
+    }
+
+    // --- Standard profile update (no displayName change) ---
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { firstName, lastName, level, department, hall },
@@ -1477,6 +1546,7 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
     return next(error);
   }
 };
+
 
 export const getCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -1493,6 +1563,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         email: true,
         firstName: true,
         lastName: true,
+        displayName: true,
+        displayNameUpdatedAt: true,
         profilePicture: true,
         role: true,         // ← add: needed for role-gating on the UI
         status: true,       // ← add: so UI knows if PENDING / ACTIVE
@@ -1501,6 +1573,10 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         hall: true,
         organizationId: true,
         createdAt: true,
+        displayNameHistories: {
+          orderBy: { changedAt: 'desc' },
+          select: { name: true, changedAt: true },
+        },
         // ← add: fetch the most recent join request for this user
         organizationJoinRequests: {
           orderBy: { createdAt: 'desc' },
@@ -1831,6 +1907,85 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response, next: Next
     });
   } catch (error) {
     logger.error(`Error fetching user analytics for period: ${req.query.period}`, { error, userId: req.user?.userId });
+    return next(error);
+  }
+};
+
+// @desc    Get a user's public community profile
+// @route   GET /api/users/:id/profile
+// @access  Private (authenticated members of same organization)
+export const getUserPublicProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const targetId = parseInt(req.params.id, 10);
+    const organizationId = req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (isNaN(targetId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { id: targetId, organizationId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+        profilePicture: true,
+        role: true,
+        createdAt: true,
+        displayNameHistories: {
+          orderBy: { changedAt: 'desc' },
+          select: { name: true, changedAt: true },
+        },
+        pings: {
+          where: { isAnonymous: false },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            progressStatus: true,
+            surgeCount: true,
+            createdAt: true,
+            category: { select: { name: true } },
+          },
+        },
+        wavesAuthored: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            solution: true,
+            status: true,
+            surgeCount: true,
+            createdAt: true,
+            ping: { select: { id: true, title: true } },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.status(200).json({
+      id: user.id,
+      displayName: user.displayName ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+      profilePicture: user.profilePicture,
+      role: user.role,
+      memberSince: user.createdAt,
+      previousNames: user.displayNameHistories,
+      recentPings: user.pings,
+      recentWaves: user.wavesAuthored,
+    });
+  } catch (error) {
+    logger.error('Error fetching public user profile', { error, targetId: req.params.id });
     return next(error);
   }
 };

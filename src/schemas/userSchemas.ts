@@ -37,6 +37,7 @@ export const updateUserSchema = z.object({
   body: z.object({
     firstName: z.string().min(1, 'First name cannot be empty').max(50).optional(),
     lastName: z.string().min(1, 'Last name cannot be empty').max(50).optional(),
+    displayName: z.string().min(2, 'Display name must be at least 2 characters').max(30, 'Display name must be 30 characters or fewer').trim().optional(),
     level: z.number().int('Level must be an integer').min(1, 'Level must be between 1 and 7').max(7, 'Level must be between 1 and 7').optional(),
     department: z.string().max(100).optional(),
     hall: z.string().max(100).optional(),

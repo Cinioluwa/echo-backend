@@ -18,7 +18,8 @@ import {
   getMySurges,
   getMyComments,
   getMyAnalytics,
-  changePassword
+  changePassword,
+  getUserPublicProfile,
 } from '../controllers/userController.js';
 import {
   getMyNotificationPreferences,
@@ -41,6 +42,7 @@ import {
   organizationClaimSchema,
   changePasswordSchema,
   userAnalyticsSchema,
+  userIdParamSchema,
 } from '../schemas/userSchemas.js';
 import {
   getNotificationPreferencesSchema,
@@ -1019,5 +1021,44 @@ router.get('/me/comments', authMiddleware, getMyComments);  // Get all my commen
  *         description: Internal server error
  */
 router.get('/me/analytics', authMiddleware, validate(userAnalyticsSchema), getMyAnalytics);
+
+/**
+ * @openapi
+ * /api/users/{id}/profile:
+ *   get:
+ *     summary: Get a user's public community profile
+ *     description: |
+ *       Returns a community-facing profile card for any authenticated member to view.
+ *       
+ *       **Includes:**
+ *       - Display name (or full name if no display name set)
+ *       - Role (for frontend badge rendering: `USER`, `REPRESENTATIVE`, `ADMIN`, `SUPER_ADMIN`)
+ *       - Previous display names with timestamps (full transparency/accountability log)
+ *       - 10 most recent non-anonymous Pings raised by the user
+ *       - 10 most recent Waves (solutions) contributed by the user
+ *       
+ *       **Note:** Only returns data scoped to the requesting user's organization.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the user whose profile to view
+ *     responses:
+ *       200:
+ *         description: Public profile returned
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/profile', authMiddleware, validate(userIdParamSchema), getUserPublicProfile);
 
 export default router;

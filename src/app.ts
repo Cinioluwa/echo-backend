@@ -20,7 +20,7 @@ import pingRoutes from './routes/pingRoutes.js';
 import waveRoutes from './routes/waveRoutes.js';
 import waveStandaloneRoutes from './routes/waveStandaloneRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import { pingCommentRouter, waveCommentRouter } from './routes/commentRoutes.js';
+import { pingCommentRouter, waveCommentRouter, commentRouter } from './routes/commentRoutes.js';
 import { pingSurgeRouter, waveSurgeRouter, commentSurgeRouter } from './routes/surgeRoutes.js';
 import officialResponseRoutes from './routes/officialResponseRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
@@ -224,6 +224,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/pings/:pingId/surge', ...writeLimiter, pingSurgeRouter);
   app.use('/api/waves/:waveId/surge', ...writeLimiter, waveSurgeRouter);
   app.use('/api/comments/:commentId/surge', ...writeLimiter, commentSurgeRouter);
+  app.use('/api/comments', ...writeLimiter, commentRouter);
   app.use('/api/pings/:pingId/waves', ...writeLimiter, waveRoutes);
 
   app.use('/api/pings', (req, res, next) => {

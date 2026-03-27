@@ -3,7 +3,8 @@ import {
   createCommentOnPing, 
   getCommentsForPing,
   createCommentOnWave, 
-  getCommentsForWave 
+  getCommentsForWave,
+  deleteComment,
 } from '../controllers/commentController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
@@ -12,7 +13,8 @@ import {
   createCommentOnPingSchema,
   getCommentsForPingSchema,
   createCommentOnWaveSchema,
-  getCommentsForWaveSchema
+  getCommentsForWaveSchema,
+  commentParamSchema,
 } from '../schemas/commentSchemas.js';
 
 // Two separate routers for different parent routes
@@ -211,3 +213,52 @@ waveCommentRouter.route('/')
 
 // Default export for backward compatibility (wave comments)
 export default waveCommentRouter;
+
+/**
+ * @openapi
+ * /api/comments/{commentId}:
+ *   delete:
+ *     summary: Delete a comment
+ *     description: |
+ *       Permanently deletes a comment. 
+ *       
+ *       **Authorization rules:**
+ *       - A user may delete their **own** comment at any time.
+ *       - An `ADMIN` or `SUPER_ADMIN` may delete **any** comment in their organization.
+ *       
+ *       **Authentication required**: User must be logged in.
+ *       **Organization scoped**: Deletion is validated against the user's organization.
+ *     tags:
+ *       - Comments
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the comment to delete
+ *     responses:
+ *       204:
+ *         description: Comment deleted successfully (no content)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not the comment author or admin
+ *       404:
+ *         description: Comment not found
+ *       500:
+ *         description: Internal server error
+ */
+
+// Standalone router for comment actions: /api/comments/:commentId
+export const commentRouter = Router();
+
+commentRouter.delete(
+  '/:commentId',
+  authMiddleware,
+  organizationMiddleware,
+  validate(commentParamSchema),
+  deleteComment,
+);

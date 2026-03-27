@@ -326,3 +326,49 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
     return next(error);
   }
 };
+
+// @desc    Delete a comment
+// @route   DELETE /api/comments/:commentId
+// @access  Private (author or admin)
+export const deleteComment = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { commentId } = req.params;
+    const userId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
+    const userRole = req.user?.role;
+
+    if (!userId || !organizationId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const comment = await prisma.comment.findFirst({
+      where: {
+        id: parseInt(commentId),
+        organizationId,
+      },
+    });
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // Only the author or an admin/super_admin can delete
+    const isOwner = comment.authorId === userId;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'You are not authorized to delete this comment' });
+    }
+
+    await prisma.comment.delete({
+      where: { id: parseInt(commentId) },
+    });
+
+    await invalidateCacheAfterMutation(organizationId);
+
+    return res.status(204).send();
+  } catch (error) {
+    logger.error('Error deleting comment', { error, commentId: req.params.commentId, userId: req.user?.userId });
+    return next(error);
+  }
+};

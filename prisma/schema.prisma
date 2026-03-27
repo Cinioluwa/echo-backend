@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
@@ -35,26 +35,27 @@ model Organization {
   claims            OrganizationClaim[]
   notifications     Notification[]
   media             Media[]
-
 }
 
 // User Model with Organization Link
 model User {
-  id             Int      @id @default(autoincrement())
-  email          String
-  firstName      String?
-  lastName       String?
-  level          Int?
-  department     String?
-  hall           String?
-  password       String? // Optional for Google OAuth users
-  googleId       String?  @unique // Google's unique user identifier
-  profilePicture String? // Store Google profile picture URL
-  isVerified     Boolean  @default(false) // Email verification status
-  role           Role     @default(USER)
-  status         String   @default("PENDING") // PENDING, ACTIVE
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                   Int       @id @default(autoincrement())
+  email                String
+  firstName            String?
+  lastName             String?
+  displayName          String?
+  displayNameUpdatedAt DateTime?
+  level                Int?
+  department           String?
+  hall                 String?
+  password             String? // Optional for Google OAuth users
+  googleId             String?   @unique // Google's unique user identifier
+  profilePicture       String? // Store Google profile picture URL
+  isVerified           Boolean   @default(false) // Email verification status
+  role                 Role      @default(USER)
+  status               String    @default("PENDING") // PENDING, ACTIVE
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
@@ -77,11 +78,25 @@ model User {
   notifications                    Notification[]
   media                            Media[]
   notificationPreference           NotificationPreference?
+  displayNameHistories             DisplayNameHistory[]
 
   @@unique([email, organizationId]) // Email unique per org
   // New performance indexes
   @@index([organizationId, email])
   @@index([organizationId, role])
+  @@index([displayName])
+}
+
+// Display Name History Model
+model DisplayNameHistory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  changedAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId, changedAt(sort: Desc)])
 }
 
 // Dynamic Category Model (Replaces Enum)
@@ -165,7 +180,7 @@ model Wave {
   flaggedById   Int?
   notifications Notification[]
   media         Media[]
-  reason        String?        // Populated when status is REJECTED or ON_HOLD
+  reason        String? // Populated when status is REJECTED or ON_HOLD
 
   // Database indexes for query performance
   @@index([pingId]) // Foreign key for getWavesForPing
@@ -400,16 +415,16 @@ model OrganizationClaim {
 }
 
 model NotificationPreference {
-  id Int @id @default(autoincrement())
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int @unique
-  waveStatusUpdated Boolean @default(true)
-  officialResponse Boolean @default(true)
-  announcement Boolean @default(true)
-  commentSurge Boolean @default(true)
-  pingCreated Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            Int      @unique
+  waveStatusUpdated Boolean  @default(true)
+  officialResponse  Boolean  @default(true)
+  announcement      Boolean  @default(true)
+  commentSurge      Boolean  @default(true)
+  pingCreated       Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // Enums
@@ -429,7 +444,6 @@ enum Status {
   COMPLETED
   ON_HOLD
 }
-
 
 enum ProgressStatus {
   NONE

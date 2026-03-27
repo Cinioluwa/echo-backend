@@ -47,3 +47,8 @@ export const commentParamSchema = z.object({
     commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number'),
   }),
 });
+export const deleteCommentSchema = z.object({
+  params: z.object({
+    commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number'),
+  }),
+});
