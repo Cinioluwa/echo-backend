@@ -103,8 +103,32 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
       });
     }
 
+    // Re-fetch the ping so the response includes the newly linked media
+    const createdPing = await prisma.ping.findUnique({
+      where: { id: newPing.id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            level: true,
+            profilePicture: true,
+          },
+        },
+        category: true,
+        _count: {
+          select: { waves: true, comments: true, surges: true },
+        },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+        },
+      },
+    });
+
     // Sanitize anonymous ping
-    const sanitizedPing = sanitizePingAuthor(newPing);
+    const sanitizedPing = sanitizePingAuthor(createdPing);
 
     // Invalidate cache so new ping appears in feeds
     await invalidateCacheAfterMutation(organizationId);
@@ -165,6 +189,9 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
           category: true,
           _count: {
             select: { waves: true, comments: true, surges: true },
+          },
+          media: {
+            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
           },
           surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
@@ -244,6 +271,9 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
           },
           _count: {
             select: { waves: true, comments: true, surges: true },
+          },
+          media: {
+            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
           },
         },
       }),
