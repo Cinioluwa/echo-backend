@@ -62,6 +62,14 @@ export function emitCommentOnWave(waveId: number, comment: object): void {
   safeEmit(`wave:${waveId}`, 'comment:created', comment);
 }
 
+export function emitCommentReplyOnPing(
+  pingId: number,
+  parentCommentId: number,
+  reply: object
+): void {
+  safeEmit(`ping:${pingId}`, 'comment:reply:created', { parentCommentId, reply });
+}
+
 // ─── Feature 6: Announcements ───
 export function emitAnnouncement(organizationId: number, announcement: object): void {
   safeEmit(`org:${organizationId}`, 'announcement:new', announcement);

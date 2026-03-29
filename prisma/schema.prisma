@@ -210,7 +210,13 @@ model Comment {
   wave   Wave? @relation(fields: [waveId], references: [id], onDelete: Cascade)
   waveId Int?
 
-  surges Surge[]
+  // Single-level threaded replies (ping comments only)
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  parentCommentId Int?
+  replies         Comment[] @relation("CommentReplies")
+
+  surges        Surge[]
+  notifications Notification[]
 
   // Database indexes for query performance
   @@index([pingId]) // Foreign key for getCommentsForPing
@@ -218,7 +224,8 @@ model Comment {
   @@index([organizationId]) // Multitenancy filter
   @@index([authorId]) // Find user's comments
   @@index([createdAt(sort: Desc)]) // Sort by newest comments
-  // New performance indexes
+  @@index([parentCommentId]) // Fetch replies for a comment
+  // Composite indexes
   @@index([organizationId, pingId])
 }
 
@@ -301,6 +308,8 @@ model Notification {
   waveId         Int?
   announcement   Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   announcementId Int?
+  comment        Comment?      @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId      Int?
 
   @@index([userId, readAt])
   @@index([userId, createdAt(sort: Desc)])
@@ -423,6 +432,7 @@ model NotificationPreference {
   announcement      Boolean  @default(true)
   commentSurge      Boolean  @default(true)
   pingCreated       Boolean  @default(true)
+  commentReply      Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -457,6 +467,7 @@ enum NotificationType {
   OFFICIAL_RESPONSE_POSTED
   ANNOUNCEMENT_POSTED
   WAVE_STATUS_UPDATED
+  COMMENT_REPLY
 }
 
 enum JoinPolicy {

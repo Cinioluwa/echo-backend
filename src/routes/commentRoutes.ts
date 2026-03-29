@@ -5,6 +5,7 @@ import {
   createCommentOnWave, 
   getCommentsForWave,
   deleteComment,
+  createReplyOnPingComment,
 } from '../controllers/commentController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
@@ -15,6 +16,7 @@ import {
   createCommentOnWaveSchema,
   getCommentsForWaveSchema,
   commentParamSchema,
+  createReplyOnPingCommentSchema,
 } from '../schemas/commentSchemas.js';
 
 // Two separate routers for different parent routes
@@ -112,8 +114,71 @@ import {
 export const pingCommentRouter = Router({ mergeParams: true });
 
 pingCommentRouter.route('/')
-  .post(authMiddleware, organizationMiddleware, validate(createCommentOnPingSchema), createCommentOnPing)  // Create a comment on a ping
-  .get(authMiddleware, organizationMiddleware, validate(getCommentsForPingSchema), getCommentsForPing);                    // Get all comments for a ping
+  .post(authMiddleware, organizationMiddleware, validate(createCommentOnPingSchema), createCommentOnPing)
+  .get(authMiddleware, organizationMiddleware, validate(getCommentsForPingSchema), getCommentsForPing);
+
+/**
+ * @openapi
+ * /api/pings/{pingId}/comments/{commentId}/replies:
+ *   post:
+ *     summary: Reply to a comment on a ping
+ *     description: |
+ *       Create a single-level reply to a top-level comment on a ping.
+ *       Replies cannot be made to other replies (one level deep only).
+ *       Wave comments do not support replies.
+ *     tags:
+ *       - Comments
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: pingId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the top-level comment to reply to
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 maxLength: 2000
+ *                 example: Block A too, it started Monday.
+ *               isAnonymous:
+ *                 type: boolean
+ *                 default: false
+ *     responses:
+ *       201:
+ *         description: Reply created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Comment'
+ *       400:
+ *         description: Replying to a reply (depth limit exceeded)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Ping or parent comment not found
+ */
+pingCommentRouter.post(
+  '/:commentId/replies',
+  authMiddleware,
+  organizationMiddleware,
+  validate(createReplyOnPingCommentSchema),
+  createReplyOnPingComment,
+);
 
 /**
  * @openapi

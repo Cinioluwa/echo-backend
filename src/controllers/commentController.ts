@@ -3,8 +3,20 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
-import { emitCommentOnPing, emitCommentOnWave } from '../utils/socketEmitter.js';
+import { emitCommentOnPing, emitCommentOnWave, emitCommentReplyOnPing } from '../utils/socketEmitter.js';
+import { emitNotification } from '../utils/socketEmitter.js';
 
+// ─── Author select shape (reused everywhere) ───────────────────────────────
+const AUTHOR_SELECT = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  displayName: true,
+  profilePicture: true,
+} as const;
+
+// ─── Sanitize anonymous comments ───────────────────────────────────────────
 const sanitizeComment = (comment: any) => {
   if (!comment) return comment;
   if (comment.isAnonymous) {
@@ -17,9 +29,16 @@ const sanitizeComment = (comment: any) => {
   };
 };
 
-// @desc    Create a new comment on a ping
-// @route   POST /api/pings/:pingId/comments
-// @access  Private
+// ─── Helper: attach hasSurged to a (sanitized) comment ────────────────────
+const withSurged = (comment: any, currentUserId: number | undefined) => ({
+  ...comment,
+  hasSurged: comment.surges?.some((s: any) => s.userId === currentUserId) ?? false,
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Create a comment on a ping
+// POST /api/pings/:pingId/comments
+// ──────────────────────────────────────────────────────────────────────────
 export const createCommentOnPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
@@ -27,21 +46,13 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
     const userId = req.user?.userId;
     const organizationId = req.user?.organizationId;
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    if (!content) {
-      return res.status(400).json({ error: 'Comment content is required' });
-    }
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!content) return res.status(400).json({ error: 'Comment content is required' });
 
-    // Verify the ping exists in the user's org
     const ping = await prisma.ping.findFirst({
       where: { id: parseInt(pingId), organizationId },
     });
-
-    if (!ping) {
-      return res.status(404).json({ error: 'Ping not found or access denied' });
-    }
+    if (!ping) return res.status(404).json({ error: 'Ping not found or access denied' });
 
     const newComment = await prisma.comment.create({
       data: {
@@ -51,24 +62,11 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
         organizationId: organizationId!,
         isAnonymous,
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
+      include: { author: { select: AUTHOR_SELECT } },
     });
 
     const sanitizedComment = sanitizeComment(newComment);
-
-    // Invalidate cache after creating comment
     await invalidateCacheAfterMutation(organizationId);
-
-    // Emit real-time comment event
     emitCommentOnPing(parseInt(pingId), sanitizedComment);
 
     return res.status(201).json(sanitizedComment);
@@ -78,64 +76,49 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
   }
 };
 
-// @desc    Get all comments for a ping
-// @route   GET /api/pings/:pingId/comments
-// @access  Private
+// ──────────────────────────────────────────────────────────────────────────
+// Get all comments for a ping (threaded — top-level + nested replies)
+// GET /api/pings/:pingId/comments
+// ──────────────────────────────────────────────────────────────────────────
 export const getCommentsForPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { pingId } = req.params;
     const organizationId = req.user?.organizationId;
+    if (!organizationId) return res.status(400).json({ error: 'Organization ID is required.' });
 
-    if (!organizationId) {
-      return res.status(400).json({ error: 'Organization ID is required.' });
-    }
-
-    // --- Pagination Logic ---
     const page = parseInt(req.query.page as string) || 1;
     let limit = parseInt(req.query.limit as string) || 50;
-    if (limit > 100) limit = 100; // Cap the limit to 100
+    if (limit > 100) limit = 100;
     const skip = (page - 1) * limit;
+    const pingIdInt = parseInt(pingId);
 
-    // --- Filtering Logic ---
-    const whereClause: any = {
-      pingId: parseInt(pingId),
-      organizationId: organizationId,
+    const ping = await prisma.ping.findFirst({
+      where: { id: pingIdInt, organizationId },
+    });
+    if (!ping) return res.status(404).json({ error: 'Ping not found or access denied' });
+
+    // Only count/fetch TOP-LEVEL comments (parentCommentId === null)
+    const whereClause = {
+      pingId: pingIdInt,
+      organizationId,
+      parentCommentId: null,
     };
 
-    // Verify the ping exists in the user's org
-    const ping = await prisma.ping.findFirst({
-      where: { 
-        id: parseInt(pingId),
-        organizationId: organizationId,
-      },
-    });
-
-    if (!ping) {
-      return res.status(404).json({ error: 'Ping not found or access denied' });
-    }
-
-    // Run two queries in parallel: one for the data, one for the total count
     const [comments, totalComments] = await prisma.$transaction([
       prisma.comment.findMany({
         where: whereClause,
-        skip: skip,
+        skip,
         take: limit,
-        orderBy: {
-          createdAt: 'asc',
-        },
+        orderBy: { createdAt: 'asc' },
         include: {
-          author: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-          surges: {
-            select: {
-              id: true,
-              userId: true,
+          author: { select: AUTHOR_SELECT },
+          surges: { select: { id: true, userId: true } },
+          // One level of replies
+          replies: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              author: { select: AUTHOR_SELECT },
+              surges: { select: { id: true, userId: true } },
             },
           },
         },
@@ -143,27 +126,24 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
       prisma.comment.count({ where: whereClause }),
     ]);
 
-    // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalComments / limit);
-
-    // Sanitize and add hasSurged status
     const currentUserId = req.user?.userId;
+
     const sanitizedComments = comments.map((comment: any) => {
-      const sanitized = sanitizeComment(comment);
+      const sanitized = withSurged(sanitizeComment(comment), currentUserId);
+      const sanitizedReplies = (comment.replies ?? []).map((reply: any) =>
+        withSurged(sanitizeComment(reply), currentUserId)
+      );
       return {
         ...sanitized,
-        hasSurged: comment.surges?.some((s: any) => s.userId === currentUserId) ?? false,
+        replies: sanitizedReplies,
+        replyCount: sanitizedReplies.length,
       };
     });
 
     return res.status(200).json({
       data: sanitizedComments,
-      pagination: {
-        totalComments,
-        totalPages,
-        currentPage: page,
-        limit,
-      },
+      pagination: { totalComments, totalPages, currentPage: page, limit },
     });
   } catch (error) {
     logger.error('Error fetching comments for ping', { error, pingId: req.params.pingId });
@@ -171,9 +151,115 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
   }
 };
 
-// @desc    Create a new comment on a wave
-// @route   POST /api/waves/:waveId/comments
-// @access  Private
+// ──────────────────────────────────────────────────────────────────────────
+// Create a reply to a top-level comment on a ping
+// POST /api/pings/:pingId/comments/:commentId/replies
+// ──────────────────────────────────────────────────────────────────────────
+export const createReplyOnPingComment = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { pingId, commentId } = req.params;
+    const { content, isAnonymous = false } = req.body;
+    const userId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
+
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const pingIdInt = parseInt(pingId);
+    const commentIdInt = parseInt(commentId);
+
+    // Verify the ping exists
+    const ping = await prisma.ping.findFirst({
+      where: { id: pingIdInt, organizationId },
+    });
+    if (!ping) return res.status(404).json({ error: 'Ping not found or access denied' });
+
+    // Verify parent comment exists, belongs to this ping, is top-level
+    const parentComment = await prisma.comment.findFirst({
+      where: { id: commentIdInt, pingId: pingIdInt, organizationId },
+    });
+    if (!parentComment) return res.status(404).json({ error: 'Comment not found' });
+
+    // Enforce single-level threading
+    if (parentComment.parentCommentId !== null) {
+      return res.status(400).json({
+        error: 'Cannot reply to a reply. Replies are limited to one level deep.',
+      });
+    }
+
+    const newReply = await prisma.comment.create({
+      data: {
+        content,
+        authorId: userId,
+        pingId: pingIdInt,
+        organizationId: organizationId!,
+        isAnonymous,
+        parentCommentId: commentIdInt,
+      },
+      include: { author: { select: AUTHOR_SELECT } },
+    });
+
+    const sanitizedReply = sanitizeComment(newReply);
+    await invalidateCacheAfterMutation(organizationId);
+    emitCommentReplyOnPing(pingIdInt, commentIdInt, sanitizedReply);
+
+    // ── COMMENT_REPLY notification ──────────────────────────────────────
+    // Notify parent comment author — unless they wrote the reply themselves,
+    // or the parent comment is anonymous (we don't know who to notify).
+    if (parentComment.authorId !== userId && !parentComment.isAnonymous) {
+      try {
+        // Check recipient's preference
+        const prefs = await prisma.notificationPreference.findUnique({
+          where: { userId: parentComment.authorId },
+          select: { commentReply: true },
+        });
+
+        const wantsNotification = prefs ? prefs.commentReply : true; // default on
+
+        if (wantsNotification) {
+          const replier = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { firstName: true, lastName: true, displayName: true },
+          });
+          const replierName = replier?.displayName
+            ?? (replier ? `${replier.firstName ?? ''} ${replier.lastName ?? ''}`.trim() : 'Someone');
+          const displayName = isAnonymous ? 'Someone' : replierName;
+
+          const notification = await prisma.notification.create({
+            data: {
+              type: 'COMMENT_REPLY',
+              title: 'New reply on your comment',
+              body: `${displayName} replied: "${content.length > 80 ? content.slice(0, 80) + '…' : content}"`,
+              userId: parentComment.authorId,
+              organizationId: organizationId!,
+              pingId: pingIdInt,
+              commentId: newReply.id,
+            },
+          });
+
+          emitNotification(parentComment.authorId, notification);
+        }
+      } catch (notifError) {
+        // Notifications are best-effort — don't fail the reply creation
+        logger.warn('Failed to create COMMENT_REPLY notification', { notifError, replyId: newReply.id });
+      }
+    }
+
+    return res.status(201).json(sanitizedReply);
+  } catch (error) {
+    logger.error('Error creating reply on ping comment', {
+      error,
+      pingId: req.params.pingId,
+      commentId: req.params.commentId,
+      userId: req.user?.userId,
+    });
+    return next(error);
+  }
+};
+
+// ──────────────────────────────────────────────────────────────────────────
+// Create a comment on a wave (flat, no replies)
+// POST /api/waves/:waveId/comments
+// ──────────────────────────────────────────────────────────────────────────
 export const createCommentOnWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { waveId } = req.params;
@@ -181,24 +267,13 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     const userId = req.user?.userId;
     const organizationId = req.user?.organizationId;
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    if (!content) {
-      return res.status(400).json({ error: 'Comment content is required' });
-    }
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!content) return res.status(400).json({ error: 'Comment content is required' });
 
-    // Verify the wave exists and belongs to the user's organization
     const wave = await prisma.wave.findFirst({
-      where: { 
-        id: parseInt(waveId),
-        organizationId: organizationId,
-      },
+      where: { id: parseInt(waveId), organizationId },
     });
-
-    if (!wave) {
-      return res.status(404).json({ error: 'Wave not found' });
-    }
+    if (!wave) return res.status(404).json({ error: 'Wave not found' });
 
     const newComment = await prisma.comment.create({
       data: {
@@ -208,24 +283,11 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
         organizationId: organizationId!,
         isAnonymous,
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
+      include: { author: { select: AUTHOR_SELECT } },
     });
 
     const sanitizedComment = sanitizeComment(newComment);
-
-    // Invalidate cache after creating comment on wave
     await invalidateCacheAfterMutation(organizationId);
-
-    // Emit real-time comment event
     emitCommentOnWave(parseInt(waveId), sanitizedComment);
 
     return res.status(201).json(sanitizedComment);
@@ -235,91 +297,52 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
   }
 };
 
-// @desc    Get all comments for a wave
-// @route   GET /api/waves/:waveId/comments
-// @access  Private
+// ──────────────────────────────────────────────────────────────────────────
+// Get all comments for a wave (flat — no threading on waves)
+// GET /api/waves/:waveId/comments
+// ──────────────────────────────────────────────────────────────────────────
 export const getCommentsForWave = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { waveId } = req.params;
     const organizationId = req.user?.organizationId;
+    if (!organizationId) return res.status(400).json({ error: 'Organization ID is required.' });
 
-    if (!organizationId) {
-        return res.status(400).json({ error: 'Organization ID is required.' });
-    }
-
-    // Verify the wave exists and belongs to the user's organization
     const wave = await prisma.wave.findFirst({
-      where: { 
-        id: parseInt(waveId),
-        organizationId: organizationId,
-      },
+      where: { id: parseInt(waveId), organizationId },
     });
+    if (!wave) return res.status(404).json({ error: 'Wave not found or access denied' });
 
-    if (!wave) {
-      return res.status(404).json({ error: 'Wave not found or access denied' });
-    }
-
-    // --- Pagination Logic ---
     const page = parseInt(req.query.page as string) || 1;
     let limit = parseInt(req.query.limit as string) || 50;
-    if (limit > 100) limit = 100; // Cap the limit to 100
+    if (limit > 100) limit = 100;
     const skip = (page - 1) * limit;
 
-    const whereClause = {
-        waveId: parseInt(waveId),
-        organizationId: organizationId,
-    };
+    const whereClause = { waveId: parseInt(waveId), organizationId };
 
-    // Run two queries in parallel: one for the data, one for the total count
     const [comments, totalComments] = await prisma.$transaction([
       prisma.comment.findMany({
         where: whereClause,
-        skip: skip,
+        skip,
         take: limit,
-        orderBy: {
-          createdAt: 'asc',
-        },
+        orderBy: { createdAt: 'asc' },
         include: {
-          author: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-          surges: {
-            select: {
-              id: true,
-              userId: true,
-            },
-          },
+          author: { select: AUTHOR_SELECT },
+          surges: { select: { id: true, userId: true } },
         },
       }),
       prisma.comment.count({ where: whereClause }),
     ]);
 
-    // --- Metadata Calculation ---
     const totalPages = Math.ceil(totalComments / limit);
-
-    // Sanitize and add hasSurged status
     const currentUserId = req.user?.userId;
-    const sanitizedComments = comments.map((comment: any) => {
-      const sanitized = sanitizeComment(comment);
-      return {
-        ...sanitized,
-        hasSurged: comment.surges?.some((s: any) => s.userId === currentUserId) ?? false,
-      };
-    });
+
+    const sanitizedComments = comments.map((comment: any) =>
+      withSurged(sanitizeComment(comment), currentUserId)
+    );
 
     return res.status(200).json({
       data: sanitizedComments,
-      pagination: {
-        totalComments,
-        totalPages,
-        currentPage: page,
-        limit,
-      },
+      pagination: { totalComments, totalPages, currentPage: page, limit },
     });
   } catch (error) {
     logger.error('Error fetching comments for wave', { error, waveId: req.params.waveId });
@@ -327,9 +350,10 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
   }
 };
 
-// @desc    Delete a comment
-// @route   DELETE /api/comments/:commentId
-// @access  Private (author or admin)
+// ──────────────────────────────────────────────────────────────────────────
+// Delete a comment (author or admin; cascades to replies)
+// DELETE /api/comments/:commentId
+// ──────────────────────────────────────────────────────────────────────────
 export const deleteComment = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { commentId } = req.params;
@@ -337,33 +361,20 @@ export const deleteComment = async (req: AuthRequest, res: Response, next: NextF
     const organizationId = req.user?.organizationId;
     const userRole = req.user?.role;
 
-    if (!userId || !organizationId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!userId || !organizationId) return res.status(401).json({ error: 'Unauthorized' });
 
     const comment = await prisma.comment.findFirst({
-      where: {
-        id: parseInt(commentId),
-        organizationId,
-      },
+      where: { id: parseInt(commentId), organizationId },
     });
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
 
-    if (!comment) {
-      return res.status(404).json({ error: 'Comment not found' });
-    }
-
-    // Only the author or an admin/super_admin can delete
     const isOwner = comment.authorId === userId;
     const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
-
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'You are not authorized to delete this comment' });
     }
 
-    await prisma.comment.delete({
-      where: { id: parseInt(commentId) },
-    });
-
+    await prisma.comment.delete({ where: { id: parseInt(commentId) } });
     await invalidateCacheAfterMutation(organizationId);
 
     return res.status(204).send();

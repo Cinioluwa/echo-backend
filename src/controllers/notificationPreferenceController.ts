@@ -8,6 +8,7 @@ const DEFAULT_PREFERENCES = {
   announcement: true,
   commentSurge: true,
   pingCreated: true,
+  commentReply: true,
 } as const;
 
 export const getMyNotificationPreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
