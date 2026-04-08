@@ -78,6 +78,7 @@ model User {
   notifications                    Notification[]
   media                            Media[]
   notificationPreference           NotificationPreference?
+  userPreference                   UserPreference?
   displayNameHistories             DisplayNameHistory[]
 
   @@unique([email, organizationId]) // Email unique per org
@@ -435,6 +436,17 @@ model NotificationPreference {
   commentReply      Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// User behaviour / posting preferences (separate from notification settings)
+model UserPreference {
+  id                 Int      @id @default(autoincrement())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             Int      @unique
+  commentAnonymously Boolean  @default(false)
+  pingAnonymously    Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 // Enums

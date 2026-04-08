@@ -14,6 +14,7 @@ const patchBodySchema = z
     announcement: z.boolean().optional(),
     commentSurge: z.boolean().optional(),
     pingCreated: z.boolean().optional(),
+    commentReply: z.boolean().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {

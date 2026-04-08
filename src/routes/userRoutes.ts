@@ -25,6 +25,10 @@ import {
   getMyNotificationPreferences,
   patchMyNotificationPreferences,
 } from '../controllers/notificationPreferenceController.js';
+import {
+  getMyPreferences,
+  patchMyPreferences,
+} from '../controllers/userPreferenceController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { env } from '../config/env.js';
@@ -48,6 +52,10 @@ import {
   getNotificationPreferencesSchema,
   patchNotificationPreferencesSchema,
 } from '../schemas/notificationPreferenceSchemas.js';
+import {
+  getUserPreferencesSchema,
+  patchUserPreferencesSchema,
+} from '../schemas/userPreferenceSchemas.js';
 
 const router = Router();
 
@@ -850,12 +858,83 @@ router.route('/me')
  *                 type: boolean
  *               pingCreated:
  *                 type: boolean
+ *               commentReply:
+ *                 type: boolean
+ *               commentAnonymously:
+ *                 type: boolean
+ *                 description: Default to posting comments anonymously
+ *               pingAnonymously:
+ *                 type: boolean
+ *                 description: Default to posting pings anonymously
  *     responses:
  *       200:
  *         description: Updated notification preferences
  */
 router.get('/me/notification-preferences', authMiddleware, validate(getNotificationPreferencesSchema), getMyNotificationPreferences);
 router.patch('/me/notification-preferences', authMiddleware, validate(patchNotificationPreferencesSchema), patchMyNotificationPreferences);
+
+/**
+ * @openapi
+ * /api/users/me/preferences:
+ *   get:
+ *     summary: Get my posting behaviour preferences
+ *     description: |
+ *       Retrieve the authenticated user's posting preferences.
+ *       Defaults are created on first access.
+ *
+ *       **Fields:**
+ *       - `commentAnonymously` — whether comments are anonymous by default
+ *       - `pingAnonymously` — whether pings are posted anonymously by default
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User preferences returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 userId:
+ *                   type: integer
+ *                 commentAnonymously:
+ *                   type: boolean
+ *                   default: false
+ *                 pingAnonymously:
+ *                   type: boolean
+ *                   default: false
+ *   patch:
+ *     summary: Update my posting behaviour preferences
+ *     description: Partially update posting preferences. Send only the fields you want to change.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               commentAnonymously:
+ *                 type: boolean
+ *                 description: Post comments anonymously by default
+ *               pingAnonymously:
+ *                 type: boolean
+ *                 description: Post pings anonymously by default
+ *     responses:
+ *       200:
+ *         description: Updated preferences returned
+ *       400:
+ *         description: No valid fields provided
+ */
+router.get('/me/preferences', authMiddleware, validate(getUserPreferencesSchema), getMyPreferences);
+router.patch('/me/preferences', authMiddleware, validate(patchUserPreferencesSchema), patchMyPreferences);
 
 /**
  * @openapi
