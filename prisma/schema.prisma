@@ -128,6 +128,7 @@ model Ping {
   createdAt         DateTime       @default(now())
   surgeCount        Int            @default(0)
   isAnonymous       Boolean        @default(false)
+  anonymousAlias    String?        // Snapshot of author's alias at post time (only set when isAnonymous=true)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
@@ -195,11 +196,12 @@ model Wave {
 }
 
 model Comment {
-  id          Int      @id @default(autoincrement())
-  content     String
-  createdAt   DateTime @default(now())
-  isAnonymous Boolean  @default(false)
-  surgeCount  Int      @default(0)
+  id             Int      @id @default(autoincrement())
+  content        String
+  createdAt      DateTime @default(now())
+  isAnonymous    Boolean  @default(false)
+  anonymousAlias String?  // Snapshot of author's alias at post time (only set when isAnonymous=true)
+  surgeCount     Int      @default(0)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
@@ -445,6 +447,8 @@ model UserPreference {
   userId             Int      @unique
   commentAnonymously Boolean  @default(false)
   pingAnonymously    Boolean  @default(false)
+  anonymousAlias     String?  // Optional alias shown on anonymous posts (2-30 chars when set)
+  anonymousAliasUpdatedAt DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }

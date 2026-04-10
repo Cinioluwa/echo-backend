@@ -10,7 +10,7 @@ const sanitizePingAuthor = (ping: any) => {
   if (!ping) return ping;
   if (ping.isAnonymous) {
     const { authorId, author, ...rest } = ping;
-    return { ...rest, author: null };
+    return { ...rest, author: null, anonymousAlias: ping.anonymousAlias ?? null };
   }
   return {
     ...ping,
@@ -59,6 +59,18 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
       });
     }
 
+    const isAnonymousPost = Boolean(isAnonymous);
+
+    // Snapshot the user's anonymous alias at creation time (immutable per-post)
+    let anonymousAlias: string | null = null;
+    if (isAnonymousPost) {
+      const prefs = await prisma.userPreference.findUnique({
+        where: { userId: authorId },
+        select: { anonymousAlias: true },
+      });
+      anonymousAlias = prefs?.anonymousAlias ?? null;
+    }
+
     const newPing = await prisma.ping.create({
       data: {
         title,
@@ -67,7 +79,8 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
         organizationId,
         categoryId,
         hashtag: hashtag || null,
-        isAnonymous,
+        isAnonymous: isAnonymousPost,
+        anonymousAlias,
       },
       include: {
         author: {
@@ -487,6 +500,13 @@ export const deletePing = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(403).json({ error: 'Forbidden: You can only delete your own pings' });
     }
 
+    // Authors cannot delete their own anonymous pings — anonymity is permanent
+    if (ping.isAnonymous) {
+      return res.status(403).json({
+        error: 'Forbidden: Anonymous posts cannot be deleted by their author',
+        code: 'ANONYMOUS_DELETE_FORBIDDEN',
+      });
+    }
     await prisma.ping.delete({
       where: { id: parseInt(id) },
     });

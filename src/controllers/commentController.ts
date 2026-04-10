@@ -21,7 +21,7 @@ const sanitizeComment = (comment: any) => {
   if (!comment) return comment;
   if (comment.isAnonymous) {
     const { authorId, author, ...rest } = comment;
-    return { ...rest, author: null };
+    return { ...rest, author: null, anonymousAlias: comment.anonymousAlias ?? null };
   }
   return {
     ...comment,
@@ -54,13 +54,24 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
     });
     if (!ping) return res.status(404).json({ error: 'Ping not found or access denied' });
 
+    const isAnonymousPost = Boolean(isAnonymous);
+    let anonymousAlias: string | null = null;
+    if (isAnonymousPost) {
+      const prefs = await prisma.userPreference.findUnique({
+        where: { userId },
+        select: { anonymousAlias: true },
+      });
+      anonymousAlias = prefs?.anonymousAlias ?? null;
+    }
+
     const newComment = await prisma.comment.create({
       data: {
         content,
         authorId: userId,
         pingId: parseInt(pingId),
         organizationId: organizationId!,
-        isAnonymous,
+        isAnonymous: isAnonymousPost,
+        anonymousAlias,
       },
       include: { author: { select: AUTHOR_SELECT } },
     });
@@ -186,13 +197,24 @@ export const createReplyOnPingComment = async (req: AuthRequest, res: Response, 
       });
     }
 
+    const isAnonymousPost = Boolean(isAnonymous);
+    let anonymousAlias: string | null = null;
+    if (isAnonymousPost) {
+      const prefs = await prisma.userPreference.findUnique({
+        where: { userId },
+        select: { anonymousAlias: true },
+      });
+      anonymousAlias = prefs?.anonymousAlias ?? null;
+    }
+
     const newReply = await prisma.comment.create({
       data: {
         content,
         authorId: userId,
         pingId: pingIdInt,
         organizationId: organizationId!,
-        isAnonymous,
+        isAnonymous: isAnonymousPost,
+        anonymousAlias,
         parentCommentId: commentIdInt,
       },
       include: { author: { select: AUTHOR_SELECT } },
@@ -275,13 +297,24 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     });
     if (!wave) return res.status(404).json({ error: 'Wave not found' });
 
+    const isAnonymousPost = Boolean(isAnonymous);
+    let anonymousAlias: string | null = null;
+    if (isAnonymousPost) {
+      const prefs = await prisma.userPreference.findUnique({
+        where: { userId },
+        select: { anonymousAlias: true },
+      });
+      anonymousAlias = prefs?.anonymousAlias ?? null;
+    }
+
     const newComment = await prisma.comment.create({
       data: {
         content,
         authorId: userId,
         waveId: parseInt(waveId),
         organizationId: organizationId!,
-        isAnonymous,
+        isAnonymous: isAnonymousPost,
+        anonymousAlias,
       },
       include: { author: { select: AUTHOR_SELECT } },
     });
@@ -372,6 +405,14 @@ export const deleteComment = async (req: AuthRequest, res: Response, next: NextF
     const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'You are not authorized to delete this comment' });
+    }
+
+    // Authors cannot delete their own anonymous comments
+    if (isOwner && comment.isAnonymous && !isAdmin) {
+      return res.status(403).json({
+        error: 'Anonymous comments cannot be deleted by their author',
+        code:  'ANONYMOUS_DELETE_FORBIDDEN',
+      });
     }
 
     await prisma.comment.delete({ where: { id: parseInt(commentId) } });
