@@ -17,11 +17,14 @@ const AUTHOR_SELECT = {
 } as const;
 
 // ─── Sanitize anonymous comments ───────────────────────────────────────────
-const sanitizeComment = (comment: any) => {
+const sanitizeComment = (comment: any, currentUserId?: string | number) => {
   if (!comment) return comment;
+  
+  const isOwner = currentUserId ? comment.authorId === currentUserId : false;
+
   if (comment.isAnonymous) {
     const { authorId, author, ...rest } = comment;
-    return { ...rest, author: null, anonymousAlias: comment.anonymousAlias ?? null };
+    return { ...rest, author: null, anonymousAlias: comment.anonymousAlias ?? null, isOwner };
   }
   return {
     ...comment,
@@ -76,7 +79,7 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
       include: { author: { select: AUTHOR_SELECT } },
     });
 
-    const sanitizedComment = sanitizeComment(newComment);
+    const sanitizedComment = sanitizeComment(newComment, userId);
     await invalidateCacheAfterMutation(organizationId);
     emitCommentOnPing(parseInt(pingId), sanitizedComment);
 
@@ -141,9 +144,9 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
     const currentUserId = req.user?.userId;
 
     const sanitizedComments = comments.map((comment: any) => {
-      const sanitized = withSurged(sanitizeComment(comment), currentUserId);
+      const sanitized = withSurged(sanitizeComment(comment, currentUserId), currentUserId);
       const sanitizedReplies = (comment.replies ?? []).map((reply: any) =>
-        withSurged(sanitizeComment(reply), currentUserId)
+        withSurged(sanitizeComment(reply, currentUserId), currentUserId)
       );
       return {
         ...sanitized,
@@ -220,7 +223,7 @@ export const createReplyOnPingComment = async (req: AuthRequest, res: Response, 
       include: { author: { select: AUTHOR_SELECT } },
     });
 
-    const sanitizedReply = sanitizeComment(newReply);
+    const sanitizedReply = sanitizeComment(newReply, userId);
     await invalidateCacheAfterMutation(organizationId);
     emitCommentReplyOnPing(pingIdInt, commentIdInt, sanitizedReply);
 
@@ -319,7 +322,7 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
       include: { author: { select: AUTHOR_SELECT } },
     });
 
-    const sanitizedComment = sanitizeComment(newComment);
+    const sanitizedComment = sanitizeComment(newComment, userId);
     await invalidateCacheAfterMutation(organizationId);
     emitCommentOnWave(parseInt(waveId), sanitizedComment);
 
@@ -370,7 +373,7 @@ export const getCommentsForWave = async (req: AuthRequest, res: Response, next: 
     const currentUserId = req.user?.userId;
 
     const sanitizedComments = comments.map((comment: any) =>
-      withSurged(sanitizeComment(comment), currentUserId)
+      withSurged(sanitizeComment(comment, currentUserId), currentUserId)
     );
 
     return res.status(200).json({

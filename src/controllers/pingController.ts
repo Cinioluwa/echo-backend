@@ -6,11 +6,14 @@ import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitPingCreated, emitPingDeleted } from '../utils/socketEmitter.js';
 import { appendPingBadges } from '../utils/pingBadges.js';
 
-const sanitizePingAuthor = (ping: any) => {
+const sanitizePingAuthor = (ping: any, currentUserId?: string | number) => {
   if (!ping) return ping;
+  
+  const isOwner = currentUserId ? ping.authorId === currentUserId : false;
+
   if (ping.isAnonymous) {
     const { authorId, author, ...rest } = ping;
-    return { ...rest, author: null, anonymousAlias: ping.anonymousAlias ?? null };
+    return { ...rest, author: null, anonymousAlias: ping.anonymousAlias ?? null, isOwner };
   }
   return {
     ...ping,
@@ -18,11 +21,13 @@ const sanitizePingAuthor = (ping: any) => {
   };
 };
 
-const sanitizeComments = (comments: any[] = []) =>
+const sanitizeComments = (comments: any[] = [], currentUserId?: string | number) =>
   comments.map((comment) => {
+    const isOwner = currentUserId ? comment.authorId === currentUserId : false;
+    
     if (comment.isAnonymous) {
       const { authorId, author, ...rest } = comment;
-      return { ...rest, author: null };
+      return { ...rest, author: null, isOwner };
     }
     return {
       ...comment,
@@ -141,7 +146,7 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
     });
 
     // Sanitize anonymous ping
-    const sanitizedPing = sanitizePingAuthor(createdPing);
+    const sanitizedPing = sanitizePingAuthor(createdPing, req.user?.userId);
 
     // Invalidate cache so new ping appears in feeds
     await invalidateCacheAfterMutation(organizationId);
@@ -217,7 +222,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
 
     // Sanitize anonymous pings and add hasSurged (always boolean)
     const sanitizedPings = pings.map(ping => {
-      const sanitized = sanitizePingAuthor(ping);
+      const sanitized = sanitizePingAuthor(ping, userId);
       let hasSurged = false;
       if (userId) {
         hasSurged = Array.isArray(ping.surges) ? ping.surges.length > 0 : false;
@@ -295,7 +300,7 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(sanitizePingAuthor);
+    const sanitizedPings = pings.map(ping => sanitizePingAuthor(ping, userId));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
 
     return res.status(200).json({
@@ -373,7 +378,7 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(sanitizePingAuthor);
+    const sanitizedPings = pings.map(ping => sanitizePingAuthor(ping, req.user?.userId));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, organizationId!);
 
     return res.status(200).json({
@@ -463,8 +468,8 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     const sanitizedPing = {
-      ...sanitizePingAuthor(ping),
-      comments: sanitizeComments(ping.comments),
+      ...sanitizePingAuthor(ping, userId),
+      comments: sanitizeComments(ping.comments, userId),
       hasSurged: userId ? (ping.surges && !!ping.surges.length) : false,
     };
 
@@ -569,7 +574,7 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
     // Invalidate cache after update
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json(sanitizePingAuthor(updatedPing));
+    return res.status(200).json(sanitizePingAuthor(updatedPing, userId));
   } catch (error) {
     logger.error('Error updating ping', { error, pingId: req.params.id, userId: req.user?.userId });
     return next(error);
@@ -609,7 +614,7 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
     // Invalidate cache after status update
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json(sanitizePingAuthor(updatedPing));
+    return res.status(200).json(sanitizePingAuthor(updatedPing, (req as any).user?.userId));
   } catch (error) {
     logger.error('Error updating ping status', { error, pingId: req.params.id });
     return next(error);
@@ -641,7 +646,7 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
     // Invalidate cache after submit
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json(sanitizePingAuthor(updatedPing));
+    return res.status(200).json(sanitizePingAuthor(updatedPing, (req as any).user?.userId));
   } catch (error) {
     logger.error('Error submitting ping', { error, pingId: req.params.id });
     return next(error);
@@ -712,7 +717,7 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
 
     return res.status(200).json({
       message: 'Ping marked as resolved',
-      ping: sanitizePingAuthor(updatedPing)
+      ping: sanitizePingAuthor(updatedPing, userId)
     });
   } catch (error) {
     logger.error('Error resolving ping', { error, pingId: req.params.id, userId: req.user?.userId });
