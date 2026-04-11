@@ -78,6 +78,7 @@ model User {
   notifications       Notification[]
   media               Media[]
   notificationPreference          NotificationPreference?
+  userPreference                  UserPreference?
   displayNameHistories DisplayNameHistory[]
 
   @@unique([email, organizationId]) // Email unique per org
@@ -99,6 +100,19 @@ model NotificationPreference {
   commentReply Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// User behaviour / posting preferences (separate from notification settings)
+model UserPreference {
+  id                 Int      @id @default(autoincrement())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             Int      @unique
+  commentAnonymously Boolean  @default(false)
+  pingAnonymously    Boolean  @default(false)
+  anonymousAlias     String?  // Optional alias shown on anonymous posts (2-30 chars when set)
+  anonymousAliasUpdatedAt DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 // Dynamic Category Model (Replaces Enum)
@@ -130,6 +144,7 @@ model Ping {
   createdAt        DateTime @default(now())
   surgeCount       Int      @default(0)
   isAnonymous      Boolean  @default(false)
+  anonymousAlias   String?
 
   author           User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId         Int
@@ -203,6 +218,7 @@ model Comment {
   content        String
   createdAt      DateTime @default(now())
   isAnonymous    Boolean  @default(false)
+  anonymousAlias String?
   surgeCount     Int      @default(0)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
