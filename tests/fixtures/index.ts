@@ -250,6 +250,7 @@ export async function createInvitation(data: CreateInvitationData = {}) {
 export async function cleanupTestData() {
   await getPrismaClient().$transaction([
     getPrismaClient().notification.deleteMany(),
+    getPrismaClient().report.deleteMany(),
     getPrismaClient().surge.deleteMany(),
     getPrismaClient().comment.deleteMany(),
     getPrismaClient().wave.deleteMany(),

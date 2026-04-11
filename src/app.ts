@@ -30,6 +30,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import representativeRoutes from './routes/representativeRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 import swaggerRoutes from './routes/swaggerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import superAdminRoutes from './routes/superAdminRoutes.js';
@@ -238,6 +239,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/announcements', ...writeLimiter, announcementRoutes);
   app.use('/api/notifications', ...writeLimiter, notificationRoutes);
+  app.use('/api/reports', ...writeLimiter, reportRoutes);
   app.use('/api/representatives', ...writeLimiter, representativeRoutes);
   app.use('/api/public', publicRoutes);
   app.use('/api/categories', ...writeLimiter, categoryRoutes);

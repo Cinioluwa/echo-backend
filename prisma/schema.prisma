@@ -33,6 +33,7 @@ model Organization {
   requests          OrganizationRequest[]
   joinRequests      OrganizationJoinRequest[]
   claims            OrganizationClaim[]
+  reports           Report[]
   notifications     Notification[]
   media             Media[]
 }
@@ -75,6 +76,7 @@ model User {
   reviewedOrganizationJoinRequests OrganizationJoinRequest[] @relation("JoinRequestReviewer")
   organizationClaims               OrganizationClaim[]       @relation("OrganizationClaimUser")
   reviewedOrganizationClaims       OrganizationClaim[]       @relation("OrganizationClaimReviewer")
+  reports                          Report[]
   notifications                    Notification[]
   media                            Media[]
   notificationPreference           NotificationPreference?
@@ -140,6 +142,7 @@ model Ping {
   comments         Comment[]
   surges           Surge[]
   waves            Wave[]
+  reports          Report[]
   officialResponse OfficialResponse?
   notifications    Notification[]
   media            Media[]
@@ -178,6 +181,7 @@ model Wave {
 
   comments      Comment[]
   surges        Surge[]
+  reports       Report[]
   flaggedBy     User?          @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
   flaggedById   Int?
   notifications Notification[]
@@ -219,6 +223,7 @@ model Comment {
   replies         Comment[] @relation("CommentReplies")
 
   surges        Surge[]
+  reports       Report[]
   notifications Notification[]
 
   // Database indexes for query performance
@@ -426,6 +431,33 @@ model OrganizationClaim {
   @@index([requesterEmail])
 }
 
+model Report {
+  id        Int          @id @default(autoincrement())
+  reason    String?
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId Int
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  ping   Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId Int?
+  wave   Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId Int?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId Int?
+
+  @@index([organizationId, status, createdAt(sort: Desc)])
+  @@index([reporterId, createdAt(sort: Desc)])
+  @@index([pingId])
+  @@index([waveId])
+  @@index([commentId])
+}
+
 model NotificationPreference {
   id                Int      @id @default(autoincrement())
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -484,6 +516,14 @@ enum NotificationType {
   ANNOUNCEMENT_POSTED
   WAVE_STATUS_UPDATED
   COMMENT_REPLY
+  POST_REPORTED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
 }
 
 enum JoinPolicy {
