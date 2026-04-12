@@ -13,7 +13,13 @@ const sanitizePingAuthor = (ping: any, currentUserId?: string | number) => {
 
   if (ping.isAnonymous) {
     const { authorId, author, ...rest } = ping;
-    return { ...rest, author: null, anonymousAlias: ping.anonymousAlias ?? null, isOwner };
+    return {
+      ...rest,
+      author: null,
+      anonymousAlias: ping.anonymousAlias ?? null,
+      anonymousProfilePicture: ping.anonymousProfilePicture ?? null,
+      isOwner,
+    };
   }
   return {
     ...ping,
@@ -27,7 +33,13 @@ const sanitizeComments = (comments: any[] = [], currentUserId?: string | number)
     
     if (comment.isAnonymous) {
       const { authorId, author, ...rest } = comment;
-      return { ...rest, author: null, isOwner };
+      return {
+        ...rest,
+        author: null,
+        anonymousAlias: comment.anonymousAlias ?? null,
+        anonymousProfilePicture: comment.anonymousProfilePicture ?? null,
+        isOwner,
+      };
     }
     return {
       ...comment,
@@ -68,12 +80,14 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
 
     // Snapshot the user's anonymous alias at creation time (immutable per-post)
     let anonymousAlias: string | null = null;
+    let anonymousProfilePicture: string | null = null;
     if (isAnonymousPost) {
       const prefs = await prisma.userPreference.findUnique({
         where: { userId: authorId },
-        select: { anonymousAlias: true },
+        select: { anonymousAlias: true, anonymousAliasProfilePicture: true },
       });
       anonymousAlias = prefs?.anonymousAlias ?? null;
+      anonymousProfilePicture = prefs?.anonymousAliasProfilePicture ?? null;
     }
 
     const newPing = await prisma.ping.create({
@@ -86,6 +100,7 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
         hashtag: hashtag || null,
         isAnonymous: isAnonymousPost,
         anonymousAlias,
+        anonymousProfilePicture,
       },
       include: {
         author: {

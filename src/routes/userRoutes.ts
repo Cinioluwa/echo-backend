@@ -885,6 +885,8 @@ router.patch('/me/notification-preferences', authMiddleware, validate(patchNotif
  *       **Fields:**
  *       - `commentAnonymously` — whether comments are anonymous by default
  *       - `pingAnonymously` — whether pings are posted anonymously by default
+ *       - `anonymousAlias` — alias name shown on anonymous content
+ *       - `anonymousAliasProfilePicture` — alias profile picture shown on anonymous content
  *     tags:
  *       - Users
  *     security:
@@ -927,6 +929,14 @@ router.patch('/me/notification-preferences', authMiddleware, validate(patchNotif
  *               pingAnonymously:
  *                 type: boolean
  *                 description: Post pings anonymously by default
+ *               anonymousAlias:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Alias name shown on anonymous posts/comments
+ *               anonymousAliasProfilePicture:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Alias profile picture URL shown on anonymous posts/comments
  *     responses:
  *       200:
  *         description: Updated preferences returned

@@ -48,6 +48,8 @@ const sanitizePingAuthor = (ping: any) =>
     ? {
         ...ping,
         author: ping?.isAnonymous ? null : ping?.author ?? null,
+        anonymousAlias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : undefined,
+        anonymousProfilePicture: ping?.isAnonymous ? (ping?.anonymousProfilePicture ?? null) : undefined,
       }
     : ping;
 

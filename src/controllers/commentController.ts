@@ -24,7 +24,13 @@ const sanitizeComment = (comment: any, currentUserId?: string | number) => {
 
   if (comment.isAnonymous) {
     const { authorId, author, ...rest } = comment;
-    return { ...rest, author: null, anonymousAlias: comment.anonymousAlias ?? null, isOwner };
+    return {
+      ...rest,
+      author: null,
+      anonymousAlias: comment.anonymousAlias ?? null,
+      anonymousProfilePicture: comment.anonymousProfilePicture ?? null,
+      isOwner,
+    };
   }
   return {
     ...comment,
@@ -59,12 +65,14 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
 
     const isAnonymousPost = Boolean(isAnonymous);
     let anonymousAlias: string | null = null;
+    let anonymousProfilePicture: string | null = null;
     if (isAnonymousPost) {
       const prefs = await prisma.userPreference.findUnique({
         where: { userId },
-        select: { anonymousAlias: true },
+        select: { anonymousAlias: true, anonymousAliasProfilePicture: true },
       });
       anonymousAlias = prefs?.anonymousAlias ?? null;
+      anonymousProfilePicture = prefs?.anonymousAliasProfilePicture ?? null;
     }
 
     const newComment = await prisma.comment.create({
@@ -75,6 +83,7 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
         organizationId: organizationId!,
         isAnonymous: isAnonymousPost,
         anonymousAlias,
+        anonymousProfilePicture,
       },
       include: { author: { select: AUTHOR_SELECT } },
     });
@@ -202,12 +211,14 @@ export const createReplyOnPingComment = async (req: AuthRequest, res: Response, 
 
     const isAnonymousPost = Boolean(isAnonymous);
     let anonymousAlias: string | null = null;
+    let anonymousProfilePicture: string | null = null;
     if (isAnonymousPost) {
       const prefs = await prisma.userPreference.findUnique({
         where: { userId },
-        select: { anonymousAlias: true },
+        select: { anonymousAlias: true, anonymousAliasProfilePicture: true },
       });
       anonymousAlias = prefs?.anonymousAlias ?? null;
+      anonymousProfilePicture = prefs?.anonymousAliasProfilePicture ?? null;
     }
 
     const newReply = await prisma.comment.create({
@@ -218,6 +229,7 @@ export const createReplyOnPingComment = async (req: AuthRequest, res: Response, 
         organizationId: organizationId!,
         isAnonymous: isAnonymousPost,
         anonymousAlias,
+        anonymousProfilePicture,
         parentCommentId: commentIdInt,
       },
       include: { author: { select: AUTHOR_SELECT } },
@@ -302,12 +314,14 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
 
     const isAnonymousPost = Boolean(isAnonymous);
     let anonymousAlias: string | null = null;
+    let anonymousProfilePicture: string | null = null;
     if (isAnonymousPost) {
       const prefs = await prisma.userPreference.findUnique({
         where: { userId },
-        select: { anonymousAlias: true },
+        select: { anonymousAlias: true, anonymousAliasProfilePicture: true },
       });
       anonymousAlias = prefs?.anonymousAlias ?? null;
+      anonymousProfilePicture = prefs?.anonymousAliasProfilePicture ?? null;
     }
 
     const newComment = await prisma.comment.create({
@@ -318,6 +332,7 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
         organizationId: organizationId!,
         isAnonymous: isAnonymousPost,
         anonymousAlias,
+        anonymousProfilePicture,
       },
       include: { author: { select: AUTHOR_SELECT } },
     });

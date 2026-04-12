@@ -131,6 +131,7 @@ model Ping {
   surgeCount        Int            @default(0)
   isAnonymous       Boolean        @default(false)
   anonymousAlias    String?        // Snapshot of author's alias at post time (only set when isAnonymous=true)
+  anonymousProfilePicture String?  // Snapshot of alias profile picture at post time
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
@@ -205,6 +206,7 @@ model Comment {
   createdAt      DateTime @default(now())
   isAnonymous    Boolean  @default(false)
   anonymousAlias String?  // Snapshot of author's alias at post time (only set when isAnonymous=true)
+  anonymousProfilePicture String? // Snapshot of alias profile picture at post time
   surgeCount     Int      @default(0)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -480,6 +482,7 @@ model UserPreference {
   commentAnonymously Boolean  @default(false)
   pingAnonymously    Boolean  @default(false)
   anonymousAlias     String?  // Optional alias shown on anonymous posts (2-30 chars when set)
+  anonymousAliasProfilePicture String? // Optional alias profile picture URL shown on anonymous posts
   anonymousAliasUpdatedAt DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

@@ -7,6 +7,8 @@ import { appendWaveBadges } from '../utils/waveBadges.js';
 const sanitizePublicPing = (ping: any) => ({
   ...ping,
   author: ping?.isAnonymous ? null : ping?.author ?? null,
+  anonymousAlias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : undefined,
+  anonymousProfilePicture: ping?.isAnonymous ? (ping?.anonymousProfilePicture ?? null) : undefined,
 });
 
 function parsePagination(req: Request) {
@@ -142,6 +144,8 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
           surgeCount: true,
           createdAt: true,
           isAnonymous: true,
+          anonymousAlias: true,
+          anonymousProfilePicture: true,
           author: { select: { id: true, firstName: true, lastName: true, profilePicture: true } },
           _count: { select: { waves: true, comments: true, surges: true } },
           media: { select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true } },

@@ -6,6 +6,7 @@ const DEFAULT_PREFERENCES = {
   commentAnonymously: false,
   pingAnonymously: false,
   anonymousAlias: null,
+  anonymousAliasProfilePicture: null,
 } as const;
 
 /**
@@ -16,7 +17,11 @@ const DEFAULT_PREFERENCES = {
 export const getMyPreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.userId;
-    const organizationId = req.organizationId!;
+    const organizationId = req.organizationId ?? req.user?.organizationId;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization context missing' });
+    }
 
     const user = await prisma.user.findFirst({
       where: { id: userId, organizationId },
@@ -46,8 +51,12 @@ export const getMyPreferences = async (req: AuthRequest, res: Response, next: Ne
 export const patchMyPreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.userId;
-    const organizationId = req.organizationId!;
+    const organizationId = req.organizationId ?? req.user?.organizationId;
     const patch = req.body as Partial<typeof DEFAULT_PREFERENCES>;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization context missing' });
+    }
 
     const user = await prisma.user.findFirst({
       where: { id: userId, organizationId },
