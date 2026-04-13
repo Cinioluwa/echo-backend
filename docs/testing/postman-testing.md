@@ -60,6 +60,14 @@ This guide provides comprehensive testing instructions for the Echo backend API 
   "password": "password123"
 }
 ```
+**Personal email login example (gmail, etc.)**:
+```json
+{
+  "email": "student.personal@gmail.com",
+  "password": "password123",
+  "organizationId": 1
+}
+```
 **Expected Response**: JWT token containing `organizationId` and `role` claims.
 
 #### POST /api/auth/google

@@ -248,7 +248,7 @@ export const loginUser = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, organizationId } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -265,25 +265,43 @@ export const loginUser = async (
       ReturnType<typeof prisma.organization.findUnique>
     >;
 
-    for (const candidate of getDomainCandidates(domain)) {
-      // eslint-disable-next-line no-await-in-loop
-      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
-      if (found) {
-        organization = found;
-        break;
+    if (isConsumerEmailDomain(domain)) {
+      if (!organizationId) {
+        return res.status(400).json({
+          error: 'Please select your organization to log in.',
+          code: 'ORG_ID_REQUIRED_FOR_PERSONAL_EMAIL',
+        });
       }
-    }
 
-    if (!organization) {
-      logger.warn('Login attempt for unknown organization domain', {
-        domain,
-        email,
-        requestId: (req as any).requestId,
-      });
-      return res.status(404).json({
-        error: 'No organization is registered for this email domain.',
-        code: 'ORG_NOT_FOUND',
-      });
+      organization = await prisma.organization.findUnique({ where: { id: organizationId } });
+
+      if (!organization) {
+        return res.status(404).json({
+          error: 'Organization not found.',
+          code: 'ORG_NOT_FOUND',
+        });
+      }
+    } else {
+      for (const candidate of getDomainCandidates(domain)) {
+        // eslint-disable-next-line no-await-in-loop
+        const found = await prisma.organization.findUnique({ where: { domain: candidate } });
+        if (found) {
+          organization = found;
+          break;
+        }
+      }
+
+      if (!organization) {
+        logger.warn('Login attempt for unknown organization domain', {
+          domain,
+          email,
+          requestId: (req as any).requestId,
+        });
+        return res.status(404).json({
+          error: 'No organization is registered for this email domain.',
+          code: 'ORG_NOT_FOUND',
+        });
+      }
     }
 
     if (organization.status !== 'ACTIVE') {

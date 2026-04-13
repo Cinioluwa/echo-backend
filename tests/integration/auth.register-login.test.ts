@@ -94,4 +94,51 @@ describe('Auth register/login', () => {
     expect(registerRes.status).toBe(202);
     expect(registerRes.body).toHaveProperty('code', 'ORG_JOIN_APPROVAL_REQUIRED');
   });
+
+  it('requires organizationId for personal-email login', async () => {
+    const request = await buildTestClient({ disableRateLimiting: true });
+    const loginRes = await request
+      .post('/api/users/login')
+      .send({ email: 'alice.personal@gmail.com', password: 'Password123!' });
+
+    expect(loginRes.status).toBe(400);
+    expect(loginRes.body).toHaveProperty('code', 'ORG_ID_REQUIRED_FOR_PERSONAL_EMAIL');
+  });
+
+  it('logs in personal-email users when organizationId is provided', async () => {
+    const prisma = getPrisma();
+    const request = await buildTestClient({ disableRateLimiting: true });
+    const personalEmail = 'alice.personal@gmail.com';
+
+    const registerRes = await request
+      .post('/api/users/register')
+      .send({
+        email: personalEmail,
+        password,
+        firstName: 'Alice',
+        lastName: 'Personal',
+        organizationId,
+      });
+
+    expect(registerRes.status).toBe(201);
+
+    await prisma.user.update({
+      where: {
+        email_organizationId: {
+          email: personalEmail.toLowerCase(),
+          organizationId,
+        },
+      },
+      data: {
+        status: 'ACTIVE',
+      },
+    });
+
+    const loginRes = await request
+      .post('/api/users/login')
+      .send({ email: personalEmail, password, organizationId });
+
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.token).toBeDefined();
+  });
 });

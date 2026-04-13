@@ -30,6 +30,7 @@ export const loginSchema = z.object({
     password: z.string({
       message: 'Password is required',
     }).min(1, 'Password cannot be empty'),
+    organizationId: z.number().int().positive().optional(),
   }),
 });
 

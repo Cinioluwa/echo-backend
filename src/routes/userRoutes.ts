@@ -196,6 +196,7 @@ router.post('/register', validate(registerSchema), registerUser);
  *       - User must have verified their email
  *       - User's organization must be ACTIVE
  *       - Password must match
+ *       - Personal email domains (for example gmail.com) must include `organizationId`
  *       
  *       **Returns:** JWT token valid for 24 hours
  *     tags:
@@ -217,6 +218,10 @@ router.post('/register', validate(registerSchema), registerUser);
  *               password:
  *                 type: string
  *                 example: SecurePass123!
+ *               organizationId:
+ *                 type: integer
+ *                 description: Required when logging in with a personal email domain (for example gmail.com)
+ *                 example: 1
  *     responses:
  *       200:
  *         description: Login successful
