@@ -205,6 +205,15 @@ All data is scoped to your organization (determined by email domain). Users can 
                 },
               ],
             },
+            isOwner: {
+              type: 'boolean',
+              description: 'Whether the authenticated user is the ping author',
+            },
+            alias: {
+              type: 'string',
+              nullable: true,
+              description: 'Display alias for the ping author (anonymous alias or full name)',
+            },
             officialResponse: {
               allOf: [
                 { $ref: '#/components/schemas/OfficialResponse' },

@@ -4,12 +4,22 @@ import { AuthRequest } from '../types/AuthRequest.js';
 import { appendPingBadges } from '../utils/pingBadges.js';
 import { appendWaveBadges } from '../utils/waveBadges.js';
 
-const sanitizePublicPing = (ping: any) => ({
-  ...ping,
-  author: ping?.isAnonymous ? null : ping?.author ?? null,
-  anonymousAlias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : undefined,
-  anonymousProfilePicture: ping?.isAnonymous ? (ping?.anonymousProfilePicture ?? null) : undefined,
-});
+const sanitizePublicPing = (ping: any, currentUserId?: string | number) => {
+  const isOwner = currentUserId ? ping?.author?.id === currentUserId : false;
+  const nonAnonymousAlias = [ping?.author?.firstName, ping?.author?.lastName]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || null;
+
+  return {
+    ...ping,
+    author: ping?.isAnonymous ? null : ping?.author ?? null,
+    anonymousAlias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : undefined,
+    anonymousProfilePicture: ping?.isAnonymous ? (ping?.anonymousProfilePicture ?? null) : undefined,
+    isOwner,
+    alias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : nonAnonymousAlias,
+  };
+};
 
 function parsePagination(req: Request) {
   const page = Math.max(1, Number(req.query.page ?? 1));
@@ -156,7 +166,7 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
     ]);
 
     const sanitizedItems = items.map((ping) => ({
-      ...sanitizePublicPing(ping),
+      ...sanitizePublicPing(ping, userId),
       hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
     }));
 
