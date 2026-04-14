@@ -46,6 +46,30 @@ const getWeekWindowFromQuery = (query: AuthRequest['query']): WeekWindow | null 
     };
 };
 
+const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+const addMonths = (date: Date, months: number) =>
+    new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const percentDelta = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Number((((current - previous) / previous) * 100).toFixed(2));
+};
+
+const average = (values: number[]) => {
+    if (!values.length) return 0;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+};
+
+const getGroupedCount = (row: { _count?: unknown }): number => {
+    const counts = row._count as Record<string, number> | undefined;
+    if (!counts) return 0;
+    if (typeof counts.id === 'number') return counts.id;
+    if (typeof counts._all === 'number') return counts._all;
+    const firstNumeric = Object.values(counts).find((value) => typeof value === 'number');
+    return typeof firstNumeric === 'number' ? firstNumeric : 0;
+};
+
 export const getPlatformStats = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const window = getWeekWindowFromQuery(req.query);
@@ -1022,6 +1046,652 @@ export const exportPingsAsCsv = async (req: AuthRequest, res: Response, next: Ne
 
         return res.status(200).send(csvContent);
 
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getAdminOverviewDashboard = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const months = clampInt(req.query.months, 7, 1, 24);
+        const unresolvedDays = clampInt(req.query.unresolvedDays, 7, 1, 365);
+        const topPingsLimit = clampInt(req.query.topPingsLimit, 3, 1, 20);
+        const oldestLimit = clampInt(req.query.oldestLimit, 3, 1, 20);
+
+        const now = new Date();
+        const currentMonthStart = startOfMonth(now);
+        const nextMonthStart = addMonths(currentMonthStart, 1);
+        const previousMonthStart = addMonths(currentMonthStart, -1);
+        const thresholdDate = new Date(now.getTime() - unresolvedDays * MS_IN_DAY);
+
+        const [
+            wavesCurrent,
+            wavesPrevious,
+            pingsCurrent,
+            pingsPrevious,
+            underReviewCurrent,
+            underReviewPrevious,
+            unresolvedOlderCurrent,
+            unresolvedOlderPrevious,
+            totalUnresolved,
+            topPingSurges,
+            oldestUnresolved,
+        ] = await prisma.$transaction([
+            prisma.wave.count({
+                where: { organizationId, createdAt: { gte: currentMonthStart, lt: nextMonthStart } },
+            }),
+            prisma.wave.count({
+                where: { organizationId, createdAt: { gte: previousMonthStart, lt: currentMonthStart } },
+            }),
+            prisma.ping.count({
+                where: { organizationId, createdAt: { gte: currentMonthStart, lt: nextMonthStart } },
+            }),
+            prisma.ping.count({
+                where: { organizationId, createdAt: { gte: previousMonthStart, lt: currentMonthStart } },
+            }),
+            prisma.ping.count({
+                where: {
+                    organizationId,
+                    progressStatus: { in: [ProgressStatus.ACKNOWLEDGED, ProgressStatus.IN_PROGRESS] },
+                },
+            }),
+            prisma.ping.count({
+                where: {
+                    organizationId,
+                    progressStatus: { in: [ProgressStatus.ACKNOWLEDGED, ProgressStatus.IN_PROGRESS] },
+                    createdAt: { lt: currentMonthStart },
+                },
+            }),
+            prisma.ping.count({
+                where: {
+                    organizationId,
+                    progressStatus: { not: ProgressStatus.RESOLVED },
+                    createdAt: { lte: thresholdDate },
+                },
+            }),
+            prisma.ping.count({
+                where: {
+                    organizationId,
+                    progressStatus: { not: ProgressStatus.RESOLVED },
+                    createdAt: { lte: new Date(previousMonthStart.getTime() - unresolvedDays * MS_IN_DAY) },
+                },
+            }),
+            prisma.ping.count({
+                where: { organizationId, progressStatus: { not: ProgressStatus.RESOLVED } },
+            }),
+            prisma.surge.groupBy({
+                by: ['pingId'],
+                where: {
+                    organizationId,
+                    createdAt: { gte: new Date(now.getTime() - 7 * MS_IN_DAY), lt: now },
+                    pingId: { not: null },
+                },
+                _count: { _all: true },
+                orderBy: { _count: { pingId: 'desc' } },
+                take: topPingsLimit,
+            }),
+            prisma.ping.findMany({
+                where: { organizationId, progressStatus: { not: ProgressStatus.RESOLVED } },
+                orderBy: { createdAt: 'asc' },
+                take: oldestLimit,
+                select: {
+                    id: true,
+                    title: true,
+                    createdAt: true,
+                    category: { select: { id: true, name: true } },
+                },
+            }),
+        ]);
+
+        const [activeCurrentRows, activePreviousRows, pingsCurrentRows, pingsPreviousRows, categoryRows, resolvedTimeRows] = await prisma.$transaction([
+            prisma.$queryRaw<Array<{ userId: number }>>`
+                SELECT DISTINCT "authorId" AS "userId"
+                FROM "Ping"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${currentMonthStart}
+                  AND "createdAt" < ${nextMonthStart}
+                UNION
+                SELECT DISTINCT "authorId" AS "userId"
+                FROM "Comment"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${currentMonthStart}
+                  AND "createdAt" < ${nextMonthStart}
+                UNION
+                SELECT DISTINCT "userId" AS "userId"
+                FROM "Surge"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${currentMonthStart}
+                  AND "createdAt" < ${nextMonthStart}
+                UNION
+                SELECT DISTINCT "authorId" AS "userId"
+                FROM "OfficialResponse"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${currentMonthStart}
+                  AND "createdAt" < ${nextMonthStart}
+            `,
+            prisma.$queryRaw<Array<{ userId: number }>>`
+                SELECT DISTINCT "authorId" AS "userId"
+                FROM "Ping"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${previousMonthStart}
+                  AND "createdAt" < ${currentMonthStart}
+                UNION
+                SELECT DISTINCT "authorId" AS "userId"
+                FROM "Comment"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${previousMonthStart}
+                  AND "createdAt" < ${currentMonthStart}
+                UNION
+                SELECT DISTINCT "userId" AS "userId"
+                FROM "Surge"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${previousMonthStart}
+                  AND "createdAt" < ${currentMonthStart}
+                UNION
+                SELECT DISTINCT "authorId" AS "userId"
+                FROM "OfficialResponse"
+                WHERE "organizationId" = ${organizationId}
+                  AND "createdAt" >= ${previousMonthStart}
+                  AND "createdAt" < ${currentMonthStart}
+            `,
+            prisma.ping.findMany({
+                where: { organizationId, createdAt: { gte: currentMonthStart, lt: nextMonthStart } },
+                select: { progressStatus: true },
+            }),
+            prisma.ping.findMany({
+                where: { organizationId, createdAt: { gte: previousMonthStart, lt: currentMonthStart } },
+                select: { progressStatus: true },
+            }),
+            prisma.category.findMany({
+                where: { organizationId },
+                select: {
+                    id: true,
+                    name: true,
+                    pings: {
+                        select: {
+                            id: true,
+                            progressStatus: true,
+                        },
+                    },
+                },
+            }),
+            prisma.ping.findMany({
+                where: {
+                    organizationId,
+                    resolvedAt: { gte: currentMonthStart, lt: nextMonthStart },
+                    progressStatus: ProgressStatus.RESOLVED,
+                },
+                select: {
+                    createdAt: true,
+                    resolvedAt: true,
+                },
+            }),
+        ]);
+
+        const activeUsersCurrent = new Set(activeCurrentRows.map((row) => row.userId)).size;
+        const activeUsersPrevious = new Set(activePreviousRows.map((row) => row.userId)).size;
+
+        const resolutionRateCurrent = pingsCurrentRows.length
+            ? (pingsCurrentRows.filter((ping) => ping.progressStatus === ProgressStatus.RESOLVED).length / pingsCurrentRows.length) * 100
+            : 0;
+        const resolutionRatePrevious = pingsPreviousRows.length
+            ? (pingsPreviousRows.filter((ping) => ping.progressStatus === ProgressStatus.RESOLVED).length / pingsPreviousRows.length) * 100
+            : 0;
+
+        const resolveDurationsDays = resolvedTimeRows
+            .filter((ping) => ping.resolvedAt)
+            .map((ping) => {
+                const resolvedAt = ping.resolvedAt as Date;
+                return (resolvedAt.getTime() - ping.createdAt.getTime()) / MS_IN_DAY;
+            })
+            .filter((days) => Number.isFinite(days) && days >= 0);
+        const avgResolveTimeDays = Number(average(resolveDurationsDays).toFixed(2));
+
+        const previousResolvedTimeRows = await prisma.ping.findMany({
+            where: {
+                organizationId,
+                resolvedAt: { gte: previousMonthStart, lt: currentMonthStart },
+                progressStatus: ProgressStatus.RESOLVED,
+            },
+            select: {
+                createdAt: true,
+                resolvedAt: true,
+            },
+        });
+
+        const previousResolveDurationsDays = previousResolvedTimeRows
+            .filter((ping) => ping.resolvedAt)
+            .map((ping) => {
+                const resolvedAt = ping.resolvedAt as Date;
+                return (resolvedAt.getTime() - ping.createdAt.getTime()) / MS_IN_DAY;
+            })
+            .filter((days) => Number.isFinite(days) && days >= 0);
+        const avgResolveTimeDaysPrevious = Number(average(previousResolveDurationsDays).toFixed(2));
+
+        const monthStarts = Array.from({ length: months }, (_, index) => {
+            const monthOffset = months - index - 1;
+            return addMonths(currentMonthStart, -monthOffset);
+        });
+
+        const oldestMonthStart = monthStarts[0];
+        const chartRangeEnd = addMonths(currentMonthStart, 1);
+
+        const [chartPings, chartWaves, chartResolved] = await prisma.$transaction([
+            prisma.ping.findMany({
+                where: { organizationId, createdAt: { gte: oldestMonthStart, lt: chartRangeEnd } },
+                select: { createdAt: true },
+            }),
+            prisma.wave.findMany({
+                where: { organizationId, createdAt: { gte: oldestMonthStart, lt: chartRangeEnd } },
+                select: { createdAt: true },
+            }),
+            prisma.ping.findMany({
+                where: {
+                    organizationId,
+                    progressStatus: ProgressStatus.RESOLVED,
+                    resolvedAt: { gte: oldestMonthStart, lt: chartRangeEnd },
+                },
+                select: { resolvedAt: true },
+            }),
+        ]);
+
+        const monthKey = (date: Date) => `${date.getFullYear()}-${date.getMonth()}`;
+        const chartBuckets = new Map<string, { month: string; waves: number; pings: number; resolved: number }>();
+
+        for (const monthStart of monthStarts) {
+            const key = monthKey(monthStart);
+            chartBuckets.set(key, {
+                month: monthStart.toLocaleString('en-US', { month: 'short' }),
+                waves: 0,
+                pings: 0,
+                resolved: 0,
+            });
+        }
+
+        for (const ping of chartPings) {
+            const key = monthKey(ping.createdAt);
+            const bucket = chartBuckets.get(key);
+            if (bucket) bucket.pings += 1;
+        }
+
+        for (const wave of chartWaves) {
+            const key = monthKey(wave.createdAt);
+            const bucket = chartBuckets.get(key);
+            if (bucket) bucket.waves += 1;
+        }
+
+        for (const ping of chartResolved) {
+            if (!ping.resolvedAt) continue;
+            const key = monthKey(ping.resolvedAt);
+            const bucket = chartBuckets.get(key);
+            if (bucket) bucket.resolved += 1;
+        }
+
+        const topPingIds = topPingSurges
+            .map((row) => row.pingId)
+            .filter((pingId): pingId is number => pingId !== null);
+        const topPingMeta = topPingIds.length
+            ? await prisma.ping.findMany({
+                where: { organizationId, id: { in: topPingIds } },
+                select: {
+                    id: true,
+                    title: true,
+                    author: { select: { id: true, firstName: true, lastName: true } },
+                },
+            })
+            : [];
+
+        const topPingMap = new Map(topPingMeta.map((ping) => [ping.id, ping]));
+
+        const topPings = topPingSurges
+            .filter((row) => row.pingId !== null)
+            .map((row, index) => {
+                const ping = topPingMap.get(row.pingId as number);
+                return {
+                    rank: index + 1,
+                    pingId: row.pingId,
+                    title: ping?.title ?? 'Unknown ping',
+                    author: ping?.author
+                        ? {
+                            id: ping.author.id,
+                            name: `${ping.author.firstName ?? ''} ${ping.author.lastName ?? ''}`.trim() || 'Unknown',
+                        }
+                        : null,
+                    engagementCount: getGroupedCount(row),
+                    engagementType: 'surges',
+                };
+            });
+
+        const oldestUnresolvedData = oldestUnresolved.map((ping) => ({
+            pingId: ping.id,
+            title: ping.title,
+            category: ping.category,
+            createdAt: ping.createdAt,
+            ageDays: Math.floor((now.getTime() - ping.createdAt.getTime()) / MS_IN_DAY),
+        }));
+
+        const categoryHealth = categoryRows
+            .map((category) => {
+                const total = category.pings.length;
+                const resolved = category.pings.filter((ping) => ping.progressStatus === ProgressStatus.RESOLVED).length;
+                const unresolved = total - resolved;
+                const resolutionRate = total > 0 ? Number(((resolved / total) * 100).toFixed(2)) : 0;
+
+                return {
+                    categoryId: category.id,
+                    categoryName: category.name,
+                    resolutionRate,
+                    unresolvedCount: unresolved,
+                    totalPings: total,
+                };
+            })
+            .sort((a, b) => b.unresolvedCount - a.unresolvedCount || a.categoryName.localeCompare(b.categoryName));
+
+        return res.status(200).json({
+            period: {
+                month: currentMonthStart.toLocaleString('en-US', { month: 'long' }),
+                year: currentMonthStart.getFullYear(),
+                start: currentMonthStart,
+                end: nextMonthStart,
+            },
+            summaryCards: {
+                waves: {
+                    value: wavesCurrent,
+                    deltaPercent: percentDelta(wavesCurrent, wavesPrevious),
+                },
+                pingsSubmitted: {
+                    value: pingsCurrent,
+                    deltaPercent: percentDelta(pingsCurrent, pingsPrevious),
+                },
+                resolutionRate: {
+                    value: Number(resolutionRateCurrent.toFixed(2)),
+                    deltaPercentagePoints: Number((resolutionRateCurrent - resolutionRatePrevious).toFixed(2)),
+                },
+                avgResolveTimeDays: {
+                    value: avgResolveTimeDays,
+                    deltaDays: Number((avgResolveTimeDays - avgResolveTimeDaysPrevious).toFixed(2)),
+                },
+                activeUsers: {
+                    value: activeUsersCurrent,
+                    deltaPercent: percentDelta(activeUsersCurrent, activeUsersPrevious),
+                },
+                underReview: {
+                    value: underReviewCurrent,
+                    deltaPercent: percentDelta(underReviewCurrent, underReviewPrevious),
+                },
+                unresolvedOlderThanDays: {
+                    thresholdDays: unresolvedDays,
+                    value: unresolvedOlderCurrent,
+                    deltaAbsolute: unresolvedOlderCurrent - unresolvedOlderPrevious,
+                },
+            },
+            communityActivity: {
+                months,
+                series: Array.from(chartBuckets.values()),
+            },
+            categoryHealth,
+            topPings: {
+                windowDays: 7,
+                items: topPings,
+            },
+            oldestUnresolved: {
+                total: totalUnresolved,
+                items: oldestUnresolvedData,
+            },
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getSurgingIssues = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const hours = clampInt(req.query.hours, 6, 1, 72);
+        const offsetHours = clampInt(req.query.offsetHours, 0, 0, 720);
+        const minEvents = clampInt(req.query.minEvents, 3, 1, 100);
+        const limit = clampInt(req.query.limit, 5, 1, 20);
+
+        const now = Date.now();
+        const windowEnd = new Date(now - offsetHours * 60 * 60 * 1000);
+        const windowStart = new Date(windowEnd.getTime() - hours * 60 * 60 * 1000);
+        const previousWindowStart = new Date(windowStart.getTime() - hours * 60 * 60 * 1000);
+
+        const [current, previous] = await prisma.$transaction([
+            prisma.surge.groupBy({
+                by: ['pingId'],
+                where: {
+                    organizationId,
+                    pingId: { not: null },
+                    createdAt: { gte: windowStart, lt: windowEnd },
+                },
+                _count: { _all: true },
+                orderBy: { pingId: 'asc' },
+            }),
+            prisma.surge.groupBy({
+                by: ['pingId'],
+                where: {
+                    organizationId,
+                    pingId: { not: null },
+                    createdAt: { gte: previousWindowStart, lt: windowStart },
+                },
+                _count: { _all: true },
+                orderBy: { pingId: 'asc' },
+            }),
+        ]);
+
+        const previousMap = new Map<number, number>();
+        for (const row of previous) {
+            if (row.pingId !== null) previousMap.set(row.pingId, getGroupedCount(row));
+        }
+
+        const scored = current
+            .filter((row) => row.pingId !== null)
+            .map((row) => {
+                const pingId = row.pingId as number;
+                const currentCount = getGroupedCount(row);
+                const previousCount = previousMap.get(pingId) ?? 0;
+                const currentRatePerHour = Number((currentCount / hours).toFixed(2));
+                const previousRatePerHour = Number((previousCount / hours).toFixed(2));
+                const rateDelta = Number((currentRatePerHour - previousRatePerHour).toFixed(2));
+                return {
+                    pingId,
+                    currentCount,
+                    previousCount,
+                    currentRatePerHour,
+                    previousRatePerHour,
+                    rateDelta,
+                };
+            })
+            .filter((row) => row.currentCount >= minEvents)
+            .sort((a, b) => b.currentRatePerHour - a.currentRatePerHour || b.rateDelta - a.rateDelta)
+            .slice(0, limit);
+
+        const pingMeta = scored.length
+            ? await prisma.ping.findMany({
+                where: { organizationId, id: { in: scored.map((item) => item.pingId) } },
+                select: {
+                    id: true,
+                    title: true,
+                    category: { select: { id: true, name: true } },
+                },
+            })
+            : [];
+
+        const pingMap = new Map(pingMeta.map((ping) => [ping.id, ping]));
+
+        return res.status(200).json({
+            window: {
+                hours,
+                offsetHours,
+                start: windowStart,
+                end: windowEnd,
+            },
+            count: scored.length,
+            items: scored.map((item) => ({
+                pingId: item.pingId,
+                title: pingMap.get(item.pingId)?.title ?? 'Unknown ping',
+                category: pingMap.get(item.pingId)?.category ?? null,
+                currentRatePerHour: item.currentRatePerHour,
+                previousRatePerHour: item.previousRatePerHour,
+                rateDelta: item.rateDelta,
+                currentSurges: item.currentCount,
+                previousSurges: item.previousCount,
+            })),
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getTopContributors = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const days = clampInt(req.query.days, 30, 1, 365);
+        const limit = clampInt(req.query.limit, 3, 1, 50);
+        const windowStart = new Date(Date.now() - days * MS_IN_DAY);
+
+        const [surgesByUser, pingsByAuthor] = await prisma.$transaction([
+            prisma.surge.groupBy({
+                by: ['userId'],
+                where: {
+                    organizationId,
+                    createdAt: { gte: windowStart },
+                },
+                _count: { _all: true },
+                orderBy: { _count: { userId: 'desc' } },
+                take: limit,
+            }),
+            prisma.ping.groupBy({
+                by: ['authorId'],
+                where: {
+                    organizationId,
+                    createdAt: { gte: windowStart },
+                },
+                _count: { _all: true },
+                orderBy: { authorId: 'asc' },
+            }),
+        ]);
+
+        const userIds = surgesByUser.map((row) => row.userId);
+        const users = userIds.length
+            ? await prisma.user.findMany({
+                where: { organizationId, id: { in: userIds } },
+                select: { id: true, firstName: true, lastName: true, email: true },
+            })
+            : [];
+
+        const userMap = new Map(users.map((user) => [user.id, user]));
+        const pingMap = new Map(pingsByAuthor.map((row) => [row.authorId, getGroupedCount(row)]));
+
+        const items = surgesByUser.map((row, index) => {
+            const user = userMap.get(row.userId);
+            const fullName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim();
+
+            return {
+                rank: index + 1,
+                userId: row.userId,
+                name: fullName || user?.email || 'Unknown',
+                pingsSubmitted: pingMap.get(row.userId) ?? 0,
+                wavesCast: getGroupedCount(row),
+                badge: index === 0 ? 'Champion' : null,
+            };
+        });
+
+        return res.status(200).json({
+            window: {
+                days,
+                start: windowStart,
+                end: new Date(),
+            },
+            items,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getCommunityMood = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const days = clampInt(req.query.days, 30, 1, 365);
+        const start = new Date(Date.now() - days * MS_IN_DAY);
+        const comments = await prisma.comment.findMany({
+            where: {
+                organizationId,
+                createdAt: { gte: start },
+            },
+            select: {
+                content: true,
+                createdAt: true,
+            },
+        });
+
+        const sentiment = new Sentiment();
+        const daily = new Map<string, { positive: number; neutral: number; negative: number; total: number }>();
+        let positive = 0;
+        let neutral = 0;
+        let negative = 0;
+
+        for (const comment of comments) {
+            const day = comment.createdAt.toISOString().slice(0, 10);
+            const score = sentiment.analyze(comment.content).score;
+
+            if (!daily.has(day)) {
+                daily.set(day, { positive: 0, neutral: 0, negative: 0, total: 0 });
+            }
+            const dayBucket = daily.get(day)!;
+
+            if (score > 0) {
+                positive += 1;
+                dayBucket.positive += 1;
+            } else if (score < 0) {
+                negative += 1;
+                dayBucket.negative += 1;
+            } else {
+                neutral += 1;
+                dayBucket.neutral += 1;
+            }
+            dayBucket.total += 1;
+        }
+
+        const total = comments.length;
+        const toPercent = (count: number) => (total === 0 ? 0 : Number(((count / total) * 100).toFixed(2)));
+
+        const trend = Array.from({ length: days }, (_, index) => {
+            const date = new Date(start.getTime() + index * MS_IN_DAY);
+            const key = date.toISOString().slice(0, 10);
+            const dayBucket = daily.get(key) ?? { positive: 0, neutral: 0, negative: 0, total: 0 };
+
+            return {
+                date: key,
+                positivePercent: dayBucket.total ? Number(((dayBucket.positive / dayBucket.total) * 100).toFixed(2)) : 0,
+                neutralPercent: dayBucket.total ? Number(((dayBucket.neutral / dayBucket.total) * 100).toFixed(2)) : 0,
+                negativePercent: dayBucket.total ? Number(((dayBucket.negative / dayBucket.total) * 100).toFixed(2)) : 0,
+                sampleSize: dayBucket.total,
+            };
+        });
+
+        return res.status(200).json({
+            window: {
+                days,
+                start,
+                end: new Date(),
+            },
+            totals: {
+                comments: total,
+                positive,
+                neutral,
+                negative,
+            },
+            percentages: {
+                positive: toPercent(positive),
+                neutral: toPercent(neutral),
+                negative: toPercent(negative),
+            },
+            trend,
+        });
     } catch (error) {
         return next(error);
     }

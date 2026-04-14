@@ -20,6 +20,10 @@ import {
     getPingSentimentAnalytics,
     getPriorityPings,
     exportPingsAsCsv,
+    getAdminOverviewDashboard,
+    getSurgingIssues,
+    getTopContributors,
+    getCommunityMood,
 
 } from '../controllers/adminController.js';
 import {
@@ -39,6 +43,8 @@ import { userIdParamSchema } from '../schemas/userSchemas.js';
 import {
     analyticsWindowOptionalSchema,
     analyticsWindowSchema,
+    adminOverviewDashboardSchema,
+    communityMoodSchema,
     listOrganizationClaimsSchema,
     listOrganizationJoinRequestsSchema,
     organizationClaimIdSchema,
@@ -47,6 +53,8 @@ import {
     rejectOrganizationClaimSchema,
     rejectOrganizationJoinRequestSchema,
     responseTimeAnalyticsSchema,
+    surgingIssuesSchema,
+    topContributorsSchema,
     updateOrganizationJoinPolicySchema,
     updateUserRoleSchema,
 } from '../schemas/adminSchemas.js';
@@ -659,6 +667,211 @@ router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddl
  */
 router.patch('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
 router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, deleteAnnouncement);
+
+/**
+ * @openapi
+ * /api/admin/overview:
+ *   get:
+ *     summary: Get admin overview dashboard payload
+ *     description: |
+ *       Returns an aggregated payload for the redesigned admin overview page,
+ *       including KPI cards, category health, top pings, and oldest unresolved pings.
+ *
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: months
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 24
+ *           default: 7
+ *       - in: query
+ *         name: unresolvedDays
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 365
+ *           default: 7
+ *       - in: query
+ *         name: topPingsLimit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 20
+ *           default: 3
+ *       - in: query
+ *         name: oldestLimit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 20
+ *           default: 3
+ *     responses:
+ *       200:
+ *         description: Overview dashboard data retrieved
+ *       403:
+ *         description: Admin access required
+ */
+// Admin overview dashboard contract used by redesigned admin homepage
+router.get(
+    '/overview',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(adminOverviewDashboardSchema),
+    cache(120),
+    getAdminOverviewDashboard
+);
+
+/**
+ * @openapi
+ * /api/admin/overview/surging-issues:
+ *   get:
+ *     summary: Get surging issues with velocity metrics
+ *     description: |
+ *       Returns pings with unusual surge activity within a configurable time window,
+ *       including per-hour rate and comparison with the previous window.
+ *
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: hours
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 72
+ *           default: 6
+ *       - in: query
+ *         name: offsetHours
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 720
+ *           default: 0
+ *       - in: query
+ *         name: minEvents
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 3
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 20
+ *           default: 5
+ *     responses:
+ *       200:
+ *         description: Surging issues retrieved
+ *       403:
+ *         description: Admin access required
+ */
+// Surging issues list with per-hour velocity for alert banners
+router.get(
+    '/overview/surging-issues',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(surgingIssuesSchema),
+    cache(60),
+    getSurgingIssues
+);
+
+/**
+ * @openapi
+ * /api/admin/overview/top-contributors:
+ *   get:
+ *     summary: Get top contributors leaderboard
+ *     description: |
+ *       Returns ranked users based on waves cast activity and pings submitted
+ *       within a configurable rolling window.
+ *
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 365
+ *           default: 30
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 3
+ *     responses:
+ *       200:
+ *         description: Top contributors retrieved
+ *       403:
+ *         description: Admin access required
+ */
+// Top contributors leaderboard (ranked by waves cast / surges)
+router.get(
+    '/overview/top-contributors',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(topContributorsSchema),
+    cache(120),
+    getTopContributors
+);
+
+/**
+ * @openapi
+ * /api/admin/overview/community-mood:
+ *   get:
+ *     summary: Get comment sentiment trend for community mood
+ *     description: |
+ *       Returns sentiment percentages and a daily trend computed from comment text
+ *       over a configurable number of days.
+ *
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 365
+ *           default: 30
+ *     responses:
+ *       200:
+ *         description: Community mood data retrieved
+ *       403:
+ *         description: Admin access required
+ */
+// Community mood computed from comment sentiment trend
+router.get(
+    '/overview/community-mood',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(communityMoodSchema),
+    cache(120),
+    getCommunityMood
+);
 
 /**
  * @openapi

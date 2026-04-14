@@ -79,3 +79,34 @@ export const rejectOrganizationClaimSchema = z.object({
     reason: z.string().max(500).optional(),
   }),
 });
+
+export const adminOverviewDashboardSchema = z.object({
+  query: z.object({
+    months: z.coerce.number().int().min(1).max(24).default(7),
+    unresolvedDays: z.coerce.number().int().min(1).max(365).default(7),
+    topPingsLimit: z.coerce.number().int().min(1).max(20).default(3),
+    oldestLimit: z.coerce.number().int().min(1).max(20).default(3),
+  }),
+});
+
+export const surgingIssuesSchema = z.object({
+  query: z.object({
+    hours: z.coerce.number().int().min(1).max(72).default(6),
+    offsetHours: z.coerce.number().int().min(0).max(720).default(0),
+    minEvents: z.coerce.number().int().min(1).max(100).default(3),
+    limit: z.coerce.number().int().min(1).max(20).default(5),
+  }),
+});
+
+export const topContributorsSchema = z.object({
+  query: z.object({
+    days: z.coerce.number().int().min(1).max(365).default(30),
+    limit: z.coerce.number().int().min(1).max(50).default(3),
+  }),
+});
+
+export const communityMoodSchema = z.object({
+  query: z.object({
+    days: z.coerce.number().int().min(1).max(365).default(30),
+  }),
+});

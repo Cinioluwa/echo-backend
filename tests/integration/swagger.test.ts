@@ -53,6 +53,10 @@ describe('Swagger/OpenAPI Documentation', () => {
       expect(paths).toHaveProperty('/api/pings');
       expect(paths).toHaveProperty('/api/categories');
       expect(paths).toHaveProperty('/api/public/soundboard');
+      expect(paths).toHaveProperty('/api/admin/overview');
+      expect(paths).toHaveProperty('/api/admin/overview/surging-issues');
+      expect(paths).toHaveProperty('/api/admin/overview/top-contributors');
+      expect(paths).toHaveProperty('/api/admin/overview/community-mood');
       expect(paths).toHaveProperty('/health');
       expect(paths).toHaveProperty('/healthz');
     });
