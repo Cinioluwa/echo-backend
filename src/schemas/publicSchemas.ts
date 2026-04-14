@@ -9,3 +9,16 @@ export const inviteLeaderSchema = z.object({
     email: z.string().email('Invalid email address'),
   }),
 });
+
+export const shareMetadataSchema = z.object({
+  params: z.object({
+    entity: z.enum(['feed', 'ping', 'wave', 'comment']),
+    id: z.string().regex(/^\d+$/, 'Share content ID must be a number'),
+  }),
+});
+
+export const shareMetadataAliasIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, 'Share content ID must be a number'),
+  }),
+});

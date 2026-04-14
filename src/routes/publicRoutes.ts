@@ -1,13 +1,87 @@
-import { Router } from 'express';
-import { getPublicPings, getPublicWaves, getPublicResolutionLog } from '../controllers/publicController.js';
+import { Router, type RequestHandler } from 'express';
+import { getPublicPings, getPublicWaves, getPublicResolutionLog, getShareMetadata } from '../controllers/publicController.js';
 import { inviteLeader } from '../controllers/organizationController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import cache from '../middleware/cacheMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { inviteLeaderSchema } from '../schemas/publicSchemas.js';
+import { inviteLeaderSchema, shareMetadataAliasIdSchema, shareMetadataSchema } from '../schemas/publicSchemas.js';
 
 const router = Router();
+
+/**
+ * @openapi
+ * /api/public/share/{entity}/{id}:
+ *   get:
+ *     summary: Get safe metadata for share previews
+ *     description: |
+ *       Returns a strict, public-safe metadata payload for link previews and SEO metadata generation.
+ *       This endpoint is intentionally unauthenticated so social crawlers can fetch metadata.
+ *
+ *       Supported entities:
+ *       - `feed` (resolves ping first, then wave)
+ *       - `ping`
+ *       - `wave`
+ *       - `comment`
+ *
+ *       **Security note**: Payload is intentionally minimal and excludes sensitive/private fields.
+ *     tags:
+ *       - Public
+ *     parameters:
+ *       - in: path
+ *         name: entity
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [feed, ping, wave, comment]
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     responses:
+ *       200:
+ *         description: Share metadata returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 type:
+ *                   type: string
+ *                   enum: [ping, wave, comment]
+ *                 id:
+ *                   type: integer
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 imageUrl:
+ *                   type: string
+ *                   nullable: true
+ *                 canonicalUrl:
+ *                   type: string
+ *       400:
+ *         description: Invalid entity or id
+ *       404:
+ *         description: Content not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/share/:entity/:id', validate(shareMetadataSchema), cache(300), getShareMetadata);
+
+const withShareEntity = (entity: 'feed' | 'ping' | 'wave' | 'comment'): RequestHandler =>
+	(req, _res, next) => {
+		req.params.entity = entity;
+		next();
+	};
+
+// Backward-compatible aliases for existing integration callers.
+router.get('/feed/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('feed'), cache(300), getShareMetadata);
+router.get('/comments/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('comment'), cache(300), getShareMetadata);
+router.get('/pings/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('ping'), cache(300), getShareMetadata);
+router.get('/waves/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('wave'), cache(300), getShareMetadata);
 
 /**
  * @openapi

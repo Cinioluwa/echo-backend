@@ -3,6 +3,40 @@ import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { appendPingBadges } from '../utils/pingBadges.js';
 import { appendWaveBadges } from '../utils/waveBadges.js';
+import { env } from '../config/env.js';
+
+type ShareEntity = 'feed' | 'ping' | 'wave' | 'comment';
+
+const SHARE_DESCRIPTION_MAX_LENGTH = 180;
+
+const trimText = (value: string | null | undefined, maxLength: number): string => {
+  const normalized = (value ?? '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength - 1).trimEnd()}…`;
+};
+
+const safeImageUrl = (media: Array<{ url: string; mimeType: string }> | undefined): string | null => {
+  if (!media || media.length === 0) return null;
+  const image = media.find((item) => item.mimeType.startsWith('image/'));
+  return image?.url ?? null;
+};
+
+const buildCanonicalUrl = (entity: ShareEntity, id: number, commentId?: number): string => {
+  const appBaseUrl = env.APP_URL.replace(/\/$/, '');
+
+  if (entity === 'comment' && commentId) {
+    return `${appBaseUrl}/feed/${id}#comment-${commentId}`;
+  }
+
+  return `${appBaseUrl}/feed/${id}`;
+};
+
+const notFound = (res: Response) =>
+  res.status(404).json({
+    error: 'Content not found',
+    code: 'SHARE_CONTENT_NOT_FOUND',
+  });
 
 const sanitizePublicPing = (ping: any, currentUserId?: string | number) => {
   const isOwner = currentUserId ? ping?.author?.id === currentUserId : false;
@@ -262,6 +296,198 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
         ? { top, sort }
         : { page: Math.floor(skip / limit) + 1, limit, total, sort },
     });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// Public share metadata for crawlers and frontend metadata generation.
+// Safe-by-design: only returns fields that are acceptable for public link previews.
+export async function getShareMetadata(req: Request, res: Response, next: NextFunction) {
+  try {
+    const entity = req.params.entity as ShareEntity;
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid share id' });
+    }
+
+    if (entity === 'ping') {
+      const ping = await prisma.ping.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          media: {
+            select: { url: true, mimeType: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!ping) return notFound(res);
+
+      return res.status(200).json({
+        type: 'ping',
+        id: ping.id,
+        title: trimText(ping.title, 110),
+        description: trimText(ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
+        imageUrl: safeImageUrl(ping.media),
+        canonicalUrl: buildCanonicalUrl('ping', ping.id),
+      });
+    }
+
+    if (entity === 'wave') {
+      const wave = await prisma.wave.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          solution: true,
+          pingId: true,
+          ping: { select: { title: true } },
+          media: {
+            select: { url: true, mimeType: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!wave) return notFound(res);
+
+      const title = wave.ping?.title
+        ? `Solution to: ${trimText(wave.ping.title, 95)}`
+        : `Solution #${wave.id}`;
+
+      return res.status(200).json({
+        type: 'wave',
+        id: wave.id,
+        title,
+        description: trimText(wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
+        imageUrl: safeImageUrl(wave.media),
+        canonicalUrl: buildCanonicalUrl('wave', wave.pingId),
+      });
+    }
+
+    if (entity === 'feed') {
+      const ping = await prisma.ping.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          media: {
+            select: { url: true, mimeType: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (ping) {
+        return res.status(200).json({
+          type: 'ping',
+          id: ping.id,
+          title: trimText(ping.title, 110),
+          description: trimText(ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
+          imageUrl: safeImageUrl(ping.media),
+          canonicalUrl: buildCanonicalUrl('feed', ping.id),
+        });
+      }
+
+      const wave = await prisma.wave.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          solution: true,
+          pingId: true,
+          ping: { select: { title: true } },
+          media: {
+            select: { url: true, mimeType: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!wave) return notFound(res);
+
+      const title = wave.ping?.title
+        ? `Solution to: ${trimText(wave.ping.title, 95)}`
+        : `Solution #${wave.id}`;
+
+      return res.status(200).json({
+        type: 'wave',
+        id: wave.id,
+        title,
+        description: trimText(wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
+        imageUrl: safeImageUrl(wave.media),
+        canonicalUrl: buildCanonicalUrl('feed', wave.pingId),
+      });
+    }
+
+    // entity === 'comment'
+    const comment = await prisma.comment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        content: true,
+        pingId: true,
+        waveId: true,
+        ping: {
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            media: {
+              select: { url: true, mimeType: true },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+        },
+        wave: {
+          select: {
+            id: true,
+            solution: true,
+            pingId: true,
+            ping: {
+              select: {
+                id: true,
+                title: true,
+                media: {
+                  select: { url: true, mimeType: true },
+                  orderBy: { createdAt: 'asc' },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!comment) return notFound(res);
+
+    if (comment.ping) {
+      return res.status(200).json({
+        type: 'comment',
+        id: comment.id,
+        title: `Comment on: ${trimText(comment.ping.title, 95)}`,
+        description: trimText(comment.content || comment.ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
+        imageUrl: safeImageUrl(comment.ping.media),
+        canonicalUrl: buildCanonicalUrl('comment', comment.ping.id, comment.id),
+      });
+    }
+
+    if (comment.wave?.ping) {
+      return res.status(200).json({
+        type: 'comment',
+        id: comment.id,
+        title: `Comment on a solution: ${trimText(comment.wave.ping.title, 80)}`,
+        description: trimText(comment.content || comment.wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
+        imageUrl: safeImageUrl(comment.wave.ping.media),
+        canonicalUrl: buildCanonicalUrl('comment', comment.wave.ping.id, comment.id),
+      });
+    }
+
+    return notFound(res);
   } catch (error) {
     return next(error);
   }
