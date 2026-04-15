@@ -148,6 +148,7 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
             },
           },
           comments: {
+            take: 10,
             include: {
               author: {
                 select: {
@@ -371,6 +372,7 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
           },
         },
         comments: {
+          take: 10,
           include: {
             author: {
               select: {

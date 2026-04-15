@@ -449,6 +449,7 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
           },
         },
         comments: {
+          take: 10,
           include: {
             author: {
               select: {

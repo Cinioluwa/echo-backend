@@ -201,10 +201,17 @@ export const deleteAnyPing = async (req: AuthRequest, res: Response, next: NextF
 
 export const getAllUsers = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+        const parsedLimit = Number.parseInt(req.query.limit as string, 10);
+        const parsedOffset = Number.parseInt(req.query.offset as string, 10);
+        const take = Number.isNaN(parsedLimit) ? 100 : Math.min(Math.max(parsedLimit, 1), 500);
+        const skip = Number.isNaN(parsedOffset) ? 0 : Math.max(parsedOffset, 0);
+
         const users = await prisma.user.findMany({
             where: {
                 organizationId: req.organizationId!,
             },
+            skip,
+            take,
             select: {
                 id: true,
                 email: true,
@@ -1018,7 +1025,8 @@ export const exportPingsAsCsv = async (req: AuthRequest, res: Response, next: Ne
                 _count: { select: { surges: true } },
                 officialResponse: { select: { isResolved: true } }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: 500,
         });
 
         // Manual CSV Generation to avoid external deps for now
