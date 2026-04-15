@@ -471,14 +471,17 @@ export const updateWave = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(404).json({ error: 'Wave not found' });
     }
 
-    // For now, only allow the ping author to update waves (can be expanded later)
+    // Allow the wave's own author or the ping's author to update
     const ping = await prisma.ping.findUnique({
       where: { id: wave.pingId },
       select: { authorId: true },
     });
 
-    if (!ping || ping.authorId !== userId) {
-      return res.status(403).json({ error: 'Forbidden: Only the ping author can update waves' });
+    const isWaveAuthor = wave.authorId === userId;
+    const isPingAuthor = ping?.authorId === userId;
+
+    if (!isWaveAuthor && !isPingAuthor) {
+      return res.status(403).json({ error: 'Forbidden: Only the wave author or ping author can update waves' });
     }
 
     const updateData: any = {};
@@ -577,14 +580,17 @@ export const deleteWave = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(404).json({ error: 'Wave not found' });
     }
 
-    // For now, only allow the ping author to delete waves (can be expanded later)
+    // Allow the wave's own author or the ping's author to delete
     const ping = await prisma.ping.findUnique({
       where: { id: wave.pingId },
       select: { authorId: true },
     });
 
-    if (!ping || ping.authorId !== userId) {
-      return res.status(403).json({ error: 'Forbidden: Only the ping author can delete waves' });
+    const isWaveAuthor = wave.authorId === userId;
+    const isPingAuthor = ping?.authorId === userId;
+
+    if (!isWaveAuthor && !isPingAuthor) {
+      return res.status(403).json({ error: 'Forbidden: Only the wave author or ping author can delete waves' });
     }
 
     await prisma.wave.delete({
