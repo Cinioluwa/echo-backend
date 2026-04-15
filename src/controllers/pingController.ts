@@ -223,6 +223,10 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
+          waves: {
+            take: 2,
+            orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+          },
           media: {
             select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
           },
