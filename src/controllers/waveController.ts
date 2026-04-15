@@ -35,6 +35,7 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(404).json({ error: 'Ping not found or access denied' });
     }
 
+    // Create the wave first (without media include — media isn't linked yet)
     const newWave = await prisma.wave.create({
       data: {
         solution,
@@ -42,6 +43,25 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
         organizationId,
         authorId: userId,
       },
+      select: { id: true },
+    });
+
+    // Attach media AFTER the wave exists so the waveId FK is valid
+    if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
+      await prisma.media.updateMany({
+        where: {
+          id: { in: mediaIds },
+          organizationId,
+          pingId: null, // Only unattached media
+          waveId: null,
+        },
+        data: { waveId: newWave.id },
+      });
+    }
+
+    // Re-fetch the wave now that media records have been linked
+    const waveWithMedia = await prisma.wave.findUnique({
+      where: { id: newWave.id },
       include: {
         author: {
           select: {
@@ -64,25 +84,12 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
       },
     });
 
-    // Attach media if mediaIds provided
-    if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
-      await prisma.media.updateMany({
-        where: {
-          id: { in: mediaIds },
-          organizationId,
-          pingId: null, // Only unattached media
-          waveId: null,
-        },
-        data: { waveId: newWave.id },
-      });
-    }
-
     // Invalidate cache after creating wave
     await invalidateCacheAfterMutation(organizationId);
 
-    emitWaveCreated(organizationId, newWave);
+    emitWaveCreated(organizationId, waveWithMedia!);
 
-    return res.status(201).json(newWave);
+    return res.status(201).json(waveWithMedia);
   } catch (error) {
     logger.error('Error creating wave', { error, pingId: req.params.pingId, userId: req.user?.userId });
     return next(error);
@@ -146,6 +153,9 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
               status: true,
               createdAt: true,
             },
+          },
+          media: {
+            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
           },
           comments: {
             take: 10,
@@ -258,6 +268,9 @@ export const getMyWaves = async (req: AuthRequest, res: Response, next: NextFunc
               createdAt: true,
             },
           },
+          media: {
+            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          },
           ping: {
             select: {
               id: true,
@@ -350,6 +363,9 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
             status: true,
             createdAt: true,
           },
+        },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
         },
         ping: {
           include: {
