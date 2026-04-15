@@ -13,7 +13,6 @@ const CACHE_PREFIX = 'echo:cache:';
  */
 function generateCacheKey(req: Request): string {
   const orgId = (req as Request & { organizationId?: number }).organizationId || 'global';
-  const userId = (req as Request & { user?: { id: number } }).user?.id || 'anon';
 
   // For org-scoped routes, include orgId. For user-specific routes, include userId.
   // Default: org-scoped caching (most feeds are org-scoped, not user-specific)
@@ -57,7 +56,8 @@ export function cache(
     // Generate cache key
     let cacheKey = generateCacheKey(req);
     if (options.perUser) {
-      const userId = (req as Request & { user?: { id: number } }).user?.id || 'anon';
+      const userContext = (req as Request & { user?: { id?: number; userId?: number } }).user;
+      const userId = userContext?.userId ?? userContext?.id ?? 'anon';
       cacheKey = `${cacheKey}:user:${userId}`;
     }
 

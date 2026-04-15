@@ -303,15 +303,22 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
               email: true,
               firstName: true,
               lastName: true,
+              level: true,
               profilePicture: true,
             },
           },
+          category: true,
           _count: {
             select: { waves: true, comments: true, surges: true },
+          },
+          waves: {
+            take: 2,
+            orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
           },
           media: {
             select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
           },
+          surges: { where: { userId }, select: { id: true } },
         },
       }),
       prisma.ping.count({ where: whereClause }),
@@ -319,7 +326,10 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(ping => sanitizePingAuthor(ping, userId));
+    const sanitizedPings = pings.map(ping => ({
+      ...sanitizePingAuthor(ping, userId),
+      hasSurged: Array.isArray(ping.surges) ? ping.surges.length > 0 : false,
+    }));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
 
     return res.status(200).json({
@@ -342,6 +352,7 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 export const searchPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const { hashtag, q } = req.query;
   const organizationId = req.user?.organizationId; // Get organizationId from authenticated user
+  const userId = req.user?.userId;
 
   try {
     if (!hashtag && !q) {
@@ -384,12 +395,22 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
               email: true,
               firstName: true,
               lastName: true,
+              level: true,
               profilePicture: true
             },
           },
+          category: true,
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
+          waves: {
+            take: 2,
+            orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+          },
+          media: {
+            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          },
+          surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
       prisma.ping.count({ where: whereClause }),
@@ -397,7 +418,10 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(ping => sanitizePingAuthor(ping, req.user?.userId));
+    const sanitizedPings = pings.map(ping => ({
+      ...sanitizePingAuthor(ping, userId),
+      hasSurged: userId ? (Array.isArray(ping.surges) ? ping.surges.length > 0 : false) : false,
+    }));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, organizationId!);
 
     return res.status(200).json({
@@ -597,12 +621,39 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
     const updatedPing = await prisma.ping.update({
       where: { id: parseInt(id) },
       data: updateData,
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            level: true,
+            profilePicture: true,
+          },
+        },
+        category: true,
+        _count: {
+          select: { waves: true, comments: true, surges: true },
+        },
+        waves: {
+          take: 2,
+          orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+        },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+        },
+        surges: userId ? { where: { userId }, select: { id: true } } : false,
+      },
     });
 
     // Invalidate cache after update
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json(sanitizePingAuthor(updatedPing, userId));
+    return res.status(200).json({
+      ...sanitizePingAuthor(updatedPing, userId),
+      hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
+    });
   } catch (error) {
     logger.error('Error updating ping', { error, pingId: req.params.id, userId: req.user?.userId });
     return next(error);
@@ -614,6 +665,7 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
     const { id } = req.params;
     const { status } = req.body;
     const organizationId = (req as any).organizationId;
+    const userId = (req as any).user?.userId;
 
     const validStatuses = ["POSTED", "UNDER_REVIEW", "APPROVED", "REJECTED"];
     if (!validStatuses.includes(status)) {
@@ -637,12 +689,39 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
       data: {
         status: status,
       },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            level: true,
+            profilePicture: true,
+          },
+        },
+        category: true,
+        _count: {
+          select: { waves: true, comments: true, surges: true },
+        },
+        waves: {
+          take: 2,
+          orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+        },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+        },
+        surges: userId ? { where: { userId }, select: { id: true } } : false,
+      },
     });
 
     // Invalidate cache after status update
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json(sanitizePingAuthor(updatedPing, (req as any).user?.userId));
+    return res.status(200).json({
+      ...sanitizePingAuthor(updatedPing, userId),
+      hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
+    });
   } catch (error) {
     logger.error('Error updating ping status', { error, pingId: req.params.id });
     return next(error);
@@ -653,6 +732,7 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
   try {
     const { id } = req.params;
     const organizationId = (req as any).organizationId;
+    const userId = (req as any).user?.userId;
 
     // Check if ping exists and belongs to organization
     const ping = await prisma.ping.findFirst({
@@ -669,12 +749,39 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
     const updatedPing = await prisma.ping.update({
       where: { id: parseInt(id) },
       data: { status: 'UNDER_REVIEW' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            level: true,
+            profilePicture: true,
+          },
+        },
+        category: true,
+        _count: {
+          select: { waves: true, comments: true, surges: true },
+        },
+        waves: {
+          take: 2,
+          orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+        },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+        },
+        surges: userId ? { where: { userId }, select: { id: true } } : false,
+      },
     });
 
     // Invalidate cache after submit
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json(sanitizePingAuthor(updatedPing, (req as any).user?.userId));
+    return res.status(200).json({
+      ...sanitizePingAuthor(updatedPing, userId),
+      hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
+    });
   } catch (error) {
     logger.error('Error submitting ping', { error, pingId: req.params.id });
     return next(error);
@@ -734,9 +841,14 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
+        waves: {
+          take: 2,
+          orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+        },
         media: {
           select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
         },
+        surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
     });
 
@@ -745,7 +857,10 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
 
     return res.status(200).json({
       message: 'Ping marked as resolved',
-      ping: sanitizePingAuthor(updatedPing, userId)
+      ping: {
+        ...sanitizePingAuthor(updatedPing, userId),
+        hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
+      }
     });
   } catch (error) {
     logger.error('Error resolving ping', { error, pingId: req.params.id, userId: req.user?.userId });
@@ -756,6 +871,7 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
 export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const organizationId = req.user?.organizationId; // Get organizationId from authenticated user
+    const userId = req.user?.userId;
 
     const page = parseInt(req.query.page as string) || 1;
     let limit = parseInt(req.query.limit as string) || 20;
@@ -784,15 +900,26 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
         include: {
           author: {
             select: {
+              id: true,
               email: true,
               firstName: true,
               lastName: true,
+              level: true,
               profilePicture: true,
             },
           },
+          category: true,
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
+          waves: {
+            take: 2,
+            orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+          },
+          media: {
+            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          },
+          surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
       prisma.ping.count({ where: whereClause }),
@@ -800,7 +927,13 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const itemsWithBadges = await appendPingBadges(pings, organizationId!);
+    const itemsWithBadges = await appendPingBadges(
+      pings.map(ping => ({
+        ...ping,
+        hasSurged: userId ? (Array.isArray(ping.surges) ? ping.surges.length > 0 : false) : false,
+      })),
+      organizationId!
+    );
 
     return res.status(200).json({
       data: itemsWithBadges,

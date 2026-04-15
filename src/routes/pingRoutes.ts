@@ -165,7 +165,7 @@ const router = Router();
 router.post('/', authMiddleware, organizationMiddleware, validate(createPingSchema), createPing);
 
 // Get all pings (with pagination and optional filters) - cached for 60s
-router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithFiltersSchema), cache(60), getAllPings);
+router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithFiltersSchema), cache(60, { perUser: true }), getAllPings);
 
 /**
  * @openapi
@@ -225,7 +225,7 @@ router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithF
  *         description: Internal server error
  */
 // Search pings by hashtag or text query (must come BEFORE /:id route) - cached for 30s
-router.get('/search', authMiddleware, organizationMiddleware, validate(searchSchema), cache(30), searchPings);
+router.get('/search', authMiddleware, organizationMiddleware, validate(searchSchema), cache(30, { perUser: true }), searchPings);
 
 /**
  * @openapi
@@ -382,7 +382,7 @@ router.get('/me', authMiddleware, validate(paginationSchema), cache(60, { perUse
  *         description: Internal server error
  */
 // Get a specific ping by ID - with ID validation - cached for 60s
-router.get('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), cache(60), getPingById);
+router.get('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), cache(60, { perUser: true }), getPingById);
 
 // Delete a ping - with ID validation
 router.delete('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), deletePing);
