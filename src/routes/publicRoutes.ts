@@ -166,7 +166,7 @@ router.get('/waves/:id/metadata', validate(shareMetadataAliasIdSchema), withShar
  *         description: Internal server error
  */
 // Soundboard (Pings) - now requires auth
-router.get('/soundboard', authMiddleware, organizationMiddleware, cache(120), getPublicPings);
+router.get('/soundboard', authMiddleware, organizationMiddleware, cache(120, { perUser: true }), getPublicPings);
 
 /**
  * @openapi
@@ -221,7 +221,7 @@ router.get('/soundboard', authMiddleware, organizationMiddleware, cache(120), ge
  *         description: Internal server error
  */
 // Stream (Waves) - now requires auth
-router.get('/stream', authMiddleware, organizationMiddleware, cache(30), getPublicWaves);
+router.get('/stream', authMiddleware, organizationMiddleware, cache(30, { perUser: true }), getPublicWaves);
 
 /**
  * @openapi
@@ -279,7 +279,7 @@ router.get('/stream', authMiddleware, organizationMiddleware, cache(30), getPubl
  *         description: Internal server error
  */
 // Resolution Log (resolved pings) - now requires auth
-router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60), getPublicResolutionLog);
+router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60, { perUser: true }), getPublicResolutionLog);
 
 /**
  * @openapi

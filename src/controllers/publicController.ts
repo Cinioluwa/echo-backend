@@ -192,6 +192,25 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
           anonymousProfilePicture: true,
           author: { select: { id: true, firstName: true, lastName: true, profilePicture: true } },
           _count: { select: { waves: true, comments: true, surges: true } },
+          waves: {
+            take: 2,
+            orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+            select: {
+              id: true,
+              solution: true,
+              createdAt: true,
+              surgeCount: true,
+              author: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  profilePicture: true,
+                },
+              },
+              _count: { select: { surges: true, comments: true } },
+            },
+          },
           media: { select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true } },
           surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
@@ -202,6 +221,7 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
     const sanitizedItems = items.map((ping) => ({
       ...sanitizePublicPing(ping, userId),
       hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
+      surges: undefined,
     }));
 
     const itemsWithBadges = await appendPingBadges(sanitizedItems, organizationId);
