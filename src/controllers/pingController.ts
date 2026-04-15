@@ -435,8 +435,13 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
             email: true,
             firstName: true,
             lastName: true,
+            level: true,
             profilePicture: true,
           },
+        },
+        category: true,
+        _count: {
+          select: { waves: true, comments: true, surges: true },
         },
         waves: {
           include: {
@@ -478,6 +483,9 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
               },
             },
           },
+        },
+        media: {
+          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
         },
         surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
