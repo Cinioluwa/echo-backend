@@ -47,6 +47,30 @@ const sanitizeComments = (comments: any[] = [], currentUserId?: string | number)
     };
   });
 
+const withHasSurged = (ping: any, currentUserId?: string | number) => ({
+  ...sanitizePingAuthor(ping, currentUserId),
+  hasSurged: currentUserId ? (Array.isArray(ping?.surges) ? ping.surges.length > 0 : false) : false,
+  surges: undefined,
+});
+
+const publicWavePreviewSelect = {
+  id: true,
+  solution: true,
+  createdAt: true,
+  surgeCount: true,
+  author: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      profilePicture: true,
+    },
+  },
+  _count: { select: { surges: true, comments: true } },
+};
+
+const publicCategorySelect = { id: true, name: true };
+
 export const createPing = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { title, content, categoryId, hashtag, isAnonymous = false, mediaIds } = req.body;
@@ -106,14 +130,13 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
         author: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
             level: true,
             profilePicture: true,
           },
         },
-        category: true,
+        category: { select: publicCategorySelect },
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
@@ -143,14 +166,13 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
         author: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
             level: true,
             profilePicture: true,
           },
         },
-        category: true,
+        category: { select: publicCategorySelect },
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
@@ -212,20 +234,20 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
           author: {
             select: {
               id: true,
-              email: true,
               firstName: true,
               lastName: true,
               level: true,
               profilePicture: true,
             },
           },
-          category: true,
+          category: { select: publicCategorySelect },
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
           waves: {
             take: 2,
             orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+            select: publicWavePreviewSelect,
           },
           media: {
             select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -240,17 +262,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     const totalPages = Math.ceil(totalPings / limit);
 
     // Sanitize anonymous pings and add hasSurged (always boolean)
-    const sanitizedPings = pings.map(ping => {
-      const sanitized = sanitizePingAuthor(ping, userId);
-      let hasSurged = false;
-      if (userId) {
-        hasSurged = Array.isArray(ping.surges) ? ping.surges.length > 0 : false;
-      }
-      return {
-        ...sanitized,
-        hasSurged,
-      };
-    });
+    const sanitizedPings = pings.map(ping => withHasSurged(ping, userId));
 
     const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
 
@@ -300,20 +312,20 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
           author: {
             select: {
               id: true,
-              email: true,
               firstName: true,
               lastName: true,
               level: true,
               profilePicture: true,
             },
           },
-          category: true,
+          category: { select: publicCategorySelect },
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
           waves: {
             take: 2,
             orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+            select: publicWavePreviewSelect,
           },
           media: {
             select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -326,10 +338,7 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(ping => ({
-      ...sanitizePingAuthor(ping, userId),
-      hasSurged: Array.isArray(ping.surges) ? ping.surges.length > 0 : false,
-    }));
+    const sanitizedPings = pings.map(ping => withHasSurged(ping, userId));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
 
     return res.status(200).json({
@@ -392,20 +401,20 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
           author: {
             select: {
               id: true,
-              email: true,
               firstName: true,
               lastName: true,
               level: true,
               profilePicture: true
             },
           },
-          category: true,
+          category: { select: publicCategorySelect },
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
           waves: {
             take: 2,
             orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+            select: publicWavePreviewSelect,
           },
           media: {
             select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -418,10 +427,7 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(ping => ({
-      ...sanitizePingAuthor(ping, userId),
-      hasSurged: userId ? (Array.isArray(ping.surges) ? ping.surges.length > 0 : false) : false,
-    }));
+    const sanitizedPings = pings.map(ping => withHasSurged(ping, userId));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, organizationId!);
 
     return res.status(200).json({
@@ -456,30 +462,18 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
         author: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
             level: true,
             profilePicture: true,
           },
         },
-        category: true,
+        category: { select: publicCategorySelect },
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
         waves: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                profilePicture: true,
-              },
-            },
-            _count: { select: { surges: true, comments: true } },
-          },
+          select: publicWavePreviewSelect,
         },
         comments: {
           take: 10,
@@ -487,7 +481,6 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
             author: {
               select: {
                 id: true,
-                email: true,
                 firstName: true,
                 lastName: true,
                 profilePicture: true,
@@ -500,7 +493,6 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
             author: {
               select: {
                 id: true,
-                email: true,
                 firstName: true,
                 lastName: true,
                 profilePicture: true,
@@ -520,9 +512,8 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     const sanitizedPing = {
-      ...sanitizePingAuthor(ping, userId),
+      ...withHasSurged(ping, userId),
       comments: sanitizeComments(ping.comments, userId),
-      hasSurged: userId ? (ping.surges && !!ping.surges.length) : false,
     };
 
     const [pingWithBadges] = await appendPingBadges([sanitizedPing], organizationId!);
@@ -625,20 +616,20 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
         author: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
             level: true,
             profilePicture: true,
           },
         },
-        category: true,
+        category: { select: publicCategorySelect },
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
         waves: {
           take: 2,
           orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+          select: publicWavePreviewSelect,
         },
         media: {
           select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -650,10 +641,7 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
     // Invalidate cache after update
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json({
-      ...sanitizePingAuthor(updatedPing, userId),
-      hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
-    });
+    return res.status(200).json(withHasSurged(updatedPing, userId));
   } catch (error) {
     logger.error('Error updating ping', { error, pingId: req.params.id, userId: req.user?.userId });
     return next(error);
@@ -693,20 +681,20 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
         author: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
             level: true,
             profilePicture: true,
           },
         },
-        category: true,
+        category: { select: publicCategorySelect },
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
         waves: {
           take: 2,
           orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+          select: publicWavePreviewSelect,
         },
         media: {
           select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -718,10 +706,7 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
     // Invalidate cache after status update
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json({
-      ...sanitizePingAuthor(updatedPing, userId),
-      hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
-    });
+    return res.status(200).json(withHasSurged(updatedPing, userId));
   } catch (error) {
     logger.error('Error updating ping status', { error, pingId: req.params.id });
     return next(error);
@@ -753,20 +738,20 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
         author: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
             level: true,
             profilePicture: true,
           },
         },
-        category: true,
+        category: { select: publicCategorySelect },
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
         waves: {
           take: 2,
           orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+          select: publicWavePreviewSelect,
         },
         media: {
           select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -778,10 +763,7 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
     // Invalidate cache after submit
     await invalidateCacheAfterMutation(organizationId);
 
-    return res.status(200).json({
-      ...sanitizePingAuthor(updatedPing, userId),
-      hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
-    });
+    return res.status(200).json(withHasSurged(updatedPing, userId));
   } catch (error) {
     logger.error('Error submitting ping', { error, pingId: req.params.id });
     return next(error);
@@ -830,20 +812,20 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
         author: {
           select: {
             id: true,
-            email: true,
             firstName: true,
             lastName: true,
             level: true,
             profilePicture: true,
           },
         },
-        category: true,
+        category: { select: publicCategorySelect },
         _count: {
           select: { waves: true, comments: true, surges: true },
         },
         waves: {
           take: 2,
           orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+          select: publicWavePreviewSelect,
         },
         media: {
           select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -857,10 +839,7 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
 
     return res.status(200).json({
       message: 'Ping marked as resolved',
-      ping: {
-        ...sanitizePingAuthor(updatedPing, userId),
-        hasSurged: userId ? (Array.isArray(updatedPing.surges) ? updatedPing.surges.length > 0 : false) : false,
-      }
+      ping: withHasSurged(updatedPing, userId)
     });
   } catch (error) {
     logger.error('Error resolving ping', { error, pingId: req.params.id, userId: req.user?.userId });
@@ -901,20 +880,20 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
           author: {
             select: {
               id: true,
-              email: true,
               firstName: true,
               lastName: true,
               level: true,
               profilePicture: true,
             },
           },
-          category: true,
+          category: { select: publicCategorySelect },
           _count: {
             select: { waves: true, comments: true, surges: true },
           },
           waves: {
             take: 2,
             orderBy: [{ surgeCount: 'desc' }, { createdAt: 'desc' }],
+            select: publicWavePreviewSelect,
           },
           media: {
             select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
@@ -927,13 +906,7 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const itemsWithBadges = await appendPingBadges(
-      pings.map(ping => ({
-        ...ping,
-        hasSurged: userId ? (Array.isArray(ping.surges) ? ping.surges.length > 0 : false) : false,
-      })),
-      organizationId!
-    );
+    const itemsWithBadges = await appendPingBadges(pings.map(ping => withHasSurged(ping, userId)), organizationId!);
 
     return res.status(200).json({
       data: itemsWithBadges,
