@@ -261,6 +261,50 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
+## Frontend Contract: Resend Verification
+
+Use this endpoint when a user did not receive a verification email and needs a fresh link.
+
+### Endpoint
+
+```http
+POST /api/users/resend-verification
+Content-Type: application/json
+```
+
+### Request (institutional email)
+
+```json
+{
+  "email": "student@university.edu"
+}
+```
+
+### Request (personal email)
+
+```json
+{
+  "email": "student@gmail.com",
+  "organizationId": 1
+}
+```
+
+### Runtime response contract
+
+```json
+{
+  "message": "If an account exists for that email, a verification link will arrive shortly."
+}
+```
+
+### Frontend behavior notes
+
+1. Treat status `200` as a successful UX action and show a neutral confirmation toast/message.
+2. Do not branch UX on whether account/email exists; backend intentionally returns a generic success message.
+3. Show standard validation errors for malformed payloads (`400`) and retry guidance for rate limits (`429`).
+
+---
+
 ## Postman Collection Setup
 
 Add this to your existing Postman collection:

@@ -14,6 +14,8 @@ vi.mock('../../src/services/emailService.js', () => ({
 describe('Auth register/login', () => {
   const email = 'alice@example.edu';
   const password = 'Password123!';
+  const resendGenericMessage =
+    'If an account exists for that email, a verification link will arrive shortly.';
   let organizationId: number;
 
   beforeAll(async () => {
@@ -140,5 +142,147 @@ describe('Auth register/login', () => {
 
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.token).toBeDefined();
+  });
+
+  it('resends verification and rotates token for unverified users', async () => {
+    const prisma = getPrisma();
+    const request = await buildTestClient({ disableRateLimiting: true });
+    const resendEmail = `resend-${Date.now()}@example.edu`;
+
+    const registerRes = await request
+      .post('/api/users/register')
+      .send({
+        email: resendEmail,
+        password,
+        firstName: 'Resend',
+        lastName: 'Tester',
+      });
+
+    expect(registerRes.status).toBe(201);
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email_organizationId: {
+          email: resendEmail.toLowerCase(),
+          organizationId,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    expect(user).toBeTruthy();
+
+    const tokenBeforeResend = await prisma.emailVerificationToken.findFirst({
+      where: { userId: user!.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(tokenBeforeResend).toBeTruthy();
+
+    const resendRes = await request
+      .post('/api/users/resend-verification')
+      .send({ email: resendEmail });
+
+    expect(resendRes.status).toBe(200);
+    expect(resendRes.body).toHaveProperty('message', resendGenericMessage);
+
+    const tokensAfterResend = await prisma.emailVerificationToken.findMany({
+      where: { userId: user!.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(tokensAfterResend).toHaveLength(1);
+    expect(tokensAfterResend[0].token).not.toBe(tokenBeforeResend!.token);
+    expect(tokensAfterResend[0].used).toBe(false);
+  });
+
+  it('returns generic response for unknown emails without creating tokens', async () => {
+    const prisma = getPrisma();
+    const request = await buildTestClient({ disableRateLimiting: true });
+
+    const tokenCountBefore = await prisma.emailVerificationToken.count();
+
+    const res = await request
+      .post('/api/users/resend-verification')
+      .send({ email: `missing-${Date.now()}@example.edu` });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message', resendGenericMessage);
+
+    const tokenCountAfter = await prisma.emailVerificationToken.count();
+    expect(tokenCountAfter).toBe(tokenCountBefore);
+  });
+
+  it('returns generic response and does not rotate token for verified users', async () => {
+    const prisma = getPrisma();
+    const request = await buildTestClient({ disableRateLimiting: true });
+    const verifiedEmail = `verified-${Date.now()}@example.edu`;
+
+    const registerRes = await request
+      .post('/api/users/register')
+      .send({
+        email: verifiedEmail,
+        password,
+        firstName: 'Verified',
+        lastName: 'Tester',
+      });
+
+    expect(registerRes.status).toBe(201);
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email_organizationId: {
+          email: verifiedEmail.toLowerCase(),
+          organizationId,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    expect(user).toBeTruthy();
+
+    await prisma.user.update({
+      where: { id: user!.id },
+      data: {
+        isVerified: true,
+        status: 'ACTIVE',
+      },
+    });
+
+    const tokenBeforeResend = await prisma.emailVerificationToken.findFirst({
+      where: { userId: user!.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(tokenBeforeResend).toBeTruthy();
+
+    const res = await request
+      .post('/api/users/resend-verification')
+      .send({ email: verifiedEmail });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message', resendGenericMessage);
+
+    const tokensAfterResend = await prisma.emailVerificationToken.findMany({
+      where: { userId: user!.id },
+    });
+
+    expect(tokensAfterResend).toHaveLength(1);
+    expect(tokensAfterResend[0].token).toBe(tokenBeforeResend!.token);
+  });
+
+  it('returns generic response for personal-email resend without organizationId', async () => {
+    const request = await buildTestClient({ disableRateLimiting: true });
+
+    const res = await request
+      .post('/api/users/resend-verification')
+      .send({ email: 'resend.personal@gmail.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message', resendGenericMessage);
   });
 });

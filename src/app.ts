@@ -190,6 +190,7 @@ export function createApp(options: CreateAppOptions = {}) {
     app.use('/api/users/forgot-password', authLimiter);
     app.use('/api/users/reset-password', authLimiter);
     app.use('/api/users/verify-email', authLimiter);
+    app.use('/api/users/resend-verification', authLimiter);
     app.use('/api/users/organization-waitlist', authLimiter);
     app.use('/api/auth/google', authLimiter);
   }

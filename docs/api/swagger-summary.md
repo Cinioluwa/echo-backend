@@ -30,7 +30,7 @@ Successfully implemented professional, standardized public API documentation usi
 - Raw OpenAPI JSON at `/docs/json`
 - Custom styling to hide Swagger UI topbar
 
-### 3. Documented Endpoints (8 total)
+### 3. Documented Endpoints (9 total)
 
 1. **POST /api/auth/google** - Google OAuth authentication
    - Request: Google ID token
@@ -69,6 +69,11 @@ Successfully implemented professional, standardized public API documentation usi
 8. **GET /health, /healthz** - Health checks
    - Deep and shallow health checks
    - No authentication required
+
+9. **POST /api/users/resend-verification** - Resend verification email
+   - Request: email (+ organizationId for personal domains)
+   - Response: Generic success message for secure account enumeration handling
+   - Rate limited as an auth endpoint
 
 ### 4. Documentation Features
 

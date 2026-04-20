@@ -645,6 +645,105 @@ export const verifyEmail = async (
   }
 };
 
+export const resendVerificationEmail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const genericResponse = {
+    message: 'If an account exists for that email, a verification link will arrive shortly.',
+  };
+
+  try {
+    const { email, organizationId } = req.body;
+
+    if (typeof email !== 'string') {
+      return res.status(200).json(genericResponse);
+    }
+
+    let domain: string;
+    try {
+      domain = extractDomainFromEmail(email);
+    } catch {
+      return res.status(200).json(genericResponse);
+    }
+
+    let organization = null as Awaited<
+      ReturnType<typeof prisma.organization.findUnique>
+    >;
+
+    if (isConsumerEmailDomain(domain)) {
+      // Personal email requires explicit org selection.
+      if (!organizationId) {
+        return res.status(200).json(genericResponse);
+      }
+
+      organization = await prisma.organization.findUnique({ where: { id: organizationId } });
+
+      if (!organization) {
+        return res.status(200).json(genericResponse);
+      }
+    } else {
+      for (const candidate of getDomainCandidates(domain)) {
+        // eslint-disable-next-line no-await-in-loop
+        const found = await prisma.organization.findUnique({ where: { domain: candidate } });
+        if (found) {
+          organization = found;
+          break;
+        }
+      }
+
+      if (!organization) {
+        return res.status(200).json(genericResponse);
+      }
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email_organizationId: {
+          email: normalizedEmail,
+          organizationId: organization.id,
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        isVerified: true,
+      },
+    });
+
+    if (!user || user.isVerified) {
+      return res.status(200).json(genericResponse);
+    }
+
+    const tokenRecord = await prisma.$transaction(async (tx) =>
+      createEmailVerificationToken(tx, user.id)
+    );
+
+    const verificationEmail = buildVerificationEmail(
+      tokenRecord.token,
+      user.firstName
+    );
+
+    try {
+      await sendEmail({ to: normalizedEmail, ...verificationEmail });
+    } catch (emailError) {
+      logger.error('Failed to dispatch resend verification email', {
+        email: normalizedEmail,
+        userId: user.id,
+        message: (emailError as Error).message,
+      });
+    }
+
+    return res.status(200).json(genericResponse);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const requestPasswordReset = async (
   req: Request,
   res: Response,

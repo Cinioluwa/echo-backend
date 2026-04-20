@@ -6,6 +6,7 @@ import {
   loginUser, 
   loginWithGoogle,
   verifyEmail,
+  resendVerificationEmail,
   requestPasswordReset,
   resetPassword,
   requestOrganizationOnboarding,
@@ -38,6 +39,7 @@ import {
   updateUserSchema, 
   googleAuthSchema,
   verifyEmailSchema,
+  resendVerificationEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   organizationWaitlistSchema,
@@ -415,6 +417,62 @@ router.get('/verify-email',
 
 // Email verification (API - for Postman/Frontend)
 router.post('/verify-email', validate(verifyEmailSchema), verifyEmail);
+
+/**
+ * @openapi
+ * /api/users/resend-verification:
+ *   post:
+ *     summary: Resend verification email
+ *     description: |
+ *       Requests a fresh email verification link for an unverified account.
+ *
+ *       **Security behavior:** The endpoint always returns a generic success message
+ *       for unknown emails, unknown organizations, and already verified users to avoid
+ *       account enumeration.
+ *
+ *       **Personal email domains:** Include `organizationId` when using personal domains
+ *       (for example gmail.com) so the backend can resolve the correct organization context.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: student@university.edu
+ *               organizationId:
+ *                 type: integer
+ *                 description: Required for personal domains (for example gmail.com)
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: Generic resend response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: If an account exists for that email, a verification link will arrive shortly.
+ *       400:
+ *         description: Invalid request body (validation)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many resend attempts
+ */
+// Resend email verification link (always returns a generic message to avoid account enumeration)
+router.post('/resend-verification', validate(resendVerificationEmailSchema), resendVerificationEmail);
 
 /**
  * @openapi
