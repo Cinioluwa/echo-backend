@@ -1704,3 +1704,195 @@ export const getCommunityMood = async (req: AuthRequest, res: Response, next: Ne
         return next(error);
     }
 };
+
+// ─── By Location ──────────────────────────────────────────────────────────────
+// Groups ping counts (and resolution rates) by author.hall or author.department.
+// No schema migration required — both fields already exist on User.
+export const getPingsByLocation = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const groupBy = (req.query.groupBy as string) === 'department' ? 'department' : 'hall';
+        const window = getWeekWindowFromQuery(req.query);
+        const createdAtFilter = window ? { createdAt: { gte: window.start, lt: window.end } } : undefined;
+
+        const pings = await prisma.ping.findMany({
+            where: {
+                organizationId,
+                ...(createdAtFilter ?? {}),
+            },
+            select: {
+                progressStatus: true,
+                resolvedAt: true,
+                author: {
+                    select: {
+                        hall: true,
+                        department: true,
+                    },
+                },
+            },
+        });
+
+        type LocationBucket = {
+            name: string;
+            totalPings: number;
+            resolvedPings: number;
+        };
+
+        const buckets = new Map<string, LocationBucket>();
+
+        for (const ping of pings) {
+            const rawLocation = groupBy === 'department' ? ping.author.department : ping.author.hall;
+            const location = rawLocation?.trim() || 'Unknown';
+
+            let bucket = buckets.get(location);
+            if (!bucket) {
+                bucket = { name: location, totalPings: 0, resolvedPings: 0 };
+                buckets.set(location, bucket);
+            }
+
+            bucket.totalPings += 1;
+            if (ping.progressStatus === ProgressStatus.RESOLVED || ping.resolvedAt !== null) {
+                bucket.resolvedPings += 1;
+            }
+        }
+
+        const data = Array.from(buckets.values())
+            .map((b) => ({
+                name: b.name,
+                totalPings: b.totalPings,
+                resolvedPings: b.resolvedPings,
+                resolutionRate: b.totalPings === 0 ? 0 : Math.round((b.resolvedPings / b.totalPings) * 100),
+            }))
+            .sort((a, b) => b.totalPings - a.totalPings);
+
+        return res.status(200).json({
+            groupBy,
+            ...(window
+                ? { window: { weeks: window.weeks, offsetWeeks: window.offsetWeeks, start: window.start, end: window.end } }
+                : {}),
+            data,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+// ─── Stalling Pings ───────────────────────────────────────────────────────────
+// Returns IN_PROGRESS pings whose progressUpdatedAt hasn't moved in N days.
+// Surfaces the follow-up queue items the soundboard "Under-review pings stalling" card needs.
+export const getStallingPings = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const staleDays = clampInt(req.query.staleDays, 14, 1, 365);
+        const limit = clampInt(req.query.limit, 10, 1, 100);
+
+        const cutoff = new Date(Date.now() - staleDays * MS_IN_DAY);
+
+        const pings = await prisma.ping.findMany({
+            where: {
+                organizationId,
+                progressStatus: ProgressStatus.IN_PROGRESS,
+                progressUpdatedAt: { lt: cutoff },
+            },
+            take: limit,
+            orderBy: { progressUpdatedAt: 'asc' }, // oldest stall first
+            include: {
+                category: { select: { id: true, name: true } },
+                _count: { select: { waves: true, surges: true } },
+            },
+        });
+
+        const now = Date.now();
+
+        const data = pings.map((ping) => {
+            const lastUpdated = ping.progressUpdatedAt!;
+            const daysStalled = Math.floor((now - lastUpdated.getTime()) / MS_IN_DAY);
+
+            return {
+                id: ping.id,
+                title: ping.title,
+                progressStatus: ping.progressStatus,
+                progressUpdatedAt: ping.progressUpdatedAt,
+                daysStalled,
+                categoryId: ping.categoryId,
+                categoryName: ping.category?.name ?? 'Unknown',
+                surgeCount: ping.surgeCount,
+                waveCount: ping._count.waves,
+            };
+        });
+
+        return res.status(200).json({
+            staleDays,
+            limit,
+            cutoff,
+            count: data.length,
+            data,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+// ─── Activity Time-Series ─────────────────────────────────────────────────────
+// Returns day-by-day buckets of pings created, waves created, and pings resolved
+// for the community activity line chart on the soundboard.
+export const getActivityTimeSeries = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const days = clampInt(req.query.days, 7, 1, 90);
+
+        const now = new Date();
+        const start = new Date(now.getTime() - days * MS_IN_DAY);
+
+        const [pingsCreated, wavesCreated, pingsResolved] = await prisma.$transaction([
+            prisma.ping.findMany({
+                where: { organizationId, createdAt: { gte: start } },
+                select: { createdAt: true },
+            }),
+            prisma.wave.findMany({
+                where: { organizationId, createdAt: { gte: start } },
+                select: { createdAt: true },
+            }),
+            prisma.ping.findMany({
+                where: { organizationId, resolvedAt: { gte: start } },
+                select: { resolvedAt: true },
+            }),
+        ]);
+
+        // Pre-fill every day in the range with zero counts so the chart has no gaps.
+        const toKey = (date: Date) => date.toISOString().slice(0, 10);
+
+        const buckets: Record<string, { date: string; pings: number; waves: number; resolved: number }> = {};
+        for (let i = 0; i < days; i++) {
+            const key = toKey(new Date(start.getTime() + i * MS_IN_DAY));
+            buckets[key] = { date: key, pings: 0, waves: 0, resolved: 0 };
+        }
+
+        for (const p of pingsCreated) {
+            const key = toKey(p.createdAt);
+            if (buckets[key]) buckets[key].pings += 1;
+        }
+
+        for (const w of wavesCreated) {
+            const key = toKey(w.createdAt);
+            if (buckets[key]) buckets[key].waves += 1;
+        }
+
+        for (const p of pingsResolved) {
+            if (!p.resolvedAt) continue;
+            const key = toKey(p.resolvedAt);
+            if (buckets[key]) buckets[key].resolved += 1;
+        }
+
+        const series = Object.values(buckets).sort((a, b) => a.date.localeCompare(b.date));
+
+        return res.status(200).json({
+            days,
+            start,
+            end: now,
+            series,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};

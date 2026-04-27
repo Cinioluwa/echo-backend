@@ -110,3 +110,24 @@ export const communityMoodSchema = z.object({
     days: z.coerce.number().int().min(1).max(365).default(30),
   }),
 });
+
+export const pingsByLocationSchema = z.object({
+  query: z.object({
+    groupBy: z.enum(['hall', 'department']).default('hall'),
+    weeks: z.coerce.number().int().min(1).max(52).optional(),
+    offsetWeeks: z.coerce.number().int().min(0).max(520).optional(),
+  }),
+});
+
+export const stallingPingsSchema = z.object({
+  query: z.object({
+    staleDays: z.coerce.number().int().min(1).max(365).default(14),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+  }),
+});
+
+export const activityTimeSeriesSchema = z.object({
+  query: z.object({
+    days: z.coerce.number().int().min(1).max(90).default(7),
+  }),
+});

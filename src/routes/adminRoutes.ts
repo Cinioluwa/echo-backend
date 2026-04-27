@@ -24,6 +24,9 @@ import {
     getSurgingIssues,
     getTopContributors,
     getCommunityMood,
+    getPingsByLocation,
+    getStallingPings,
+    getActivityTimeSeries,
 
 } from '../controllers/adminController.js';
 import {
@@ -57,6 +60,9 @@ import {
     topContributorsSchema,
     updateOrganizationJoinPolicySchema,
     updateUserRoleSchema,
+    pingsByLocationSchema,
+    stallingPingsSchema,
+    activityTimeSeriesSchema,
 } from '../schemas/adminSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
 import {
@@ -1334,6 +1340,139 @@ router.get('/waves', authMiddleware, adminMiddleware, organizationMiddleware, va
  *         description: Admin access required
  */
 router.patch('/waves/:id/status', authMiddleware, adminMiddleware, organizationMiddleware, validate(waveIdParamSchema), validate(updateWaveStatusSchema), updateWaveStatusAsAdmin);
+
+/**
+ * @openapi
+ * /api/admin/analytics/by-location:
+ *   get:
+ *     summary: Get ping breakdown by author location
+ *     description: |
+ *       Groups ping counts and resolution rates by author hall (default) or department.
+ *       Sourced from existing User.hall / User.department fields — no migration required.
+ *
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: groupBy
+ *         schema:
+ *           type: string
+ *           enum: [hall, department]
+ *           default: hall
+ *       - in: query
+ *         name: weeks
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 52
+ *       - in: query
+ *         name: offsetWeeks
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 520
+ *     responses:
+ *       200:
+ *         description: Location breakdown retrieved
+ *       403:
+ *         description: Admin access required
+ */
+router.get(
+    '/analytics/by-location',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(pingsByLocationSchema),
+    cache(120),
+    getPingsByLocation
+);
+
+/**
+ * @openapi
+ * /api/admin/pings/stalling:
+ *   get:
+ *     summary: Get IN_PROGRESS pings that haven't been updated in N days
+ *     description: |
+ *       Returns pings with progressStatus=IN_PROGRESS whose progressUpdatedAt
+ *       is older than staleDays. Powers the "stalling pings" follow-up queue
+ *       on the soundboard.
+ *
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: staleDays
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 365
+ *           default: 14
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Stalling pings retrieved
+ *       403:
+ *         description: Admin access required
+ */
+router.get(
+    '/pings/stalling',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(stallingPingsSchema),
+    cache(60),
+    getStallingPings
+);
+
+/**
+ * @openapi
+ * /api/admin/analytics/activity:
+ *   get:
+ *     summary: Get day-by-day activity time-series
+ *     description: |
+ *       Returns daily buckets of pings created, waves created, and pings resolved
+ *       over a rolling window. Powers the community activity line chart on the soundboard.
+ *
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 90
+ *           default: 7
+ *     responses:
+ *       200:
+ *         description: Activity time-series retrieved
+ *       403:
+ *         description: Admin access required
+ */
+router.get(
+    '/analytics/activity',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(activityTimeSeriesSchema),
+    cache(60),
+    getActivityTimeSeries
+);
 
 export default router;
 
