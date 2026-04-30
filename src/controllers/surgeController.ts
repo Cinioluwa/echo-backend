@@ -6,6 +6,8 @@ import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitPingSurgeUpdate, emitWaveSurgeUpdate, emitCommentSurgeUpdate } from '../utils/socketEmitter.js';
+import { createNotification } from '../services/notificationService.js';
+import { sendEmail, buildPingSurgedMilestoneEmail } from '../services/emailService.js';
 // @desc    Toggle surge on a ping
 // @route   POST /api/pings/:pingId/surge
 // @access  Private
@@ -26,6 +28,7 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
         id: pingIdInt,
         organizationId: req.organizationId!,
       },
+      include: { author: { select: { email: true } } },
     });
 
     if (!ping) {
@@ -86,6 +89,27 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
     await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
     // Invalidate cache after surge toggle
     await invalidateCacheAfterMutation(req.organizationId);
+
+    // Milestone Check
+    const milestones = [10, 50, 100, 500, 1000];
+    if (milestones.includes(count) && ping.authorId !== userId) {
+      await createNotification(prisma as any, {
+        userId: ping.authorId,
+        organizationId: req.organizationId!,
+        type: 'PING_SURGED_MILESTONE',
+        title: 'Ping milestone reached!',
+        body: `Your ping "${ping.title}" has reached ${count} surges.`,
+        pingId: ping.id,
+      });
+
+      if (ping.author.email) {
+        const emailContent = buildPingSurgedMilestoneEmail(ping.title, count, ping.id);
+        setImmediate(() => {
+          sendEmail({ to: ping.author.email, ...emailContent }).catch(() => {});
+        });
+      }
+    }
+
     emitPingSurgeUpdate(req.organizationId!, { pingId: pingIdInt, surgeCount: count, surged: true });
     return res.status(200).json({ message: 'Ping surged', surged: true, surgeCount: count });
   } catch (error) {

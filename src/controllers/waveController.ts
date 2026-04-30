@@ -1,10 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitWaveCreated, emitWaveDeleted } from '../utils/socketEmitter.js';
 import { appendWaveBadges } from '../utils/waveBadges.js';
+import { createNotification } from '../services/notificationService.js';
 
 // @desc    Create a new wave (solution) for a ping
 // @route   POST /api/pings/:pingId/waves
@@ -29,6 +30,7 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
     // Verify the ping exists in the user's org
     const ping = await prisma.ping.findFirst({
       where: { id: parseInt(pingId), organizationId },
+      include: { author: true },
     });
 
     if (!ping) {
@@ -88,6 +90,19 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
     await invalidateCacheAfterMutation(organizationId);
 
     emitWaveCreated(organizationId, waveWithMedia!);
+
+    if (ping.authorId !== userId) {
+      const authorName = waveWithMedia!.author.firstName ? `${waveWithMedia!.author.firstName} ${waveWithMedia!.author.lastName || ''}`.trim() : 'Someone';
+      await createNotification(prisma as any, {
+        userId: ping.authorId,
+        organizationId,
+        type: 'NEW_WAVE_ON_PING',
+        title: 'New wave proposed',
+        body: `${authorName} proposed a new wave for your ping "${ping.title}"`,
+        pingId: ping.id,
+        waveId: newWave.id,
+      });
+    }
 
     return res.status(201).json(waveWithMedia);
   } catch (error) {

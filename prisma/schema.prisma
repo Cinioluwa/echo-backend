@@ -82,6 +82,7 @@ model User {
   notificationPreference           NotificationPreference?
   userPreference                   UserPreference?
   displayNameHistories             DisplayNameHistory[]
+  pushSubscriptions                PushSubscription[]
 
   @@unique([email, organizationId]) // Email unique per org
   // New performance indexes
@@ -326,6 +327,20 @@ model Notification {
   @@index([organizationId, createdAt(sort: Desc)])
 }
 
+// Web Push Subscription Model
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId])
+}
+
 // Invitation Model
 model Invitation {
   id        Int      @id @default(autoincrement())
@@ -520,6 +535,9 @@ enum NotificationType {
   WAVE_STATUS_UPDATED
   COMMENT_REPLY
   POST_REPORTED
+  NEW_WAVE_ON_PING
+  NEW_COMMENT_ON_POST
+  PING_SURGED_MILESTONE
 }
 
 enum ReportStatus {

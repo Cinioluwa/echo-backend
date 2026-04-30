@@ -1,10 +1,12 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitCommentOnPing, emitCommentOnWave, emitCommentReplyOnPing } from '../utils/socketEmitter.js';
 import { emitNotification } from '../utils/socketEmitter.js';
+import { createNotification } from '../services/notificationService.js';
+import { sendEmail, buildNewCommentEmail } from '../services/emailService.js';
 
 // ─── Author select shape (reused everywhere) ───────────────────────────────
 const AUTHOR_SELECT = {
@@ -23,7 +25,7 @@ const sanitizeComment = (comment: any, currentUserId?: string | number) => {
   const isOwner = currentUserId ? comment.authorId === currentUserId : false;
 
   if (comment.isAnonymous) {
-    const { authorId, author, ...rest } = comment;
+    const { authorId: _authorId, author: _author, ...rest } = comment;
     return {
       ...rest,
       author: null,
@@ -60,6 +62,7 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
 
     const ping = await prisma.ping.findFirst({
       where: { id: parseInt(pingId), organizationId },
+      include: { author: { select: { email: true, firstName: true } } },
     });
     if (!ping) return res.status(404).json({ error: 'Ping not found or access denied' });
 
@@ -91,6 +94,26 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
     const sanitizedComment = sanitizeComment(newComment, userId);
     await invalidateCacheAfterMutation(organizationId);
     emitCommentOnPing(parseInt(pingId), sanitizedComment);
+
+    if (ping.authorId !== userId) {
+      const commenterName = isAnonymousPost ? 'Someone' : (newComment.author.firstName ? `${newComment.author.firstName} ${newComment.author.lastName || ''}`.trim() : 'Someone');
+      await createNotification(prisma as any, {
+        userId: ping.authorId,
+        organizationId: organizationId!,
+        type: 'NEW_COMMENT_ON_POST',
+        title: 'New comment',
+        body: `${commenterName} commented on your ping "${ping.title}"`,
+        pingId: ping.id,
+        commentId: newComment.id,
+      });
+
+      if (ping.author.email) {
+        const emailContent = buildNewCommentEmail(ping.title, commenterName, `/feed/${ping.id}`);
+        setImmediate(() => {
+          sendEmail({ to: ping.author.email, ...emailContent }).catch(() => {});
+        });
+      }
+    }
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {
@@ -309,6 +332,7 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
 
     const wave = await prisma.wave.findFirst({
       where: { id: parseInt(waveId), organizationId },
+      include: { author: { select: { email: true, firstName: true } }, ping: { select: { id: true, title: true } } },
     });
     if (!wave) return res.status(404).json({ error: 'Wave not found' });
 
@@ -340,6 +364,27 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     const sanitizedComment = sanitizeComment(newComment, userId);
     await invalidateCacheAfterMutation(organizationId);
     emitCommentOnWave(parseInt(waveId), sanitizedComment);
+
+    if (wave.authorId !== userId) {
+      const commenterName = isAnonymousPost ? 'Someone' : (newComment.author.firstName ? `${newComment.author.firstName} ${newComment.author.lastName || ''}`.trim() : 'Someone');
+      await createNotification(prisma as any, {
+        userId: wave.authorId,
+        organizationId: organizationId!,
+        type: 'NEW_COMMENT_ON_POST',
+        title: 'New comment',
+        body: `${commenterName} commented on your wave for "${wave.ping.title}"`,
+        pingId: wave.pingId,
+        waveId: wave.id,
+        commentId: newComment.id,
+      });
+
+      if (wave.author.email) {
+        const emailContent = buildNewCommentEmail(wave.ping.title, commenterName, `/feed/${wave.pingId}`);
+        setImmediate(() => {
+          sendEmail({ to: wave.author.email, ...emailContent }).catch(() => {});
+        });
+      }
+    }
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {

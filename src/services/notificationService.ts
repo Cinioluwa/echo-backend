@@ -1,5 +1,6 @@
 import type { NotificationType } from '@prisma/client';
 import { emitNotification } from '../utils/socketEmitter.js';
+import { sendPushNotification } from './pushNotificationService.js';
 
 type PrismaLike = {
   notification: {
@@ -24,6 +25,7 @@ export type CreateNotificationInput = {
   pingId?: number;
   waveId?: number;
   announcementId?: number;
+  commentId?: number;
 };
 
 const DEFAULT_PREFERENCES = {
@@ -70,10 +72,17 @@ export const createNotification = async (db: PrismaLike, input: CreateNotificati
       pingId: input.pingId,
       waveId: input.waveId,
       announcementId: input.announcementId,
+      commentId: input.commentId,
     },
   });
 
   emitNotification(input.userId, notification);
+
+  sendPushNotification(input.userId, {
+    title: input.title,
+    body: input.body,
+    url: input.pingId ? `/feed/${input.pingId}` : '/',
+  }).catch(() => {});
 
   return notification;
 };

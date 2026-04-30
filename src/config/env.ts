@@ -49,6 +49,11 @@ const envSchema = z.object({
 
   // Upload settings
   MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(10),
+
+  // Web Push (VAPID)
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().url('VAPID_SUBJECT must be a valid mailto: or URL').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

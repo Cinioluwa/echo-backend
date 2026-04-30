@@ -356,3 +356,46 @@ This invitation expires in 7 days.
 — The Echo Team`,
 	};
 };
+
+export const buildNewWaveOnPingEmail = (pingTitle: string, waveAuthorName: string, pingId: number) => {
+	const pingUrl = `${sanitizeAppUrl()}/feed/${pingId}`;
+	return {
+		subject: `New wave proposed for your ping: ${pingTitle}`,
+		html: `
+			<p>Hi,</p>
+			<p><strong>${waveAuthorName}</strong> just proposed a new wave (solution) for your ping <em>"${pingTitle}"</em>.</p>
+			<p><a href="${pingUrl}">Click here to view the wave</a></p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,\n\n${waveAuthorName} just proposed a new wave (solution) for your ping "${pingTitle}".\n\nView it here: ${pingUrl}\n\n— The Echo Team`,
+	};
+};
+
+export const buildNewCommentEmail = (postTitle: string, commenterName: string, urlPath: string) => {
+	const postUrl = `${sanitizeAppUrl()}${urlPath}`;
+	return {
+		subject: `New comment on: ${postTitle}`,
+		html: `
+			<p>Hi,</p>
+			<p><strong>${commenterName}</strong> just left a comment on <em>"${postTitle}"</em>.</p>
+			<p><a href="${postUrl}">Click here to view the comment</a></p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,\n\n${commenterName} just left a comment on "${postTitle}".\n\nView it here: ${postUrl}\n\n— The Echo Team`,
+	};
+};
+
+export const buildPingSurgedMilestoneEmail = (pingTitle: string, surgeCount: number, pingId: number) => {
+	const pingUrl = `${sanitizeAppUrl()}/feed/${pingId}`;
+	return {
+		subject: `Your ping is blowing up! ${surgeCount} surges 🚀`,
+		html: `
+			<p>Hi,</p>
+			<p>Your ping <em>"${pingTitle}"</em> has just reached <strong>${surgeCount} surges</strong>!</p>
+			<p>Your community is highly engaged with this topic.</p>
+			<p><a href="${pingUrl}">Click here to view your ping</a></p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,\n\nYour ping "${pingTitle}" has just reached ${surgeCount} surges!\nYour community is highly engaged with this topic.\n\nView it here: ${pingUrl}\n\n— The Echo Team`,
+	};
+};
