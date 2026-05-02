@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/authMiddleware.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 import {
   subscribe,
   unsubscribe,
@@ -8,8 +8,8 @@ import {
 
 const router = Router();
 
-router.post('/subscribe', requireAuth, subscribe);
-router.delete('/unsubscribe', requireAuth, unsubscribe);
+router.post('/subscribe', authMiddleware, subscribe);
+router.delete('/unsubscribe', authMiddleware, unsubscribe);
 router.get('/vapid-public-key', getVapidPublicKey);
 
 export default router;

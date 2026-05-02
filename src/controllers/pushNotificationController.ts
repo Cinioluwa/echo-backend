@@ -5,7 +5,7 @@ import { env } from '../config/env.js';
 
 export const subscribe = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user!.id;
+        const userId = req.user!.userId;
         const { endpoint, keys } = req.body;
 
         if (!endpoint || !keys?.p256dh || !keys?.auth) {
@@ -35,7 +35,7 @@ export const subscribe = async (req: AuthRequest, res: Response, next: NextFunct
 
 export const unsubscribe = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user!.id;
+        const userId = req.user!.userId;
         const { endpoint } = req.body;
 
         if (!endpoint) {
