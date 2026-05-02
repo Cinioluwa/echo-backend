@@ -486,21 +486,24 @@ export const updateWave = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(404).json({ error: 'Wave not found' });
     }
 
-    // Allow the wave's own author or the ping's author to update
-    const ping = await prisma.ping.findUnique({
-      where: { id: wave.pingId },
-      select: { authorId: true },
-    });
+    // Only the wave's own author can edit their wave content
+    if (wave.authorId !== userId) {
+      return res.status(403).json({ error: 'Forbidden: Only the wave author can edit their wave' });
+    }
 
-    const isWaveAuthor = wave.authorId === userId;
-    const isPingAuthor = ping?.authorId === userId;
-
-    if (!isWaveAuthor && !isPingAuthor) {
-      return res.status(403).json({ error: 'Forbidden: Only the wave author or ping author can update waves' });
+    // Enforce 5-minute edit window
+    const EDIT_WINDOW_MS = 5 * 60 * 1000;
+    if (Date.now() - wave.createdAt.getTime() > EDIT_WINDOW_MS) {
+      return res.status(403).json({
+        error: 'Waves can only be edited within 5 minutes of creation',
+        code: 'EDIT_WINDOW_EXPIRED',
+      });
     }
 
     const updateData: any = {};
     if (solution !== undefined) updateData.solution = solution;
+    // Mark as edited when content actually changes
+    if (solution !== undefined) updateData.isEdited = true;
 
     const updatedWave = await prisma.wave.update({
       where: { id: parseInt(id) },

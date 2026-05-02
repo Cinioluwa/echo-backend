@@ -10,152 +10,153 @@ generator testClient {
 
 // Tenancy Model
 model Organization {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  domain      String?      @unique // Null indicates open-domain organizations
-  joinPolicy  JoinPolicy   @default(OPEN)
-  isDomainLocked Boolean   @default(false)
-  isClaimVerified Boolean  @default(true)
-  categoryCustomizationLocked Boolean @default(false)
-  status      String       @default("PENDING") // PENDING, ACTIVE
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                          Int        @id @default(autoincrement())
+  name                        String     @unique
+  domain                      String?    @unique // Null indicates open-domain organizations
+  joinPolicy                  JoinPolicy @default(OPEN)
+  isDomainLocked              Boolean    @default(false)
+  isClaimVerified             Boolean    @default(true)
+  categoryCustomizationLocked Boolean    @default(false)
+  status                      String     @default("PENDING") // PENDING, ACTIVE
+  createdAt                   DateTime   @default(now())
+  updatedAt                   DateTime   @updatedAt
 
-  users       User[]
-  pings       Ping[]
-  waves       Wave[]
-  comments    Comment[]
-  surges      Surge[]
-  announcements Announcement[]
+  users             User[]
+  pings             Ping[]
+  waves             Wave[]
+  comments          Comment[]
+  surges            Surge[]
+  announcements     Announcement[]
   officialResponses OfficialResponse[]
-  invitations Invitation[]
-  categories  Category[] // An organization can have many custom categories
-  requests    OrganizationRequest[]
-  joinRequests OrganizationJoinRequest[]
-  claims      OrganizationClaim[]
-  reports     Report[]
-  notifications Notification[]
-  media       Media[]
+  invitations       Invitation[]
+  categories        Category[] // An organization can have many custom categories
+  requests          OrganizationRequest[]
+  joinRequests      OrganizationJoinRequest[]
+  claims            OrganizationClaim[]
+  reports           Report[]
+  notifications     Notification[]
+  media             Media[]
 }
 
 // User Model with Organization Link
 model User {
-  id             Int      @id @default(autoincrement())
-  email          String
-  firstName      String?
-  lastName       String?
-  level          Int?
-  department     String?
-  hall           String?
-  password       String?  // Optional for Google OAuth users
-  googleId       String?  @unique // Google's unique user identifier
-  profilePicture String?  // Store Google profile picture URL
-  isVerified     Boolean  @default(false) // Email verification status
-  role           Role     @default(USER)
-  status         String   @default("PENDING") // PENDING, ACTIVE
-  displayName    String?
+  id                   Int       @id @default(autoincrement())
+  email                String
+  firstName            String?
+  lastName             String?
+  level                Int?
+  department           String?
+  hall                 String?
+  password             String? // Optional for Google OAuth users
+  googleId             String?   @unique // Google's unique user identifier
+  profilePicture       String? // Store Google profile picture URL
+  isVerified           Boolean   @default(false) // Email verification status
+  role                 Role      @default(USER)
+  status               String    @default("PENDING") // PENDING, ACTIVE
+  displayName          String?
   displayNameUpdatedAt DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  pings              Ping[]
-  comments           Comment[]
-  surges             Surge[]
-  announcements      Announcement[]
-  officialResponses  OfficialResponse[]
+  pings                            Ping[]
+  comments                         Comment[]
+  surges                           Surge[]
+  announcements                    Announcement[]
+  officialResponses                OfficialResponse[]
   // Waves authored by this user
-  wavesAuthored      Wave[] @relation("Wave_author")
+  wavesAuthored                    Wave[]                    @relation("Wave_author")
   // Waves flagged by this user (representative forwarding)
-  flaggedWaves       Wave[] @relation("WaveFlaggedBy")
-  emailVerificationTokens EmailVerificationToken[]
-  passwordResetTokens      PasswordResetToken[]
-  organizationJoinRequests OrganizationJoinRequest[] @relation("JoinRequestUser")
+  flaggedWaves                     Wave[]                    @relation("WaveFlaggedBy")
+  emailVerificationTokens          EmailVerificationToken[]
+  passwordResetTokens              PasswordResetToken[]
+  organizationJoinRequests         OrganizationJoinRequest[] @relation("JoinRequestUser")
   reviewedOrganizationJoinRequests OrganizationJoinRequest[] @relation("JoinRequestReviewer")
-  organizationClaims OrganizationClaim[] @relation("OrganizationClaimUser")
-  reviewedOrganizationClaims OrganizationClaim[] @relation("OrganizationClaimReviewer")
-  reports             Report[]
-  notifications       Notification[]
-  media               Media[]
-  notificationPreference          NotificationPreference?
-  userPreference                  UserPreference?
-  displayNameHistories DisplayNameHistory[]
+  organizationClaims               OrganizationClaim[]       @relation("OrganizationClaimUser")
+  reviewedOrganizationClaims       OrganizationClaim[]       @relation("OrganizationClaimReviewer")
+  reports                          Report[]
+  notifications                    Notification[]
+  media                            Media[]
+  notificationPreference           NotificationPreference?
+  userPreference                   UserPreference?
+  displayNameHistories             DisplayNameHistory[]
+  pushSubscriptions                PushSubscription[]
 
   @@unique([email, organizationId]) // Email unique per org
-
   // New performance indexes
   @@index([organizationId, email])
   @@index([organizationId, role])
+  @@index([displayName])
 }
 
 model NotificationPreference {
-  id Int @id @default(autoincrement())
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int @unique
-  waveStatusUpdated Boolean @default(true)
-  officialResponse Boolean @default(true)
-  announcement Boolean @default(true)
-  commentSurge Boolean @default(true)
-  pingCreated Boolean @default(true)
-  commentReply Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            Int      @unique
+  waveStatusUpdated Boolean  @default(true)
+  officialResponse  Boolean  @default(true)
+  announcement      Boolean  @default(true)
+  commentSurge      Boolean  @default(true)
+  pingCreated       Boolean  @default(true)
+  commentReply      Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // User behaviour / posting preferences (separate from notification settings)
 model UserPreference {
-  id                 Int      @id @default(autoincrement())
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId             Int      @unique
-  commentAnonymously Boolean  @default(false)
-  pingAnonymously    Boolean  @default(false)
-  anonymousAlias     String?  // Optional alias shown on anonymous posts (2-30 chars when set)
+  id                           Int       @id @default(autoincrement())
+  user                         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                       Int       @unique
+  commentAnonymously           Boolean   @default(false)
+  pingAnonymously              Boolean   @default(false)
+  anonymousAlias               String? // Optional alias shown on anonymous posts (2-30 chars when set)
   anonymousAliasProfilePicture String? // Optional alias profile picture URL shown on anonymous posts
-  anonymousAliasUpdatedAt DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  anonymousAliasUpdatedAt      DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 }
 
 // Dynamic Category Model (Replaces Enum)
 model Category {
-  id             Int      @id @default(autoincrement())
-  name           String
-  createdAt      DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  pings          Ping[]
-  announcements  Announcement[]
+  pings Ping[]
 
   @@unique([name, organizationId])
 }
 
 // Content Models with Organization Link and Dynamic Category
 model Ping {
-  id               Int      @id @default(autoincrement())
-  title            String
-  content          String
-  hashtag          String?
-  status           Status   @default(POSTED)
-  progressStatus   ProgressStatus @default(NONE)
-  progressUpdatedAt DateTime?
-  acknowledgedAt   DateTime?
-  resolvedAt       DateTime?
-  createdAt        DateTime @default(now())
-  surgeCount       Int      @default(0)
-  isAnonymous      Boolean  @default(false)
-  anonymousAlias   String?
+  id                      Int            @id @default(autoincrement())
+  title                   String
+  content                 String
+  hashtag                 String?
+  status                  Status         @default(POSTED)
+  progressStatus          ProgressStatus @default(NONE)
+  progressUpdatedAt       DateTime?
+  acknowledgedAt          DateTime?
+  resolvedAt              DateTime?
+  createdAt               DateTime       @default(now())
+  surgeCount              Int            @default(0)
+  isAnonymous             Boolean        @default(false)
+  isEdited                Boolean        @default(false) // True if the author edited content after posting
+  anonymousAlias          String?
   anonymousProfilePicture String?
 
-  author           User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId         Int
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId   Int
-  category         Category     @relation(fields: [categoryId], references: [id])
-  categoryId       Int
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId       Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+  category       Category     @relation(fields: [categoryId], references: [id])
+  categoryId     Int
 
   comments         Comment[]
   surges           Surge[]
@@ -166,14 +167,13 @@ model Ping {
   media            Media[]
 
   // Database indexes for query performance
-  @@index([authorId])                      // Used in getMyPings and foreign key joins
-  @@index([organizationId])                // Multitenancy filter
-  @@index([categoryId])                    // Used in filtering getAllPings
-  @@index([status])                        // Used in filtering getAllPings
-  @@index([hashtag])                       // Used in searchPings by hashtag
-  @@index([createdAt(sort: Desc)])         // Used for orderBy in most queries
+  @@index([authorId]) // Used in getMyPings and foreign key joins
+  @@index([organizationId]) // Multitenancy filter
+  @@index([categoryId]) // Used in filtering getAllPings
+  @@index([status]) // Used in filtering getAllPings
+  @@index([hashtag]) // Used in searchPings by hashtag
+  @@index([createdAt(sort: Desc)]) // Used for orderBy in most queries
   @@index([status, categoryId, createdAt]) // Composite index for common filter + sort pattern
-
   // New performance indexes
   @@index([organizationId, createdAt])
   @@index([organizationId, status])
@@ -188,55 +188,56 @@ model Wave {
   viewCount        Int      @default(0)
   surgeCount       Int      @default(0)
   flaggedForReview Boolean  @default(false)
+  isEdited         Boolean  @default(false) // True if the author edited content after posting
   createdAt        DateTime @default(now())
 
-  ping             Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
-  pingId           Int
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId   Int
+  ping           Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId         Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
 
-  author           User         @relation("Wave_author", fields: [authorId], references: [id], onDelete: Cascade)
-  authorId         Int
+  author   User @relation("Wave_author", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId Int
 
-  comments         Comment[]
-  surges           Surge[]
-  reports          Report[]
-  flaggedBy        User?        @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
-  flaggedById      Int?
-  notifications    Notification[]
-  media            Media[]
-  reason           String?      // Populated when status is REJECTED or ON_HOLD
+  comments      Comment[]
+  surges        Surge[]
+  reports       Report[]
+  flaggedBy     User?          @relation("WaveFlaggedBy", fields: [flaggedById], references: [id])
+  flaggedById   Int?
+  notifications Notification[]
+  media         Media[]
+  reason        String? // Populated when status is REJECTED or ON_HOLD
 
   // Database indexes for query performance
-  @@index([pingId])                  // Foreign key for getWavesForPing
-  @@index([organizationId])          // Multitenancy filter
-  @@index([viewCount(sort: Desc)])   // Sort by most viewed waves
-  @@index([createdAt(sort: Desc)])   // Sort by newest waves
-  @@index([authorId])                // For querying waves by author
-
+  @@index([pingId]) // Foreign key for getWavesForPing
+  @@index([organizationId]) // Multitenancy filter
+  @@index([viewCount(sort: Desc)]) // Sort by most viewed waves
+  @@index([createdAt(sort: Desc)]) // Sort by newest waves
+  @@index([authorId]) // For querying waves by author
   // New performance indexes
   @@index([organizationId, pingId])
   @@index([organizationId, status])
 }
 
 model Comment {
-  id             Int      @id @default(autoincrement())
-  content        String
-  createdAt      DateTime @default(now())
-  isAnonymous    Boolean  @default(false)
-  anonymousAlias String?
+  id                      Int      @id @default(autoincrement())
+  content                 String
+  createdAt               DateTime @default(now())
+  isAnonymous             Boolean  @default(false)
+  isEdited                Boolean  @default(false) // True if the author edited content after posting
+  anonymousAlias          String?
   anonymousProfilePicture String?
-  surgeCount     Int      @default(0)
+  surgeCount              Int      @default(0)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  ping           Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
-  pingId         Int?
-  wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
-  waveId         Int?
+  ping   Ping? @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId Int?
+  wave   Wave? @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId Int?
 
   // Single-level threaded replies (ping comments only)
   parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
@@ -248,39 +249,38 @@ model Comment {
   notifications Notification[]
 
   // Database indexes for query performance
-  @@index([pingId])                  // Foreign key for getCommentsForPing
-  @@index([waveId])                  // Foreign key for getCommentsForWave
-  @@index([organizationId])          // Multitenancy filter
-  @@index([authorId])                // Find user's comments
-  @@index([createdAt(sort: Desc)])   // Sort by newest comments
-  @@index([parentCommentId])         // Fetch replies for a comment
+  @@index([pingId]) // Foreign key for getCommentsForPing
+  @@index([waveId]) // Foreign key for getCommentsForWave
+  @@index([organizationId]) // Multitenancy filter
+  @@index([authorId]) // Find user's comments
+  @@index([createdAt(sort: Desc)]) // Sort by newest comments
+  @@index([parentCommentId]) // Fetch replies for a comment
   // Composite indexes
   @@index([organizationId, pingId])
 }
 
 model Surge {
-  id             Int      @id @default(autoincrement())
-  createdAt      DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
 
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         Int
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  ping           Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
-  pingId         Int?
-  wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
-  waveId         Int?
-  comment        Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  commentId      Int?
+  ping      Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId    Int?
+  wave      Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId    Int?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId Int?
 
   // Database indexes for query performance
-  @@index([userId])            // Find user's surges
-  @@index([organizationId])    // Multitenancy filter
-  @@index([pingId, userId])    // Check if user surged a ping (toggle surge)
-  @@index([waveId, userId])    // Check if user surged a wave (toggle surge)
+  @@index([userId]) // Find user's surges
+  @@index([organizationId]) // Multitenancy filter
+  @@index([pingId, userId]) // Check if user surged a ping (toggle surge)
+  @@index([waveId, userId]) // Check if user surged a wave (toggle surge)
   @@index([commentId, userId]) // Check if user surged a comment (toggle surge)
-
   // New performance indexes
   @@index([organizationId, pingId])
   @@index([organizationId, userId])
@@ -288,10 +288,10 @@ model Surge {
 }
 
 model OfficialResponse {
-  id             Int      @id @default(autoincrement())
-  content        String
-  createdAt      DateTime @default(now())
-  isResolved     Boolean  @default(false)
+  id         Int      @id @default(autoincrement())
+  content    String
+  createdAt  DateTime @default(now())
+  isResolved Boolean  @default(false)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
@@ -302,35 +302,32 @@ model OfficialResponse {
 }
 
 model Announcement {
-  id             Int      @id @default(autoincrement())
-  title          String
-  content        String
-  createdAt      DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  // Announcements now target dynamic categories
-  categories     Category[]
-
-  notifications  Notification[]
+  notifications Notification[]
 
   // Database indexes for query performance
-  @@index([organizationId])          // Multitenancy filter
-  @@index([createdAt(sort: Desc)])   // Sort by newest announcements
+  @@index([organizationId]) // Multitenancy filter
+  @@index([createdAt(sort: Desc)]) // Sort by newest announcements
 }
 
 // Invitation Model
 model Invitation {
-  id             Int          @id @default(autoincrement())
-  email          String
-  token          String       @unique
-  role           Role         @default(USER)
-  status         String       @default("PENDING") // PENDING, ACCEPTED, EXPIRED
-  expiresAt      DateTime
-  createdAt      DateTime     @default(now())
+  id        Int      @id @default(autoincrement())
+  email     String
+  token     String   @unique
+  role      Role     @default(USER)
+  status    String   @default("PENDING") // PENDING, ACCEPTED, EXPIRED
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
@@ -365,13 +362,13 @@ model PasswordResetToken {
 }
 
 model OrganizationRequest {
-  id               Int      @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   organizationName String
   domain           String
   requesterEmail   String
-  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  status           String    @default("PENDING") // PENDING, APPROVED, REJECTED
   metadata         Json?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
   resolvedAt       DateTime?
 
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -382,22 +379,22 @@ model OrganizationRequest {
 }
 
 model OrganizationJoinRequest {
-  id             Int                @id @default(autoincrement())
-  email          String
-  status         JoinRequestStatus  @default(PENDING)
-  reason         String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  reviewedAt     DateTime?
+  id         Int               @id @default(autoincrement())
+  email      String
+  status     JoinRequestStatus @default(PENDING)
+  reason     String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  reviewedAt DateTime?
 
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  user           User               @relation("JoinRequestUser", fields: [userId], references: [id], onDelete: Cascade)
-  userId         Int
+  user   User @relation("JoinRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
 
-  reviewedBy     User?              @relation("JoinRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedById   Int?
+  reviewedBy   User? @relation("JoinRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById Int?
 
   @@index([organizationId, status])
   @@index([organizationId, email])
@@ -405,23 +402,23 @@ model OrganizationJoinRequest {
 }
 
 model OrganizationClaim {
-  id             Int          @id @default(autoincrement())
+  id             Int         @id @default(autoincrement())
   requesterEmail String
-  status         ClaimStatus  @default(PENDING)
+  status         ClaimStatus @default(PENDING)
   reason         String?
   metadata       Json?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
   reviewedAt     DateTime?
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  user           User         @relation("OrganizationClaimUser", fields: [userId], references: [id], onDelete: Cascade)
-  userId         Int
+  user   User @relation("OrganizationClaimUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
 
-  reviewedBy     User?        @relation("OrganizationClaimReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedById   Int?
+  reviewedBy   User? @relation("OrganizationClaimReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById Int?
 
   // Concurrency for pending claims is handled in service/controller logic.
   @@index([organizationId, userId])
@@ -436,7 +433,7 @@ model Report {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporter   User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   reporterId Int
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -474,7 +471,6 @@ enum Status {
   ON_HOLD
 }
 
-
 enum ProgressStatus {
   NONE
   ACKNOWLEDGED
@@ -483,25 +479,25 @@ enum ProgressStatus {
 }
 
 model Notification {
-  id             Int              @id @default(autoincrement())
-  type           NotificationType
-  title          String
-  body           String
-  createdAt      DateTime         @default(now())
-  readAt         DateTime?
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  title     String
+  body      String
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
 
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         Int
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  ping           Ping?            @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  ping           Ping?         @relation(fields: [pingId], references: [id], onDelete: Cascade)
   pingId         Int?
-  wave           Wave?            @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  wave           Wave?         @relation(fields: [waveId], references: [id], onDelete: Cascade)
   waveId         Int?
-  announcement   Announcement?    @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  announcement   Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   announcementId Int?
-  comment        Comment?         @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  comment        Comment?      @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId      Int?
 
   @@index([userId, readAt])
@@ -516,6 +512,9 @@ enum NotificationType {
   WAVE_STATUS_UPDATED
   COMMENT_REPLY
   POST_REPORTED
+  NEW_WAVE_ON_PING
+  NEW_COMMENT_ON_POST
+  PING_SURGED_MILESTONE
 }
 
 enum ReportStatus {
@@ -542,28 +541,42 @@ enum ClaimStatus {
   REJECTED
 }
 
+// Web Push Subscription Model
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  @@index([userId])
+}
+
 // Media/Attachment Model for file uploads
 model Media {
-  id             Int      @id @default(autoincrement())
-  url            String   // Cloudinary URL
-  publicId       String   // Cloudinary public ID for deletion
-  filename       String   // Original filename
-  mimeType       String   // MIME type (image/jpeg, video/mp4, etc.)
-  size           Int      // File size in bytes
-  width          Int?     // Image/video width in pixels
-  height         Int?     // Image/video height in pixels
-  createdAt      DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  url       String // Cloudinary URL
+  publicId  String // Cloudinary public ID for deletion
+  filename  String // Original filename
+  mimeType  String // MIME type (image/jpeg, video/mp4, etc.)
+  size      Int // File size in bytes
+  width     Int? // Image/video width in pixels
+  height    Int? // Image/video height in pixels
+  createdAt DateTime @default(now())
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
   // Polymorphic relations - only one should be set
-  ping           Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
-  pingId         Int?
-  wave           Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
-  waveId         Int?
-  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         Int?
+  ping   Ping? @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId Int?
+  wave   Wave? @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId Int?
+  user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int?
 
   @@index([organizationId])
   @@index([pingId])
@@ -577,7 +590,7 @@ model DisplayNameHistory {
   name      String
   changedAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

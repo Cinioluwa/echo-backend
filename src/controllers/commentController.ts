@@ -487,3 +487,61 @@ export const deleteComment = async (req: AuthRequest, res: Response, next: NextF
     return next(error);
   }
 };
+
+// ──────────────────────────────────────────────────────────────────────────
+// Edit a comment (author only; 5-minute window; anonymous comments excluded)
+// PATCH /api/comments/:commentId
+// ──────────────────────────────────────────────────────────────────────────
+export const updateComment = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { commentId } = req.params;
+    const { content } = req.body;
+    const userId = req.user?.userId;
+    const organizationId = req.user?.organizationId;
+
+    if (!userId || !organizationId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!content || typeof content !== 'string' || content.trim().length < 2) {
+      return res.status(400).json({ error: 'Content must be at least 2 characters' });
+    }
+
+    const comment = await prisma.comment.findFirst({
+      where: { id: parseInt(commentId), organizationId },
+    });
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    // Only the author can edit their own comment
+    if (comment.authorId !== userId) {
+      return res.status(403).json({ error: 'Forbidden: You can only edit your own comments' });
+    }
+
+    // Anonymous comments cannot be edited (identity cannot be verified)
+    if (comment.isAnonymous) {
+      return res.status(403).json({
+        error: 'Anonymous comments cannot be edited',
+        code: 'ANONYMOUS_EDIT_FORBIDDEN',
+      });
+    }
+
+    // Enforce 5-minute edit window
+    const EDIT_WINDOW_MS = 5 * 60 * 1000;
+    if (Date.now() - comment.createdAt.getTime() > EDIT_WINDOW_MS) {
+      return res.status(403).json({
+        error: 'Comments can only be edited within 5 minutes of creation',
+        code: 'EDIT_WINDOW_EXPIRED',
+      });
+    }
+
+    const updatedComment = await prisma.comment.update({
+      where: { id: parseInt(commentId) },
+      data: { content: content.trim(), isEdited: true },
+      include: { author: { select: AUTHOR_SELECT } },
+    });
+
+    await invalidateCacheAfterMutation(organizationId);
+
+    return res.status(200).json(sanitizeComment(updatedComment, userId));
+  } catch (error) {
+    logger.error('Error updating comment', { error, commentId: req.params.commentId, userId: req.user?.userId });
+    return next(error);
+  }
+};

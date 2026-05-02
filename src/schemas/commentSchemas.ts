@@ -48,6 +48,18 @@ export const commentParamSchema = z.object({
   }),
 });
 
+export const updateCommentSchema = z.object({
+  params: z.object({
+    commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number'),
+  }),
+  body: z.object({
+    content: z
+      .string({ message: 'Content is required' })
+      .min(2, 'Content must be at least 2 characters')
+      .max(5000, 'Content is too long'),
+  }),
+});
+
 export const deleteCommentSchema = z.object({
   params: z.object({
     commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number'),

@@ -601,6 +601,16 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
       return res.status(403).json({ error: 'Forbidden: You do not own this ping' });
     }
 
+    // Enforce 5-minute edit window for content edits
+    const EDIT_WINDOW_MS = 5 * 60 * 1000;
+    const isContentEdit = title !== undefined || content !== undefined;
+    if (isContentEdit && Date.now() - ping.createdAt.getTime() > EDIT_WINDOW_MS) {
+      return res.status(403).json({
+        error: 'Pings can only be edited within 5 minutes of creation',
+        code: 'EDIT_WINDOW_EXPIRED',
+      });
+    }
+
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (content !== undefined) updateData.content = content;
@@ -608,6 +618,8 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
     if (hashtag !== undefined) updateData.hashtag = hashtag;
     if (status !== undefined) updateData.status = status;
     if (isAnonymous !== undefined) updateData.isAnonymous = isAnonymous;
+    // Mark as edited if any content field is being changed
+    if (isContentEdit) updateData.isEdited = true;
 
     const updatedPing = await prisma.ping.update({
       where: { id: parseInt(id) },

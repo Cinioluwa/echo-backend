@@ -5,6 +5,7 @@ import {
   createCommentOnWave, 
   getCommentsForWave,
   deleteComment,
+  updateComment,
   createReplyOnPingComment,
 } from '../controllers/commentController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
@@ -16,6 +17,7 @@ import {
   createCommentOnWaveSchema,
   getCommentsForWaveSchema,
   commentParamSchema,
+  updateCommentSchema,
   createReplyOnPingCommentSchema,
 } from '../schemas/commentSchemas.js';
 
@@ -326,4 +328,64 @@ commentRouter.delete(
   organizationMiddleware,
   validate(commentParamSchema),
   deleteComment,
-);
+);
+
+/**
+ * @openapi
+ * /api/comments/{commentId}:
+ *   patch:
+ *     summary: Edit a comment
+ *     description: |
+ *       Edit the content of a comment you authored.
+ *       
+ *       **Rules:**
+ *       - You must be the original author.
+ *       - The comment must have been created within the last **5 minutes**.
+ *       - Anonymous comments cannot be edited.
+ *     tags:
+ *       - Comments
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the comment to edit
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 5000
+ *     responses:
+ *       200:
+ *         description: Comment updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Comment'
+ *       400:
+ *         description: Content too short
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not the author, edit window expired, or anonymous comment
+ *       404:
+ *         description: Comment not found
+ */
+commentRouter.patch(
+  '/:commentId',
+  authMiddleware,
+  organizationMiddleware,
+  validate(updateCommentSchema),
+  updateComment,
+);

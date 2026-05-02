@@ -131,6 +131,7 @@ model Ping {
   createdAt         DateTime       @default(now())
   surgeCount        Int            @default(0)
   isAnonymous       Boolean        @default(false)
+  isEdited          Boolean        @default(false) // True if the author edited content after posting
   anonymousAlias    String?        // Snapshot of author's alias at post time (only set when isAnonymous=true)
   anonymousProfilePicture String?  // Snapshot of alias profile picture at post time
 
@@ -171,6 +172,7 @@ model Wave {
   viewCount        Int      @default(0)
   surgeCount       Int      @default(0)
   flaggedForReview Boolean  @default(false)
+  isEdited         Boolean  @default(false) // True if the author edited content after posting
   createdAt        DateTime @default(now())
 
   ping           Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
@@ -206,6 +208,7 @@ model Comment {
   content        String
   createdAt      DateTime @default(now())
   isAnonymous    Boolean  @default(false)
+  isEdited       Boolean  @default(false) // True if the author edited content after posting
   anonymousAlias String?  // Snapshot of author's alias at post time (only set when isAnonymous=true)
   anonymousProfilePicture String? // Snapshot of alias profile picture at post time
   surgeCount     Int      @default(0)
