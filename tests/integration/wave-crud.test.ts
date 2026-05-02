@@ -224,6 +224,7 @@ describe('Wave CRUD Operations', () => {
       waveToUpdate = await createWave({
         pingId: ping1.id,
         organizationId: org1.id,
+        authorId: user1.id,
         solution: 'Original solution'
       });
     });
@@ -290,6 +291,7 @@ describe('Wave CRUD Operations', () => {
       waveToDelete = await createWave({
         pingId: ping1.id,
         organizationId: org1.id,
+        authorId: user1.id,
         solution: 'Wave to delete'
       });
     });
