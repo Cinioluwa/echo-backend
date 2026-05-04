@@ -69,6 +69,10 @@ describe('Notification Preferences', () => {
       announcement: true,
       commentSurge: true,
       pingCreated: true,
+      commentReply: true,
+      newWaveOnPing: true,
+      newCommentOnPost: true,
+      pingSurgedMilestone: true,
     });
   });
 
@@ -125,6 +129,41 @@ describe('Notification Preferences', () => {
     const row = notifRes.body.data.find(
       (n: any) =>
         (n.type === 'WAVE_APPROVED' || n.type === 'WAVE_STATUS_UPDATED') && n.pingId === ping.id
+    );
+    expect(row).toBeUndefined();
+  });
+
+  it('does not create NEW_WAVE_ON_PING notifications when opted out', async () => {
+    // Opt out
+    await client
+      .patch('/api/users/me/notification-preferences')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .send({ newWaveOnPing: false })
+      .expect(200);
+
+    const ping = await createPing({
+      title: 'New Wave Ping',
+      content: 'Content',
+      categoryId: category.id,
+      organizationId: org.id,
+      authorId: pingAuthor.id,
+    });
+
+    // Create a wave as a different user (admin in this case for simplicity)
+    // In real app, anyone can wave.
+    await client
+      .post(`/api/pings/${ping.id}/waves`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ solution: 'A solution' })
+      .expect(201);
+
+    const notifRes = await client
+      .get('/api/notifications?unreadOnly=true')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+
+    const row = notifRes.body.data.find(
+      (n: any) => n.type === 'NEW_WAVE_ON_PING' && n.pingId === ping.id
     );
     expect(row).toBeUndefined();
   });

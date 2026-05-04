@@ -479,17 +479,20 @@ model Report {
 }
 
 model NotificationPreference {
-  id                Int      @id @default(autoincrement())
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId            Int      @unique
-  waveStatusUpdated Boolean  @default(true)
-  officialResponse  Boolean  @default(true)
-  announcement      Boolean  @default(true)
-  commentSurge      Boolean  @default(true)
-  pingCreated       Boolean  @default(true)
-  commentReply      Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              Int      @unique
+  waveStatusUpdated   Boolean  @default(true)
+  officialResponse    Boolean  @default(true)
+  announcement        Boolean  @default(true)
+  commentSurge        Boolean  @default(true)
+  pingCreated         Boolean  @default(true)
+  commentReply        Boolean  @default(true)
+  newWaveOnPing       Boolean  @default(true)
+  newCommentOnPost    Boolean  @default(true)
+  pingSurgedMilestone Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 // User behaviour / posting preferences (separate from notification settings)

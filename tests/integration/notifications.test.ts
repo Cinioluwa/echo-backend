@@ -105,6 +105,7 @@ describe('Notifications', () => {
     const row = res.body.data.find((n: any) => n.type === 'WAVE_APPROVED' && n.pingId === ping.id);
     expect(row).toBeDefined();
     expect(row.readAt).toBeNull();
+    expect(row.url).toBe(`/feed/${ping.id}`);
 
     const countRes = await client
       .get('/api/notifications/unread-count')
@@ -120,6 +121,42 @@ describe('Notifications', () => {
       .expect(200);
 
     expect(readRes.body.readAt).toBeTruthy();
+  });
+
+  it('should mark all notifications as read', async () => {
+    // Create another notification
+    const ping = await createPing({
+      title: 'Read all ping',
+      content: 'Content',
+      categoryId: category.id,
+      organizationId: org.id,
+      authorId: pingAuthor.id,
+    });
+
+    await client
+      .post(`/api/pings/${ping.id}/official-response`)
+      .set('Authorization', `Bearer ${repToken}`)
+      .send({ content: 'Official response', isResolved: false })
+      .expect(201);
+
+    const beforeRes = await client
+      .get('/api/notifications/unread-count')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    
+    expect(beforeRes.body.unreadCount).toBeGreaterThan(0);
+
+    await client
+      .patch('/api/notifications/read-all')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+
+    const afterRes = await client
+      .get('/api/notifications/unread-count')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    
+    expect(afterRes.body.unreadCount).toBe(0);
   });
 
   it('should create a notification when an official response is posted (ping author)', async () => {
@@ -146,6 +183,7 @@ describe('Notifications', () => {
       (n: any) => n.type === 'OFFICIAL_RESPONSE_POSTED' && n.pingId === ping.id
     );
     expect(row).toBeDefined();
+    expect(row.url).toBe(`/feed/${ping.id}`);
   });
 
   it('should create announcement notifications for org users (excluding author)', async () => {
@@ -169,5 +207,6 @@ describe('Notifications', () => {
       (n: any) => n.type === 'ANNOUNCEMENT_POSTED' && n.announcementId === announcementId
     );
     expect(row).toBeDefined();
+    expect(row.url).toBe('/notifications');
   });
 });

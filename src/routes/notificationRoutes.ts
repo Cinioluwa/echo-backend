@@ -10,6 +10,7 @@ import {
   getUnreadNotificationCount,
   listNotifications,
   markNotificationRead,
+  markAllNotificationsRead,
 } from '../controllers/notificationController.js';
 import { cache } from '../middleware/cacheMiddleware.js';
 
@@ -146,6 +147,40 @@ router.get('/unread-count', authMiddleware, organizationMiddleware, cache(15, { 
  *       500:
  *         description: Internal server error
  */
+/**
+ * @openapi
+ * /api/notifications/read-all:
+ *   patch:
+ *     summary: Mark all notifications as read
+ *     description: |
+ *       Mark all unread notifications for the authenticated user as read.
+ *       
+ *       **Authentication required**: User must be logged in.
+ *     tags:
+ *       - Notifications
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications marked as read
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: All notifications marked as read
+ *                 count:
+ *                   type: integer
+ *                   example: 5
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/read-all', authMiddleware, organizationMiddleware, markAllNotificationsRead);
+
 router.patch('/:id/read', authMiddleware, organizationMiddleware, validate(notificationIdParamSchema), markNotificationRead);
 
 export default router;

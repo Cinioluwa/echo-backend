@@ -14,6 +14,9 @@ type PrismaLike = {
     findUnique: (args: any) => Promise<any | null>;
     upsert: (args: any) => Promise<any>;
   };
+  wave?: {
+    findUnique: (args: any) => Promise<any | null>;
+  };
 };
 
 export type CreateNotificationInput = {
@@ -28,12 +31,30 @@ export type CreateNotificationInput = {
   commentId?: number;
 };
 
+export function computeNotificationUrl(notification: { 
+  pingId?: number | null; 
+  waveId?: number | null; 
+  announcementId?: number | null; 
+}): string {
+  if (notification.pingId) {
+    return `/feed/${notification.pingId}`;
+  }
+  // Note: For waveId only, we might still want the pingId but we'd need a DB lookup.
+  // In the REST API response, we might not want to do N lookups.
+  // However, in createNotification we do a lookup if needed.
+  return '/notifications';
+}
+
 const DEFAULT_PREFERENCES = {
   waveStatusUpdated: true,
   officialResponse: true,
   announcement: true,
   commentSurge: true,
   pingCreated: true,
+  commentReply: true,
+  newWaveOnPing: true,
+  newCommentOnPost: true,
+  pingSurgedMilestone: true,
 } as const;
 
 const isAllowedByPreferences = async (db: PrismaLike, input: CreateNotificationInput): Promise<boolean> => {
@@ -53,6 +74,14 @@ const isAllowedByPreferences = async (db: PrismaLike, input: CreateNotificationI
       return Boolean(prefs.officialResponse);
     case 'ANNOUNCEMENT_POSTED':
       return Boolean(prefs.announcement);
+    case 'NEW_WAVE_ON_PING':
+      return Boolean(prefs.newWaveOnPing);
+    case 'NEW_COMMENT_ON_POST':
+      return Boolean(prefs.newCommentOnPost);
+    case 'PING_SURGED_MILESTONE':
+      return Boolean(prefs.pingSurgedMilestone);
+    case 'COMMENT_REPLY':
+      return Boolean(prefs.commentReply);
     default:
       return true;
   }
@@ -76,12 +105,35 @@ export const createNotification = async (db: PrismaLike, input: CreateNotificati
     },
   });
 
-  emitNotification(input.userId, notification);
+  // Compute the deep-link URL
+  let targetPingId = input.pingId;
+  
+  // If we have a waveId but no pingId, try to find the pingId via the wave
+  if (!targetPingId && input.waveId && db.wave) {
+    try {
+      const wave = await db.wave.findUnique({
+        where: { id: input.waveId },
+        select: { pingId: true }
+      });
+      if (wave) targetPingId = wave.pingId;
+    } catch (err) {
+      // Silently fail lookup, fallback to root or notifications
+    }
+  }
+
+  const url = targetPingId ? `/feed/${targetPingId}` : computeNotificationUrl(notification);
+
+  const enrichedPayload = {
+    ...notification,
+    url
+  };
+
+  emitNotification(input.userId, enrichedPayload);
 
   sendPushNotification(input.userId, {
     title: input.title,
     body: input.body,
-    url: input.pingId ? `/feed/${input.pingId}` : '/',
+    url: url,
   }).catch(() => {});
 
   return notification;

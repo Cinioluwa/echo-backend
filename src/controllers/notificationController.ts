@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import { computeNotificationUrl } from '../services/notificationService.js';
 
 export const listNotifications = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -29,8 +30,13 @@ export const listNotifications = async (req: AuthRequest, res: Response, next: N
 
     const totalPages = Math.ceil(total / limit);
 
+    const data = rows.map(row => ({
+      ...row,
+      url: computeNotificationUrl(row)
+    }));
+
     return res.status(200).json({
-      data: rows,
+      data,
       pagination: {
         total,
         totalPages,
@@ -78,6 +84,25 @@ export const markNotificationRead = async (req: AuthRequest, res: Response, next
     });
 
     return res.status(200).json(updated);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const markAllNotificationsRead = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const organizationId = req.organizationId!;
+    const userId = req.user!.userId;
+
+    const result = await prisma.notification.updateMany({
+      where: { organizationId, userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+
+    return res.status(200).json({ 
+      message: 'All notifications marked as read',
+      count: result.count 
+    });
   } catch (error) {
     return next(error);
   }
