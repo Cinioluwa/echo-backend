@@ -5,6 +5,7 @@ import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitPingCreated, emitPingDeleted } from '../utils/socketEmitter.js';
 import { appendPingBadges } from '../utils/pingBadges.js';
+import { appendAdminPingBadges } from '../utils/adminPingBadges.js';
 
 const sanitizePingAuthor = (ping: any, currentUserId?: string | number) => {
   if (!ping) return ping;
@@ -518,6 +519,17 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
 
     const [pingWithBadges] = await appendPingBadges([sanitizedPing], organizationId!);
 
+    // Admins and representatives get the extra triage badges (including detail-only ones)
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'REPRESENTATIVE';
+    if (isAdmin) {
+      const [withAdminBadges] = await appendAdminPingBadges(
+        [pingWithBadges],
+        organizationId!,
+        true // includeDetailBadges — enables HIGH_DISCUSSION on the detail view
+      );
+      return res.status(200).json(withAdminBadges);
+    }
+
     return res.status(200).json(pingWithBadges);
   } catch (error) {
     logger.error('Error fetching ping', { error, pingId: req.params.id });
@@ -918,7 +930,9 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const itemsWithBadges = await appendPingBadges(pings.map(ping => withHasSurged(ping, userId)), organizationId!);
+    const publicBadged = await appendPingBadges(pings.map(ping => withHasSurged(ping, userId)), organizationId!);
+    // Admin list view: attach triage badges (card-level only, no HIGH_DISCUSSION)
+    const itemsWithBadges = await appendAdminPingBadges(publicBadged, organizationId!);
 
     return res.status(200).json({
       data: itemsWithBadges,

@@ -68,7 +68,7 @@ describe('Ping CRUD Operations', () => {
         .post('/api/pings')
         .set('Authorization', `Bearer ${user1Token}`)
         .send(pingData)
-        .expect(201).catch(e => console.error('BODY:', res.body))
+        .expect(201).catch((e: any) => console.error('BODY:', res.body))
 
       expect(res.body).toBeDefined();
       expect(res.body.title).toBe(pingData.title);
