@@ -12,6 +12,7 @@ import {
     resolvePing
 } from '../controllers/pingController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import moderationMiddleware from '../middleware/moderationMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 import representativeMiddleware from '../middleware/representativeMiddleware.js';
@@ -162,7 +163,7 @@ const router = Router();
  */
 
 // Create a new ping - with validation
-router.post('/', authMiddleware, organizationMiddleware, validate(createPingSchema), createPing);
+router.post('/', authMiddleware, moderationMiddleware, organizationMiddleware, validate(createPingSchema), createPing);
 
 // Get all pings (with pagination and optional filters) - cached for 60s
 router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithFiltersSchema), cache(60, { perUser: true }), getAllPings);

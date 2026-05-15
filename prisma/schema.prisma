@@ -55,6 +55,9 @@ model User {
   isVerified           Boolean   @default(false) // Email verification status
   role                 Role      @default(USER)
   status               String    @default("PENDING") // PENDING, ACTIVE
+  moderationStatus     ModerationStatus @default(ACTIVE)
+  suspendedUntil       DateTime? // Non-null only when moderationStatus = SUSPENDED
+  moderationNote       String?   // Internal admin note, never exposed to the user
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
@@ -77,6 +80,7 @@ model User {
   organizationClaims               OrganizationClaim[]       @relation("OrganizationClaimUser")
   reviewedOrganizationClaims       OrganizationClaim[]       @relation("OrganizationClaimReviewer")
   reports                          Report[]
+  actedOnReports                   Report[]                  @relation("ReportActionedBy")
   notifications                    Notification[]
   media                            Media[]
   notificationPreference           NotificationPreference?
@@ -458,6 +462,13 @@ model Report {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
+  // Moderation action fields (populated when an admin acts on the report)
+  action       ModerationAction? // Which action the admin took
+  actionNote   String?           // Written justification (required for REQUEST_IDENTITY_DISCLOSURE)
+  actionedAt   DateTime?
+  actionedBy   User?             @relation("ReportActionedBy", fields: [actionedById], references: [id], onDelete: SetNull)
+  actionedById Int?
+
   reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   reporterId Int
 
@@ -476,6 +487,7 @@ model Report {
   @@index([pingId])
   @@index([waveId])
   @@index([commentId])
+  @@index([actionedById])
 }
 
 model NotificationPreference {
@@ -544,6 +556,11 @@ enum NotificationType {
   NEW_WAVE_ON_PING
   NEW_COMMENT_ON_POST
   PING_SURGED_MILESTONE
+  // Moderation notifications
+  MODERATION_WARNING
+  MODERATION_SUSPENSION
+  MODERATION_BAN
+  MODERATION_IDENTITY_DISCLOSURE_REQUESTED
 }
 
 enum ReportStatus {
@@ -551,6 +568,22 @@ enum ReportStatus {
   REVIEWED
   RESOLVED
   DISMISSED
+}
+
+enum ModerationStatus {
+  ACTIVE
+  WARNED
+  SUSPENDED
+  BANNED
+}
+
+enum ModerationAction {
+  DISMISS
+  WARN
+  REMOVE_POST
+  SUSPEND
+  BAN
+  REQUEST_IDENTITY_DISCLOSURE
 }
 
 enum JoinPolicy {

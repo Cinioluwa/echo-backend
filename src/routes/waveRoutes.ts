@@ -4,6 +4,7 @@ import {
     getWavesForPing
 } from '../controllers/waveController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import moderationMiddleware from '../middleware/moderationMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { createWaveSchema, pingParamSchema } from '../schemas/waveSchemas.js';
@@ -105,7 +106,7 @@ const router = Router({ mergeParams: true });
  */
 
 // POST /api/pings/:pingId/waves - Create a wave for a ping
-router.post('/', authMiddleware, organizationMiddleware, validate(createWaveSchema), createWave);
+router.post('/', authMiddleware, moderationMiddleware, organizationMiddleware, validate(createWaveSchema), createWave);
 
 // GET /api/pings/:pingId/waves - Get all waves for a ping - cached for 60s
 router.get('/', authMiddleware, organizationMiddleware, validate(pingParamSchema), cache(60), getWavesForPing);

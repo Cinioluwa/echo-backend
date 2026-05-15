@@ -9,6 +9,7 @@ import {
   createReplyOnPingComment,
 } from '../controllers/commentController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import moderationMiddleware from '../middleware/moderationMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { 
@@ -116,7 +117,7 @@ import {
 export const pingCommentRouter = Router({ mergeParams: true });
 
 pingCommentRouter.route('/')
-  .post(authMiddleware, organizationMiddleware, validate(createCommentOnPingSchema), createCommentOnPing)
+  .post(authMiddleware, moderationMiddleware, organizationMiddleware, validate(createCommentOnPingSchema), createCommentOnPing)
   .get(authMiddleware, organizationMiddleware, validate(getCommentsForPingSchema), getCommentsForPing);
 
 /**
@@ -177,6 +178,7 @@ pingCommentRouter.route('/')
 pingCommentRouter.post(
   '/:commentId/replies',
   authMiddleware,
+  moderationMiddleware,
   organizationMiddleware,
   validate(createReplyOnPingCommentSchema),
   createReplyOnPingComment,
@@ -275,7 +277,7 @@ pingCommentRouter.post(
 export const waveCommentRouter = Router({ mergeParams: true });
 
 waveCommentRouter.route('/')
-  .post(authMiddleware, organizationMiddleware, validate(createCommentOnWaveSchema), createCommentOnWave)  // Create a comment on a wave
+  .post(authMiddleware, moderationMiddleware, organizationMiddleware, validate(createCommentOnWaveSchema), createCommentOnWave)  // Create a comment on a wave
   .get(authMiddleware, organizationMiddleware, validate(getCommentsForWaveSchema), getCommentsForWave);                    // Get all comments for a wave
 
 // Default export for backward compatibility (wave comments)

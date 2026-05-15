@@ -27,8 +27,8 @@ import {
     getPingsByLocation,
     getStallingPings,
     getActivityTimeSeries,
-
 } from '../controllers/adminController.js';
+import { applyModerationAction } from '../controllers/moderationController.js';
 import {
     createAnnouncement,
     updateAnnouncement,
@@ -64,6 +64,7 @@ import {
     stallingPingsSchema,
     activityTimeSeriesSchema,
 } from '../schemas/adminSchemas.js';
+import { applyModerationActionSchema } from '../schemas/moderationSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
 import {
     createAnnouncementSchema,
@@ -87,6 +88,46 @@ import {
 } from '../controllers/organizationJoinPolicyController.js';
 
 const router = Router();
+
+/**
+ * @openapi
+ * /api/admin/reports/{id}/action:
+ *   post:
+ *     summary: Apply a moderation action to a report
+ *     description: |
+ *       Apply a moderation action (DISMISS, WARN, REMOVE_POST, SUSPEND, BAN, REQUEST_IDENTITY_DISCLOSURE).
+ *       
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Action applied
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Report not found
+ *       409:
+ *         description: Report already finalized
+ */
+router.post(
+    '/reports/:id/action',
+    authMiddleware,
+    adminMiddleware,
+    organizationMiddleware,
+    validate(applyModerationActionSchema),
+    applyModerationAction
+);
 
 /**
  * @openapi
