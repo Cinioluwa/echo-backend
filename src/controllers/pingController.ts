@@ -101,6 +101,52 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
       });
     }
 
+    // Fetch organization settings
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        allowMediaOnPings: true,
+        sameTopicCooldownHours: true,
+      },
+    });
+
+    if (!org) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    // 1. Media attachment check
+    if (!org.allowMediaOnPings && mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
+      return res.status(400).json({
+        error: 'Media attachments are not allowed for pings in this organization.',
+        code: 'MEDIA_ATTACHMENTS_DISABLED',
+      });
+    }
+
+    // 2. Same-topic cooldown check
+    if (hashtag && org.sameTopicCooldownHours > 0) {
+      const cooldownLimitDate = new Date(Date.now() - org.sameTopicCooldownHours * 60 * 60 * 1000);
+      const existingRecentPing = await prisma.ping.findFirst({
+        where: {
+          authorId,
+          organizationId,
+          hashtag: process.env.DATABASE_URL?.startsWith('file:')
+            ? { equals: hashtag.trim() }
+            : { equals: hashtag.trim(), mode: 'insensitive' as const },
+          createdAt: {
+            gte: cooldownLimitDate,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (existingRecentPing) {
+        return res.status(429).json({
+          error: `Cooldown active: You can only post to the same topic once every ${org.sameTopicCooldownHours} hours.`,
+          code: 'TOPIC_COOLDOWN_ACTIVE',
+        });
+      }
+    }
+
     const isAnonymousPost = Boolean(isAnonymous);
 
     // Snapshot the user's anonymous alias at creation time (immutable per-post)
@@ -219,6 +265,18 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     }
     if (status) {
       whereClause.status = status;
+    } else {
+      // Auto-hide flagged/pending-review pings for normal users if enabled
+      const isUser = req.user?.role === 'USER';
+      if (isUser && organizationId) {
+        const orgSettings = await prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: { hideFlaggedPendingReview: true },
+        });
+        if (orgSettings?.hideFlaggedPendingReview) {
+          whereClause.status = { notIn: ['UNDER_REVIEW', 'REJECTED'] };
+        }
+      }
     }
 
     // Run two queries in parallel: one for the data, one for the total count

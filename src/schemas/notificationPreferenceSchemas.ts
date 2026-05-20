@@ -18,6 +18,9 @@ const patchBodySchema = z
     newWaveOnPing: z.boolean().optional(),
     newCommentOnPost: z.boolean().optional(),
     pingSurgedMilestone: z.boolean().optional(),
+    emailEnabled: z.boolean().optional(),
+    surgeMilestone: z.number().int().min(1).optional(),
+    notifyJoinRequests: z.boolean().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {

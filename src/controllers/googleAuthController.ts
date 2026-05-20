@@ -66,11 +66,12 @@ export async function googleAuth(req: AuthRequest, res: Response) {
 
     for (const candidate of getDomainCandidates(domain)) {
       // eslint-disable-next-line no-await-in-loop
-      const found = await prisma.organization.findUnique({
+      const foundDomain = await prisma.organizationDomain.findUnique({
         where: { domain: candidate },
+        include: { organization: true },
       });
-      if (found) {
-        organization = found;
+      if (foundDomain) {
+        organization = foundDomain.organization;
         break;
       }
     }

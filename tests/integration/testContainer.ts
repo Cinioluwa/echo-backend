@@ -27,7 +27,7 @@ export async function setupTestDb() {
   await prisma.$connect();
 
   // Push schema to SQLite (syncs without migrations)
-  execSync('npx prisma db push --schema=prisma/test/test-schema.prisma --accept-data-loss', { stdio: 'inherit' });
+  execSync('npx prisma db push --schema=prisma/test/test-schema.prisma --accept-data-loss --skip-generate', { stdio: 'inherit' });
 
   // Set global test client so the application uses it instead of the main client
   (globalThis as any).__testPrismaClient = prisma;

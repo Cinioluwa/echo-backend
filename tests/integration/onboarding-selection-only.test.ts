@@ -102,9 +102,11 @@ describe('Selection-only onboarding', () => {
     expect(requestRecord).toBeTruthy();
     expect(requestRecord?.status).toBe('PENDING');
 
-    const organization = await prisma.organization.findUnique({
+    const orgDomain = await prisma.organizationDomain.findUnique({
       where: { domain },
+      include: { organization: true },
     });
+    const organization = orgDomain?.organization ?? null;
     expect(organization).toBeNull();
 
     const requesterUser = await prisma.user.findFirst({
@@ -130,9 +132,11 @@ describe('Selection-only onboarding', () => {
       .set('Authorization', `Bearer ${superAdminToken}`)
       .expect(200);
 
-    const org = await prisma.organization.findUnique({
+    const orgDomain = await prisma.organizationDomain.findUnique({
       where: { domain },
+      include: { organization: true },
     });
+    const org = orgDomain?.organization;
 
     expect(org).toBeTruthy();
     expect(org?.status).toBe('ACTIVE');

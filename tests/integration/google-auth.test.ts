@@ -28,6 +28,12 @@ describe('Google Auth Integration', () => {
         status: 'ACTIVE',
       },
     });
+    await prisma.organizationDomain.create({
+      data: {
+        domain: 'example.com',
+        organizationId: org.id,
+      },
+    });
     organizationId = org.id;
   });
 

@@ -1237,6 +1237,73 @@ export const getAdminOverviewDashboard = async (req: AuthRequest, res: Response,
             }),
         ]);
 
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+        const [recentSurges, stalledWaves, stalledAcknowledgedPings] = await prisma.$transaction([
+            prisma.surge.groupBy({
+                by: ['pingId'],
+                where: {
+                    organizationId,
+                    pingId: { not: null },
+                    createdAt: { gte: oneHourAgo },
+                },
+                _count: { _all: true },
+                orderBy: {
+                    pingId: 'asc',
+                },
+            }),
+            prisma.wave.count({
+                where: {
+                    organizationId,
+                    status: 'APPROVED',
+                    createdAt: { lt: sevenDaysAgo },
+                    comments: {
+                        none: {
+                            createdAt: { gte: sevenDaysAgo },
+                        },
+                    },
+                },
+            }),
+            prisma.ping.count({
+                where: {
+                    organizationId,
+                    progressStatus: 'ACKNOWLEDGED',
+                    OR: [
+                        { progressUpdatedAt: { lt: fourteenDaysAgo } },
+                        {
+                            progressUpdatedAt: null,
+                            createdAt: { lt: fourteenDaysAgo },
+                        },
+                    ],
+                },
+            }),
+        ]);
+
+        const surgeVelocity = recentSurges.map((rs: any) => ({
+            pingId: rs.pingId!,
+            velocity: rs._count?._all ?? 0,
+        }));
+
+        const categoriesStats = categoryRows.map((category) => {
+            const total = category.pings.length;
+            const resolved = category.pings.filter((ping) => ping.progressStatus === ProgressStatus.RESOLVED).length;
+            const open = total - resolved;
+            const resolutionPercentage = total > 0 ? Number(((resolved / total) * 100).toFixed(2)) : 0;
+            const openPercentage = total > 0 ? Number(((open / total) * 100).toFixed(2)) : 0;
+
+            return {
+                categoryId: category.id,
+                categoryName: category.name,
+                totalPings: total,
+                openCount: open,
+                resolvedCount: resolved,
+                openPercentage,
+                resolutionPercentage,
+            };
+        });
+
         const activeUsersCurrent = new Set(activeCurrentRows.map((row) => row.userId)).size;
         const activeUsersPrevious = new Set(activePreviousRows.map((row) => row.userId)).size;
 
@@ -1447,6 +1514,10 @@ export const getAdminOverviewDashboard = async (req: AuthRequest, res: Response,
                 total: totalUnresolved,
                 items: oldestUnresolvedData,
             },
+            surgeVelocity,
+            stalledWavesCount: stalledWaves,
+            stalledAcknowledgedPingsCount: stalledAcknowledgedPings,
+            categoriesStats,
         });
     } catch (error) {
         return next(error);

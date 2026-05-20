@@ -22,6 +22,13 @@ describe('Admin Export API', () => {
         });
         orgId = org.id;
 
+        await prisma.organizationDomain.create({
+            data: {
+                domain: 'export.test.edu',
+                organizationId: org.id
+            }
+        });
+
         // Setup Admin User
         const password = 'password123';
         const hashedPassword = await bcrypt.hash(password, 10);

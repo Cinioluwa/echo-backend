@@ -12,6 +12,9 @@ const DEFAULT_PREFERENCES = {
   newWaveOnPing: true,
   newCommentOnPost: true,
   pingSurgedMilestone: true,
+  emailEnabled: true,
+  surgeMilestone: 100,
+  notifyJoinRequests: true,
 } as const;
 
 export const getMyNotificationPreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -21,6 +21,10 @@ import {
   getMyAnalytics,
   changePassword,
   getUserPublicProfile,
+  setup2FA,
+  verify2FA,
+  disable2FA,
+  loginWith2fa,
 } from '../controllers/userController.js';
 import {
   getMyNotificationPreferences,
@@ -271,6 +275,7 @@ router.post('/register', validate(registerSchema), registerUser);
  */
 // Login a user - with validation
 router.post('/login', validate(loginSchema), loginUser);
+router.post('/2fa/login', loginWith2fa);
 
 /**
  * @openapi
@@ -883,6 +888,11 @@ router.route('/me')
   .get(authMiddleware, getCurrentUser)                                   // Get current user profile
   .patch(authMiddleware, validate(updateUserSchema), updateCurrentUser)  // Update profile (firstName/lastName) - with validation
   .delete(authMiddleware, deleteCurrentUser);                            // Delete account
+
+// Two-Factor Authentication (2FA) Routes
+router.get('/me/2fa/setup', authMiddleware, setup2FA);
+router.post('/me/2fa/verify', authMiddleware, verify2FA);
+router.post('/me/2fa/disable', authMiddleware, disable2FA);
 
 /**
  * @openapi

@@ -75,9 +75,22 @@ export async function createOrganization(data: CreateOrganizationData = {}) {
     ...data,
   };
 
-  return await getPrismaClient().organization.create({
+  const domainStr = defaultData.domain;
+
+  const org = await getPrismaClient().organization.create({
     data: defaultData,
   });
+
+  if (domainStr) {
+    await getPrismaClient().organizationDomain.create({
+      data: {
+        domain: domainStr,
+        organizationId: org.id,
+      },
+    });
+  }
+
+  return org;
 }
 
 /**

@@ -32,6 +32,7 @@ import {
 import { env } from '../config/env.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import type { Role } from '@prisma/client';
+import { generateBase32Secret, verifyTOTP, generateOtpauthUri } from '../utils/twoFactorUtils.js';
 
 const googleClient = env.GOOGLE_CLIENT_ID
   ? new OAuth2Client(env.GOOGLE_CLIENT_ID)
@@ -113,9 +114,12 @@ export const registerUser = async (
       // Org email: domain-based lookup
       for (const candidate of getDomainCandidates(domain)) {
         // eslint-disable-next-line no-await-in-loop
-        const found = await prisma.organization.findUnique({ where: { domain: candidate } });
-        if (found) {
-          organization = found;
+        const foundDomain = await prisma.organizationDomain.findUnique({
+          where: { domain: candidate },
+          include: { organization: true },
+        });
+        if (foundDomain) {
+          organization = foundDomain.organization;
           break;
         }
       }
@@ -284,9 +288,12 @@ export const loginUser = async (
     } else {
       for (const candidate of getDomainCandidates(domain)) {
         // eslint-disable-next-line no-await-in-loop
-        const found = await prisma.organization.findUnique({ where: { domain: candidate } });
-        if (found) {
-          organization = found;
+        const foundDomain = await prisma.organizationDomain.findUnique({
+          where: { domain: candidate },
+          include: { organization: true },
+        });
+        if (foundDomain) {
+          organization = foundDomain.organization;
           break;
         }
       }
@@ -374,6 +381,19 @@ export const loginUser = async (
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    if (user.twoFactorEnabled) {
+      const tempToken = jwt.sign(
+        { userId: user.id, isTemp2fa: true },
+        process.env.JWT_SECRET as string,
+        { expiresIn: '5m' }
+      );
+      return res.status(200).json({
+        message: 'Two-factor authentication code is required.',
+        code: 'TWO_FACTOR_REQUIRED',
+        tempToken,
+      });
+    }
+
     const token = issueJwtForUser(user);
 
     // Invalidate cache to ensure fresh data on login
@@ -435,9 +455,12 @@ export const loginWithGoogle = async (
 
     for (const candidate of getDomainCandidates(domain)) {
       // eslint-disable-next-line no-await-in-loop
-      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
-      if (found) {
-        organization = found;
+      const foundDomain = await prisma.organizationDomain.findUnique({
+        where: { domain: candidate },
+        include: { organization: true },
+      });
+      if (foundDomain) {
+        organization = foundDomain.organization;
         break;
       }
     }
@@ -686,9 +709,12 @@ export const resendVerificationEmail = async (
     } else {
       for (const candidate of getDomainCandidates(domain)) {
         // eslint-disable-next-line no-await-in-loop
-        const found = await prisma.organization.findUnique({ where: { domain: candidate } });
-        if (found) {
-          organization = found;
+        const foundDomain = await prisma.organizationDomain.findUnique({
+          where: { domain: candidate },
+          include: { organization: true },
+        });
+        if (foundDomain) {
+          organization = foundDomain.organization;
           break;
         }
       }
@@ -780,9 +806,12 @@ export const requestPasswordReset = async (
 
     for (const candidate of getDomainCandidates(domain)) {
       // eslint-disable-next-line no-await-in-loop
-      const found = await prisma.organization.findUnique({ where: { domain: candidate } });
-      if (found) {
-        organization = found;
+      const foundDomain = await prisma.organizationDomain.findUnique({
+        where: { domain: candidate },
+        include: { organization: true },
+      });
+      if (foundDomain) {
+        organization = foundDomain.organization;
         break;
       }
     }
@@ -974,9 +1003,11 @@ export const requestOrganizationOnboarding = async (
     const normalizedDomain = domain;
     const normalizedEmail = normalizeEmail(email);
 
-    const existingOrganization = await prisma.organization.findUnique({
+    const existingOrgDomain = await prisma.organizationDomain.findUnique({
       where: { domain: normalizedDomain },
+      include: { organization: true },
     });
+    const existingOrganization = existingOrgDomain?.organization;
 
     if (existingOrganization) {
       return res.status(409).json({
@@ -1579,7 +1610,7 @@ export const deleteCurrentUser = async (req: AuthRequest, res: Response, next: N
 export const updateCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const { firstName, lastName, level, department, hall, displayName } = req.body;
+    const { level, department, hall, displayName } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized: User ID not found' });
@@ -1639,8 +1670,6 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
             data: {
               displayName,
               displayNameUpdatedAt: new Date(),
-              ...(firstName !== undefined && { firstName }),
-              ...(lastName !== undefined && { lastName }),
               ...(level !== undefined && { level }),
               ...(department !== undefined && { department }),
               ...(hall !== undefined && { hall }),
@@ -1656,7 +1685,7 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
     // --- Standard profile update (no displayName change) ---
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { firstName, lastName, level, department, hall },
+      data: { level, department, hall },
     });
     const { password: _pw, ...safeUser } = updatedUser;
 
@@ -2105,6 +2134,182 @@ export const getUserPublicProfile = async (req: AuthRequest, res: Response, next
     });
   } catch (error) {
     logger.error('Error fetching public user profile', { error, targetId: req.params.id });
+    return next(error);
+  }
+};
+
+// ── Two-Factor Authentication Endpoints ───────────────────────────────
+
+export const setup2FA = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: User ID not found' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, twoFactorSecret: true, twoFactorEnabled: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.twoFactorEnabled) {
+      return res.status(400).json({ error: 'Two-factor authentication is already enabled' });
+    }
+
+    let secret = user.twoFactorSecret;
+    if (!secret) {
+      secret = generateBase32Secret();
+      await prisma.user.update({
+        where: { id: userId },
+        data: { twoFactorSecret: secret },
+      });
+    }
+
+    const otpauthUri = generateOtpauthUri(secret, user.email, 'Echo');
+
+    return res.status(200).json({
+      secret,
+      otpauthUri,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const verify2FA = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    const { code } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: User ID not found' });
+    }
+
+    if (typeof code !== 'string' || code.trim().length !== 6) {
+      return res.status(400).json({ error: 'A valid 6-digit TOTP code is required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorSecret: true, twoFactorEnabled: true },
+    });
+
+    if (!user || !user.twoFactorSecret) {
+      return res.status(400).json({ error: '2FA setup has not been initiated for this user' });
+    }
+
+    if (user.twoFactorEnabled) {
+      return res.status(400).json({ error: 'Two-factor authentication is already enabled' });
+    }
+
+    const isValid = verifyTOTP(user.twoFactorSecret, code);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorEnabled: true },
+    });
+
+    return res.status(200).json({
+      message: 'Two-factor authentication enabled successfully',
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const disable2FA = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    const { code } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: User ID not found' });
+    }
+
+    if (typeof code !== 'string' || code.trim().length !== 6) {
+      return res.status(400).json({ error: 'A valid 6-digit TOTP code is required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorSecret: true, twoFactorEnabled: true },
+    });
+
+    if (!user || !user.twoFactorSecret || !user.twoFactorEnabled) {
+      return res.status(400).json({ error: '2FA is not enabled for this user' });
+    }
+
+    const isValid = verifyTOTP(user.twoFactorSecret, code);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+      },
+    });
+
+    return res.status(200).json({
+      message: 'Two-factor authentication disabled successfully',
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const loginWith2fa = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { tempToken, code } = req.body;
+
+    if (typeof tempToken !== 'string' || typeof code !== 'string') {
+      return res.status(400).json({ error: 'tempToken and TOTP code are required' });
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_SECRET as string);
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired temporary 2FA token' });
+    }
+
+    if (!decoded.isTemp2fa) {
+      return res.status(401).json({ error: 'Invalid session token' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!user || !user.twoFactorSecret) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isValid = verifyTOTP(user.twoFactorSecret, code);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid two-factor code' });
+    }
+
+    const token = issueJwtForUser(user);
+    await invalidateCacheAfterMutation(user.organizationId);
+
+    logger.info('User completed 2FA and logged in', {
+      userId: user.id,
+      email: user.email,
+      organizationId: user.organizationId,
+    });
+
+    return res.status(200).json({ message: 'Login successful', token });
+  } catch (error) {
     return next(error);
   }
 };

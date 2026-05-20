@@ -62,13 +62,13 @@ export async function approveOrganizationRequest(
       let organizationId = orgRequest.organizationId;
 
       if (!organizationId) {
-        const existingOrganization = await tx.organization.findUnique({
+        const existingOrgDomain = await tx.organizationDomain.findUnique({
           where: { domain: orgRequest.domain },
-          select: { id: true },
+          select: { organizationId: true },
         });
 
-        if (existingOrganization) {
-          organizationId = existingOrganization.id;
+        if (existingOrgDomain) {
+          organizationId = existingOrgDomain.organizationId;
         } else {
           const createdOrganization = await tx.organization.create({
             data: {
@@ -79,6 +79,11 @@ export async function approveOrganizationRequest(
               isDomainLocked: false,
               isClaimVerified: true,
               categoryCustomizationLocked: false,
+              domains: {
+                create: {
+                  domain: orgRequest.domain,
+                },
+              },
             },
             select: { id: true },
           });

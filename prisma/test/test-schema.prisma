@@ -12,7 +12,9 @@ generator testClient {
 model Organization {
   id                          Int        @id @default(autoincrement())
   name                        String     @unique
-  domain                      String?    @unique // Null indicates open-domain organizations
+  domain                      String?    // Legacy non-unique field for fallback compatibility
+  description                 String?    // Brief description of the space
+  logoUrl                     String?    // Space custom profile picture/logo URL
   joinPolicy                  JoinPolicy @default(OPEN)
   isDomainLocked              Boolean    @default(false)
   isClaimVerified             Boolean    @default(true)
@@ -20,6 +22,13 @@ model Organization {
   status                      String     @default("PENDING") // PENDING, ACTIVE
   createdAt                   DateTime   @default(now())
   updatedAt                   DateTime   @updatedAt
+
+  // Revamped Organization Posting & Moderation Rules
+  allowMediaOnPings           Boolean    @default(true)
+  sameTopicCooldownHours      Int        @default(24)       // 0 for none
+  reportsAutoFlagThreshold    Int        @default(3)        // 0 for none
+  hideFlaggedPendingReview    Boolean    @default(true)
+  minSurgesForWave            Int        @default(0)        // 0 for none
 
   users             User[]
   pings             Ping[]
@@ -36,6 +45,7 @@ model Organization {
   reports           Report[]
   notifications     Notification[]
   media             Media[]
+  domains           OrganizationDomain[]
 }
 
 // User Model with Organization Link
@@ -50,7 +60,7 @@ model User {
   department           String?
   hall                 String?
   password             String? // Optional for Google OAuth users
-  googleId             String?   @unique // Google's unique user identifier
+  googleId             String?   // SQLite doesn't strictly require unique fields to be mapped identically, but we can keep it
   profilePicture       String? // Store Google profile picture URL
   isVerified           Boolean   @default(false) // Email verification status
   role                 Role      @default(USER)
@@ -58,6 +68,8 @@ model User {
   moderationStatus     ModerationStatus @default(ACTIVE)
   suspendedUntil       DateTime? // Non-null only when moderationStatus = SUSPENDED
   moderationNote       String?   // Internal admin note, never exposed to the user
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorSecret      String?   // Encrypted secret key for Authenticator App OTP
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
@@ -111,6 +123,8 @@ model DisplayNameHistory {
 model Category {
   id        Int      @id @default(autoincrement())
   name      String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -119,6 +133,7 @@ model Category {
   pings Ping[]
 
   @@unique([name, organizationId])
+  @@index([organizationId, sortOrder])
 }
 
 // Content Models with Organization Link and Dynamic Category
@@ -494,6 +509,9 @@ model NotificationPreference {
   id                  Int      @id @default(autoincrement())
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId              Int      @unique
+  emailEnabled        Boolean  @default(true)
+  surgeMilestone      Int      @default(100)
+  notifyJoinRequests  Boolean  @default(true)
   waveStatusUpdated   Boolean  @default(true)
   officialResponse    Boolean  @default(true)
   announcement        Boolean  @default(true)
@@ -632,3 +650,13 @@ model Media {
   @@index([userId])
 }
 
+model OrganizationDomain {
+  id             Int          @id @default(autoincrement())
+  domain         String       @unique // e.g. @cu.stu.cu.edu.ng
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  @@index([organizationId])
+}

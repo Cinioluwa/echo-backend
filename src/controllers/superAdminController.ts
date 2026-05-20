@@ -333,7 +333,7 @@ export const updateOrganizationDetails = async (
     // Check domain uniqueness if changing (null clears the domain → open-domain org)
     if (domain !== undefined && domain !== org.domain) {
       if (domain !== null) {
-        const conflict = await prisma.organization.findUnique({ where: { domain } });
+        const conflict = await prisma.organizationDomain.findUnique({ where: { domain } });
         if (conflict) {
           return res.status(409).json({ error: 'An organization with this domain already exists' });
         }

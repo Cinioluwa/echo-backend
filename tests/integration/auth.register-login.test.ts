@@ -29,6 +29,13 @@ describe('Auth register/login', () => {
       },
     });
     organizationId = org.id;
+
+    await prisma.organizationDomain.create({
+      data: {
+        domain: 'example.edu',
+        organizationId: org.id
+      }
+    });
   });
 
   it('registers a user and logs in after activation', async () => {
@@ -79,6 +86,13 @@ describe('Auth register/login', () => {
         status: 'ACTIVE',
         joinPolicy: 'REQUIRES_APPROVAL',
       },
+    });
+
+    await prisma.organizationDomain.create({
+      data: {
+        domain: approvalOrg.domain!,
+        organizationId: approvalOrg.id
+      }
     });
 
     const pendingEmail = `pending@${approvalOrg.domain}`;

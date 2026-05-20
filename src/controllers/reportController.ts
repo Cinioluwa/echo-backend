@@ -154,6 +154,38 @@ export const createReport = async (req: AuthRequest, res: Response, next: NextFu
         include: REPORT_INCLUDE,
       });
 
+      // ── Auto-flagging logic ──────────────────────────────────────────────
+      const org = await tx.organization.findUnique({
+        where: { id: organizationId },
+        select: { reportsAutoFlagThreshold: true },
+      });
+
+      if (org && org.reportsAutoFlagThreshold > 0) {
+        const distinctReporters = await tx.report.groupBy({
+          by: ['reporterId'],
+          where: {
+            organizationId,
+            pingId: target.pingId,
+            waveId: target.waveId,
+            commentId: target.commentId,
+          },
+        });
+
+        if (distinctReporters.length >= org.reportsAutoFlagThreshold) {
+          if (target.pingId) {
+            await tx.ping.update({
+              where: { id: target.pingId },
+              data: { status: 'UNDER_REVIEW' },
+            });
+          } else if (target.waveId) {
+            await tx.wave.update({
+              where: { id: target.waveId },
+              data: { status: 'UNDER_REVIEW', flaggedForReview: true },
+            });
+          }
+        }
+      }
+
       const adminUsers = await tx.user.findMany({
         where: {
           organizationId,
