@@ -106,6 +106,24 @@ async function main() {
         },
     });
 
+    // --- Seed OrganizationDomain records for all orgs ---
+    // The domain resolution logic in userController looks up the OrganizationDomain
+    // table, NOT the legacy Organization.domain column. We must populate it here.
+    const domainMap: Array<{ domain: string; organizationId: number }> = [
+        { domain: 'testorg1.edu', organizationId: org.id },
+        { domain: 'testorg2.edu', organizationId: orgTest2.id },
+        { domain: 'cu.edu.ng', organizationId: cuOrg.id },
+        { domain: 'testuniva.edu', organizationId: org1.id },
+        { domain: 'testunivb.edu', organizationId: org2.id },
+    ];
+
+    for (const entry of domainMap) {
+        const existing = await prisma.organizationDomain.findUnique({ where: { domain: entry.domain } });
+        if (!existing) {
+            await prisma.organizationDomain.create({ data: entry });
+        }
+    }
+
     // Users for Covenant University
     await prisma.user.upsert({
         where: { email_organizationId: { email: 'admin@cu.edu.ng', organizationId: cuOrg.id } },

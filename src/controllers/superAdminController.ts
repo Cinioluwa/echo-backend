@@ -345,18 +345,35 @@ export const updateOrganizationDetails = async (
     if (domain !== undefined) data.domain = domain;
     if (joinPolicy !== undefined) data.joinPolicy = joinPolicy;
 
-    const updated = await prisma.organization.update({
-      where: { id: orgId },
-      data,
-      select: {
-        id: true,
-        name: true,
-        domain: true,
-        status: true,
-        joinPolicy: true,
-        isClaimVerified: true,
-        isDomainLocked: true,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.organization.update({
+        where: { id: orgId },
+        data,
+        select: {
+          id: true,
+          name: true,
+          domain: true,
+          status: true,
+          joinPolicy: true,
+          isClaimVerified: true,
+          isDomainLocked: true,
+        },
+      });
+
+      // Keep OrganizationDomain in sync when the domain is being changed.
+      // This is the authoritative lookup table used by login/register.
+      if (domain !== undefined && domain !== org.domain) {
+        // Remove the old domain entry if one existed
+        if (org.domain) {
+          await tx.organizationDomain.deleteMany({ where: { domain: org.domain, organizationId: orgId } });
+        }
+        // Create the new domain entry if a domain was provided
+        if (domain !== null) {
+          await tx.organizationDomain.create({ data: { domain, organizationId: orgId } });
+        }
+      }
+
+      return result;
     });
 
     return res.json({ organization: updated });
