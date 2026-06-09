@@ -35,6 +35,7 @@ import swaggerRoutes from './routes/swaggerRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import superAdminRoutes from './routes/superAdminRoutes.js';
 import pushNotificationRoutes from './routes/pushNotificationRoutes.js';
+import guestRoutes from './routes/guestRoutes.js';
 
 import type { RedisClientType } from './config/redis.js';
 export type CreateAppOptions = {
@@ -247,6 +248,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/public', publicRoutes);
   app.use('/api/categories', ...writeLimiter, categoryRoutes);
   app.use('/api/uploads', ...writeLimiter, uploadRoutes);
+  app.use('/api/guest', guestRoutes);
 
   app.use(errorHandler);
   return app;

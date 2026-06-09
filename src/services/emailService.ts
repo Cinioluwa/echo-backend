@@ -399,3 +399,22 @@ export const buildPingSurgedMilestoneEmail = (pingTitle: string, surgeCount: num
 		text: `Hi,\n\nYour ping "${pingTitle}" has just reached ${surgeCount} surges!\nYour community is highly engaged with this topic.\n\nView it here: ${pingUrl}\n\n— The Echo Team`,
 	};
 };
+
+export const buildGuestOtpEmail = (code: string, pingTitle?: string) => {
+	const reasonText = pingTitle 
+		? `You requested this code to verify your email and surge the ping: "${pingTitle}".` 
+		: 'You requested this code to verify your email on Echo.';
+
+	return {
+		subject: `Your Echo verification code: ${code}`,
+		html: `
+			<p>Hi,</p>
+			<p>Here is your 6-digit verification code:</p>
+			<h2 style="letter-spacing: 4px; color: #1a1a1a;">${code}</h2>
+			<p>${reasonText}</p>
+			<p>This code expires in 10 minutes. Do not share this code with anyone.</p>
+			<p>— The Echo Team</p>
+		`,
+		text: `Hi,\n\nHere is your 6-digit verification code: ${code}\n\n${reasonText}\n\nThis code expires in 10 minutes. Do not share this code with anyone.\n\n— The Echo Team`,
+	};
+};

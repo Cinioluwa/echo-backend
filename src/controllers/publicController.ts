@@ -339,6 +339,10 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           id: true,
           title: true,
           content: true,
+          surgeCount: true,
+          _count: { select: { waves: true } },
+          category: { select: { name: true } },
+          organization: { select: { name: true, logoUrl: true } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -353,8 +357,13 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         id: ping.id,
         title: trimText(ping.title, 110),
         description: trimText(ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
-        imageUrl: safeImageUrl(ping.media),
+        imageUrl: safeImageUrl(ping.media) || ping.organization?.logoUrl || null,
         canonicalUrl: buildCanonicalUrl('ping', ping.id),
+        surgeCount: ping.surgeCount,
+        waveCount: ping._count.waves,
+        category: ping.category?.name,
+        orgName: ping.organization?.name,
+        orgLogoUrl: ping.organization?.logoUrl,
       });
     }
 
@@ -365,7 +374,9 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           id: true,
           solution: true,
           pingId: true,
-          ping: { select: { title: true } },
+          surgeCount: true,
+          ping: { select: { title: true, category: { select: { name: true } } } },
+          organization: { select: { name: true, logoUrl: true } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -384,8 +395,12 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         id: wave.id,
         title,
         description: trimText(wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
-        imageUrl: safeImageUrl(wave.media),
+        imageUrl: safeImageUrl(wave.media) || wave.organization?.logoUrl || null,
         canonicalUrl: buildCanonicalUrl('wave', wave.pingId),
+        surgeCount: wave.surgeCount,
+        category: wave.ping?.category?.name,
+        orgName: wave.organization?.name,
+        orgLogoUrl: wave.organization?.logoUrl,
       });
     }
 
@@ -396,6 +411,10 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           id: true,
           title: true,
           content: true,
+          surgeCount: true,
+          _count: { select: { waves: true } },
+          category: { select: { name: true } },
+          organization: { select: { name: true, logoUrl: true } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -409,8 +428,13 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           id: ping.id,
           title: trimText(ping.title, 110),
           description: trimText(ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
-          imageUrl: safeImageUrl(ping.media),
+          imageUrl: safeImageUrl(ping.media) || ping.organization?.logoUrl || null,
           canonicalUrl: buildCanonicalUrl('feed', ping.id),
+          surgeCount: ping.surgeCount,
+          waveCount: ping._count.waves,
+          category: ping.category?.name,
+          orgName: ping.organization?.name,
+          orgLogoUrl: ping.organization?.logoUrl,
         });
       }
 
@@ -420,7 +444,9 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           id: true,
           solution: true,
           pingId: true,
-          ping: { select: { title: true } },
+          surgeCount: true,
+          ping: { select: { title: true, category: { select: { name: true } } } },
+          organization: { select: { name: true, logoUrl: true } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -439,8 +465,12 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         id: wave.id,
         title,
         description: trimText(wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
-        imageUrl: safeImageUrl(wave.media),
+        imageUrl: safeImageUrl(wave.media) || wave.organization?.logoUrl || null,
         canonicalUrl: buildCanonicalUrl('feed', wave.pingId),
+        surgeCount: wave.surgeCount,
+        category: wave.ping?.category?.name,
+        orgName: wave.organization?.name,
+        orgLogoUrl: wave.organization?.logoUrl,
       });
     }
 

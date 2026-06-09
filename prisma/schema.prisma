@@ -12,9 +12,9 @@ generator client {
 model Organization {
   id                          Int        @id @default(autoincrement())
   name                        String     @unique
-  domain                      String?    // Legacy non-unique field for fallback compatibility
-  description                 String?    // Brief description of the space
-  logoUrl                     String?    // Space custom profile picture/logo URL
+  domain                      String? // Legacy non-unique field for fallback compatibility
+  description                 String? // Brief description of the space
+  logoUrl                     String? // Space custom profile picture/logo URL
   joinPolicy                  JoinPolicy @default(OPEN)
   isDomainLocked              Boolean    @default(false)
   isClaimVerified             Boolean    @default(true)
@@ -24,11 +24,11 @@ model Organization {
   updatedAt                   DateTime   @updatedAt
 
   // Revamped Organization Posting & Moderation Rules
-  allowMediaOnPings           Boolean    @default(true)
-  sameTopicCooldownHours      Int        @default(24)       // 0 for none
-  reportsAutoFlagThreshold    Int        @default(3)        // 0 for none
-  hideFlaggedPendingReview    Boolean    @default(true)
-  minSurgesForWave            Int        @default(0)        // 0 for none
+  allowMediaOnPings        Boolean @default(true)
+  sameTopicCooldownHours   Int     @default(24) // 0 for none
+  reportsAutoFlagThreshold Int     @default(3) // 0 for none
+  hideFlaggedPendingReview Boolean @default(true)
+  minSurgesForWave         Int     @default(0) // 0 for none
 
   users             User[]
   pings             Ping[]
@@ -46,11 +46,13 @@ model Organization {
   notifications     Notification[]
   media             Media[]
   domains           OrganizationDomain[]
+  guestSurges       GuestSurge[]
+  guestOrgAccesses  GuestOrgAccess[]
 }
 
 // User Model with Organization Link
 model User {
-  id                   Int       @id @default(autoincrement())
+  id                   Int              @id @default(autoincrement())
   email                String
   firstName            String?
   lastName             String?
@@ -60,18 +62,18 @@ model User {
   department           String?
   hall                 String?
   password             String? // Optional for Google OAuth users
-  googleId             String?   @unique // Google's unique user identifier
+  googleId             String?          @unique // Google's unique user identifier
   profilePicture       String? // Store Google profile picture URL
-  isVerified           Boolean   @default(false) // Email verification status
-  role                 Role      @default(USER)
-  status               String    @default("PENDING") // PENDING, ACTIVE
+  isVerified           Boolean          @default(false) // Email verification status
+  role                 Role             @default(USER)
+  status               String           @default("PENDING") // PENDING, ACTIVE
   moderationStatus     ModerationStatus @default(ACTIVE)
   suspendedUntil       DateTime? // Non-null only when moderationStatus = SUSPENDED
-  moderationNote       String?   // Internal admin note, never exposed to the user
-  twoFactorEnabled     Boolean   @default(false)
-  twoFactorSecret      String?   // Encrypted secret key for Authenticator App OTP
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  moderationNote       String? // Internal admin note, never exposed to the user
+  twoFactorEnabled     Boolean          @default(false)
+  twoFactorSecret      String? // Encrypted secret key for Authenticator App OTP
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
@@ -138,21 +140,21 @@ model Category {
 
 // Content Models with Organization Link and Dynamic Category
 model Ping {
-  id                Int            @id @default(autoincrement())
-  title             String
-  content           String
-  hashtag           String?
-  status            Status         @default(POSTED)
-  progressStatus    ProgressStatus @default(NONE)
-  progressUpdatedAt DateTime?
-  acknowledgedAt    DateTime?
-  resolvedAt        DateTime?
-  createdAt         DateTime       @default(now())
-  surgeCount        Int            @default(0)
-  isAnonymous       Boolean        @default(false)
-  isEdited          Boolean        @default(false) // True if the author edited content after posting
-  anonymousAlias    String?        // Snapshot of author's alias at post time (only set when isAnonymous=true)
-  anonymousProfilePicture String?  // Snapshot of alias profile picture at post time
+  id                      Int            @id @default(autoincrement())
+  title                   String
+  content                 String
+  hashtag                 String?
+  status                  Status         @default(POSTED)
+  progressStatus          ProgressStatus @default(NONE)
+  progressUpdatedAt       DateTime?
+  acknowledgedAt          DateTime?
+  resolvedAt              DateTime?
+  createdAt               DateTime       @default(now())
+  surgeCount              Int            @default(0)
+  isAnonymous             Boolean        @default(false)
+  isEdited                Boolean        @default(false) // True if the author edited content after posting
+  anonymousAlias          String? // Snapshot of author's alias at post time (only set when isAnonymous=true)
+  anonymousProfilePicture String? // Snapshot of alias profile picture at post time
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
@@ -168,6 +170,7 @@ model Ping {
   officialResponse OfficialResponse?
   notifications    Notification[]
   media            Media[]
+  guestSurges      GuestSurge[]
 
   // Database indexes for query performance
   @@index([authorId]) // Used in getMyPings and foreign key joins
@@ -209,6 +212,7 @@ model Wave {
   flaggedById   Int?
   notifications Notification[]
   media         Media[]
+  guestSurges   GuestSurge[]
   reason        String? // Populated when status is REJECTED or ON_HOLD
 
   // Database indexes for query performance
@@ -223,14 +227,14 @@ model Wave {
 }
 
 model Comment {
-  id             Int      @id @default(autoincrement())
-  content        String
-  createdAt      DateTime @default(now())
-  isAnonymous    Boolean  @default(false)
-  isEdited       Boolean  @default(false) // True if the author edited content after posting
-  anonymousAlias String?  // Snapshot of author's alias at post time (only set when isAnonymous=true)
+  id                      Int      @id @default(autoincrement())
+  content                 String
+  createdAt               DateTime @default(now())
+  isAnonymous             Boolean  @default(false)
+  isEdited                Boolean  @default(false) // True if the author edited content after posting
+  anonymousAlias          String? // Snapshot of author's alias at post time (only set when isAnonymous=true)
   anonymousProfilePicture String? // Snapshot of alias profile picture at post time
-  surgeCount     Int      @default(0)
+  surgeCount              Int      @default(0)
 
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       Int
@@ -479,21 +483,21 @@ model Report {
 
   // Moderation action fields (populated when an admin acts on the report)
   action       ModerationAction? // Which action the admin took
-  actionNote   String?           // Written justification (required for REQUEST_IDENTITY_DISCLOSURE)
+  actionNote   String? // Written justification (required for REQUEST_IDENTITY_DISCLOSURE)
   actionedAt   DateTime?
   actionedBy   User?             @relation("ReportActionedBy", fields: [actionedById], references: [id], onDelete: SetNull)
   actionedById Int?
 
-  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporter   User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
   reporterId Int
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
-  ping   Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
-  pingId Int?
-  wave   Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
-  waveId Int?
+  ping      Ping?    @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId    Int?
+  wave      Wave?    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId    Int?
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId Int?
 
@@ -527,16 +531,16 @@ model NotificationPreference {
 
 // User behaviour / posting preferences (separate from notification settings)
 model UserPreference {
-  id                 Int      @id @default(autoincrement())
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId             Int      @unique
-  commentAnonymously Boolean  @default(false)
-  pingAnonymously    Boolean  @default(false)
-  anonymousAlias     String?  // Optional alias shown on anonymous posts (2-30 chars when set)
+  id                           Int       @id @default(autoincrement())
+  user                         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                       Int       @unique
+  commentAnonymously           Boolean   @default(false)
+  pingAnonymously              Boolean   @default(false)
+  anonymousAlias               String? // Optional alias shown on anonymous posts (2-30 chars when set)
   anonymousAliasProfilePicture String? // Optional alias profile picture URL shown on anonymous posts
-  anonymousAliasUpdatedAt DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  anonymousAliasUpdatedAt      DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 }
 
 // Enums
@@ -651,12 +655,77 @@ model Media {
 }
 
 model OrganizationDomain {
-  id             Int          @id @default(autoincrement())
-  domain         String       @unique // e.g. @cu.stu.cu.edu.ng
-  createdAt      DateTime     @default(now())
+  id        Int      @id @default(autoincrement())
+  domain    String   @unique // e.g. @cu.stu.cu.edu.ng
+  createdAt DateTime @default(now())
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
+  @@index([organizationId])
+}
+
+// Guest User system for Email OTP verified users
+model GuestUser {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  surges      GuestSurge[]
+  otpSessions GuestOtpSession[]
+  orgAccesses GuestOrgAccess[]
+}
+
+model GuestOrgAccess {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  guestUser   GuestUser @relation(fields: [guestUserId], references: [id], onDelete: Cascade)
+  guestUserId Int
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  @@unique([guestUserId, organizationId])
+  @@index([guestUserId])
+  @@index([organizationId])
+}
+
+model GuestOtpSession {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  guestUser   GuestUser? @relation(fields: [guestUserId], references: [id])
+  guestUserId Int?
+
+  @@index([email, expiresAt])
+}
+
+model GuestSurge {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  guestUser   GuestUser @relation(fields: [guestUserId], references: [id], onDelete: Cascade)
+  guestUserId Int
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  ping   Ping? @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId Int?
+  wave   Wave? @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId Int?
+
+  @@unique([guestUserId, pingId])
+  @@unique([guestUserId, waveId])
+  @@index([pingId])
+  @@index([guestUserId])
   @@index([organizationId])
 }
