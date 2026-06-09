@@ -7,6 +7,7 @@ import { createGuestOtpSession, consumeGuestOtpSession } from '../services/guest
 import { sendEmail, buildGuestOtpEmail } from '../services/emailService.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import { emitPingSurgeUpdate } from '../utils/socketEmitter.js';
+import { extractDomainFromEmail, getDomainCandidates } from '../utils/domainUtils.js';
 
 export const sendGuestOtp = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -21,11 +22,44 @@ export const sendGuestOtp = async (req: Request, res: Response, next: NextFuncti
     // Find the ping to resolve the organization
     const ping = await prisma.ping.findUnique({
       where: { id: parseInt(pingId) },
-      select: { id: true, title: true, organizationId: true },
+      select: { 
+        id: true, 
+        title: true, 
+        organizationId: true,
+        organization: {
+          select: {
+            domain: true,
+            domains: { select: { domain: true } }
+          }
+        }
+      },
     });
 
     if (!ping) {
       return res.status(404).json({ error: 'Ping not found' });
+    }
+
+    // Enforce organization email domain
+    let domain: string;
+    try {
+      domain = extractDomainFromEmail(emailNorm);
+    } catch {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    const org = ping.organization;
+    const allowedDomains = new Set<string>();
+    if (org.domain) allowedDomains.add(org.domain.toLowerCase());
+    org.domains.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+
+    // If the org has allowed domains configured, enforce that the guest email matches
+    if (allowedDomains.size > 0) {
+      const candidates = getDomainCandidates(domain);
+      const isAllowed = candidates.some(c => allowedDomains.has(c));
+      
+      if (!isAllowed) {
+        return res.status(403).json({ error: 'This email domain is not allowed for this institution.' });
+      }
     }
 
     const { session, rawCode } = await createGuestOtpSession(prisma, emailNorm);

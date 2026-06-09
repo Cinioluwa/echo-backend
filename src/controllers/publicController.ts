@@ -342,7 +342,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           surgeCount: true,
           _count: { select: { waves: true } },
           category: { select: { name: true } },
-          organization: { select: { name: true, logoUrl: true } },
+          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -351,6 +351,10 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
       });
 
       if (!ping) return notFound(res);
+
+      const allowedDomains = new Set<string>();
+      if (ping.organization?.domain) allowedDomains.add(ping.organization.domain.toLowerCase());
+      ping.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
 
       return res.status(200).json({
         type: 'ping',
@@ -364,6 +368,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         category: ping.category?.name,
         orgName: ping.organization?.name,
         orgLogoUrl: ping.organization?.logoUrl,
+        allowedDomains: Array.from(allowedDomains),
       });
     }
 
@@ -376,7 +381,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           pingId: true,
           surgeCount: true,
           ping: { select: { title: true, category: { select: { name: true } } } },
-          organization: { select: { name: true, logoUrl: true } },
+          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -390,6 +395,10 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         ? `Solution to: ${trimText(wave.ping.title, 95)}`
         : `Solution #${wave.id}`;
 
+      const allowedDomains = new Set<string>();
+      if (wave.organization?.domain) allowedDomains.add(wave.organization.domain.toLowerCase());
+      wave.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+
       return res.status(200).json({
         type: 'wave',
         id: wave.id,
@@ -401,6 +410,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         category: wave.ping?.category?.name,
         orgName: wave.organization?.name,
         orgLogoUrl: wave.organization?.logoUrl,
+        allowedDomains: Array.from(allowedDomains),
       });
     }
 
@@ -414,7 +424,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           surgeCount: true,
           _count: { select: { waves: true } },
           category: { select: { name: true } },
-          organization: { select: { name: true, logoUrl: true } },
+          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -423,6 +433,10 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
       });
 
       if (ping) {
+        const allowedDomains = new Set<string>();
+        if (ping.organization?.domain) allowedDomains.add(ping.organization.domain.toLowerCase());
+        ping.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+
         return res.status(200).json({
           type: 'ping',
           id: ping.id,
@@ -435,6 +449,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           category: ping.category?.name,
           orgName: ping.organization?.name,
           orgLogoUrl: ping.organization?.logoUrl,
+          allowedDomains: Array.from(allowedDomains),
         });
       }
 
@@ -446,7 +461,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           pingId: true,
           surgeCount: true,
           ping: { select: { title: true, category: { select: { name: true } } } },
-          organization: { select: { name: true, logoUrl: true } },
+          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -460,6 +475,10 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         ? `Solution to: ${trimText(wave.ping.title, 95)}`
         : `Solution #${wave.id}`;
 
+      const allowedDomains = new Set<string>();
+      if (wave.organization?.domain) allowedDomains.add(wave.organization.domain.toLowerCase());
+      wave.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+
       return res.status(200).json({
         type: 'wave',
         id: wave.id,
@@ -471,6 +490,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         category: wave.ping?.category?.name,
         orgName: wave.organization?.name,
         orgLogoUrl: wave.organization?.logoUrl,
+        allowedDomains: Array.from(allowedDomains),
       });
     }
 
