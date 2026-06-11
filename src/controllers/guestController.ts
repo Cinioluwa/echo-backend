@@ -19,6 +19,42 @@ export const sendGuestOtp = async (req: Request, res: Response, next: NextFuncti
 
     const emailNorm = email.toLowerCase().trim();
 
+    // Check if the user already has a regular account
+    const existingUser = await prisma.user.findFirst({
+      where: { email: emailNorm },
+    });
+    
+
+    if (existingUser) {
+      return res.status(409).json({
+        error: 'account_exists',
+        message: 'You already have an Echo account. Please sign in.',
+      });
+    }
+
+    // Check if the guest already surged this ping
+    const guestUser = await prisma.guestUser.findUnique({
+      where: { email: emailNorm },
+    });
+
+    if (guestUser) {
+      const existingSurge = await prisma.guestSurge.findUnique({
+        where: {
+          guestUserId_pingId: {
+            guestUserId: guestUser.id,
+            pingId: parseInt(pingId),
+          },
+        },
+      });
+
+      if (existingSurge) {
+        return res.status(400).json({
+          error: 'already_surged',
+          message: 'You have already surged this ping.',
+        });
+      }
+    }
+
     // Find the ping to resolve the organization
     const ping = await prisma.ping.findUnique({
       where: { id: parseInt(pingId) },
@@ -249,16 +285,11 @@ export const guestSurgePing = async (req: Request, res: Response, next: NextFunc
     });
 
     if (existingSurge) {
-      // Toggle logic: delete surge
-      await prisma.guestSurge.delete({ where: { id: existingSurge.id } });
+      // Idempotent: same guest token surging twice = 1 surge
       const count = await prisma.surge.count({ where: { pingId: pingIdInt } }) +
                     await prisma.guestSurge.count({ where: { pingId: pingIdInt } });
                     
-      await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
-      await invalidateCacheAfterMutation(guest.organizationId);
-      emitPingSurgeUpdate(guest.organizationId, { pingId: pingIdInt, surgeCount: count, surged: false });
-      
-      return res.status(200).json({ message: 'Surge removed', surged: false, surgeCount: count });
+      return res.status(200).json({ message: 'Ping surged', surged: true, surgeCount: count });
     }
 
     // Add surge

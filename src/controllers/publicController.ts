@@ -19,7 +19,11 @@ const trimText = (value: string | null | undefined, maxLength: number): string =
 const safeImageUrl = (media: Array<{ url: string; mimeType: string }> | undefined): string | null => {
   if (!media || media.length === 0) return null;
   const image = media.find((item) => item.mimeType.startsWith('image/'));
-  return image?.url ?? null;
+  if (image?.url) {
+    const appBaseUrl = env.APP_URL.replace(/\/$/, '');
+    return image.url.startsWith('http') ? image.url : `${appBaseUrl}${image.url.startsWith('/') ? '' : '/'}${image.url}`;
+  }
+  return null;
 };
 
 const buildCanonicalUrl = (entity: ShareEntity, id: number, commentId?: number): string => {
@@ -360,7 +364,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         type: 'ping',
         id: ping.id,
         title: trimText(ping.title, 110),
-        description: trimText(ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
+        description: ping.content || '',
         imageUrl: safeImageUrl(ping.media) || ping.organization?.logoUrl || null,
         canonicalUrl: buildCanonicalUrl('ping', ping.id),
         surgeCount: ping.surgeCount,
@@ -403,7 +407,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         type: 'wave',
         id: wave.id,
         title,
-        description: trimText(wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
+        description: wave.solution || '',
         imageUrl: safeImageUrl(wave.media) || wave.organization?.logoUrl || null,
         canonicalUrl: buildCanonicalUrl('wave', wave.pingId),
         surgeCount: wave.surgeCount,
@@ -441,7 +445,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           type: 'ping',
           id: ping.id,
           title: trimText(ping.title, 110),
-          description: trimText(ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
+          description: ping.content || '',
           imageUrl: safeImageUrl(ping.media) || ping.organization?.logoUrl || null,
           canonicalUrl: buildCanonicalUrl('feed', ping.id),
           surgeCount: ping.surgeCount,
@@ -483,7 +487,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         type: 'wave',
         id: wave.id,
         title,
-        description: trimText(wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
+        description: wave.solution || '',
         imageUrl: safeImageUrl(wave.media) || wave.organization?.logoUrl || null,
         canonicalUrl: buildCanonicalUrl('feed', wave.pingId),
         surgeCount: wave.surgeCount,
@@ -540,7 +544,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         type: 'comment',
         id: comment.id,
         title: `Comment on: ${trimText(comment.ping.title, 95)}`,
-        description: trimText(comment.content || comment.ping.content, SHARE_DESCRIPTION_MAX_LENGTH),
+        description: comment.content || comment.ping.content || '',
         imageUrl: safeImageUrl(comment.ping.media),
         canonicalUrl: buildCanonicalUrl('comment', comment.ping.id, comment.id),
       });
@@ -551,7 +555,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
         type: 'comment',
         id: comment.id,
         title: `Comment on a solution: ${trimText(comment.wave.ping.title, 80)}`,
-        description: trimText(comment.content || comment.wave.solution, SHARE_DESCRIPTION_MAX_LENGTH),
+        description: comment.content || comment.wave.solution || '',
         imageUrl: safeImageUrl(comment.wave.ping.media),
         canonicalUrl: buildCanonicalUrl('comment', comment.wave.ping.id, comment.id),
       });
