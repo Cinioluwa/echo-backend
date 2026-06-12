@@ -427,7 +427,8 @@ export const buildWeeklyDigestEmail = (
 	unsubscribeToken: string
 ) => {
 	const appUrl = sanitizeAppUrl();
-	const unsubscribeUrl = `${appUrl}/unsubscribe?token=${unsubscribeToken}`;
+	const apiUrl = (process.env.API_URL || process.env.APP_URL || '').replace(/\/$/, '');
+	const unsubscribeUrl = `${apiUrl}/api/public/unsubscribe?token=${unsubscribeToken}`;
 
 	const topPingsHtml = stats.topPings
 		.map(

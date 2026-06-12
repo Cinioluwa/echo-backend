@@ -46,6 +46,8 @@ model Organization {
   notifications     Notification[]
   media             Media[]
   domains           OrganizationDomain[]
+  guestSurges       GuestSurge[]
+  guestOrgAccesses  GuestOrgAccess[]
 }
 
 // User Model with Organization Link
@@ -168,6 +170,7 @@ model Ping {
   officialResponse OfficialResponse?
   notifications    Notification[]
   media            Media[]
+  guestSurges      GuestSurge[]
 
   // Database indexes for query performance
   @@index([authorId]) // Used in getMyPings and foreign key joins
@@ -209,6 +212,7 @@ model Wave {
   flaggedById   Int?
   notifications Notification[]
   media         Media[]
+  guestSurges   GuestSurge[]
   reason        String? // Populated when status is REJECTED or ON_HOLD
 
   // Database indexes for query performance
@@ -658,5 +662,70 @@ model OrganizationDomain {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId Int
 
+  @@index([organizationId])
+}
+
+// Guest User system for Email OTP verified users
+model GuestUser {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  surges      GuestSurge[]
+  otpSessions GuestOtpSession[]
+  orgAccesses GuestOrgAccess[]
+}
+
+model GuestOrgAccess {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  guestUser   GuestUser @relation(fields: [guestUserId], references: [id], onDelete: Cascade)
+  guestUserId Int
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  @@unique([guestUserId, organizationId])
+  @@index([guestUserId])
+  @@index([organizationId])
+}
+
+model GuestOtpSession {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  guestUser   GuestUser? @relation(fields: [guestUserId], references: [id])
+  guestUserId Int?
+
+  @@index([email, expiresAt])
+}
+
+model GuestSurge {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  guestUser   GuestUser @relation(fields: [guestUserId], references: [id], onDelete: Cascade)
+  guestUserId Int
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  ping   Ping? @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  pingId Int?
+  wave   Wave? @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId Int?
+
+  @@unique([guestUserId, pingId])
+  @@unique([guestUserId, waveId])
+  @@index([pingId])
+  @@index([guestUserId])
   @@index([organizationId])
 }
