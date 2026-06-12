@@ -415,6 +415,65 @@ export const buildGuestOtpEmail = (code: string, pingTitle?: string) => {
 			<p>This code expires in 10 minutes. Do not share this code with anyone.</p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,\n\nHere is your 6-digit verification code: ${code}\n\n${reasonText}\n\nThis code expires in 10 minutes. Do not share this code with anyone.\n\n— The Echo Team`,
+	};
+};
+
+export const buildWeeklyDigestEmail = (
+	stats: {
+		topPings: { id: number; title: string; surgeCount: number }[];
+		newPingsCount: number;
+		activeUsersCount: number;
+	},
+	unsubscribeToken: string
+) => {
+	const appUrl = sanitizeAppUrl();
+	const unsubscribeUrl = `${appUrl}/unsubscribe?token=${unsubscribeToken}`;
+
+	const topPingsHtml = stats.topPings
+		.map(
+			(p) =>
+				`<li><a href="${appUrl}/feed/${p.id}"><strong>${p.title}</strong></a> - ${p.surgeCount} surges</li>`
+		)
+		.join('');
+
+	const topPingsText = stats.topPings
+		.map((p) => `- ${p.title} (${p.surgeCount} surges): ${appUrl}/feed/${p.id}`)
+		.join('\n');
+
+	return {
+		subject: 'Your Echo Weekly Digest',
+		html: `
+			<p>Hi,</p>
+			<p>Here's a summary of what happened in your organization this past week:</p>
+			<ul>
+				<li><strong>${stats.newPingsCount}</strong> new pings</li>
+				<li><strong>${stats.activeUsersCount}</strong> active users engaging with the community</li>
+			</ul>
+			<h3>Top Pings This Week</h3>
+			<ul>
+				${topPingsHtml}
+			</ul>
+			<p>Jump back into Echo to see what else you missed!</p>
+			<p><a href="${appUrl}">Open Echo</a></p>
+			<p>— The Echo Team</p>
+			<hr style="margin-top: 32px; border: none; border-top: 1px solid #eaeaea;" />
+			<p style="font-size: 12px; color: #888;">
+				If you'd like to stop receiving these weekly updates, you can <a href="${unsubscribeUrl}">unsubscribe here</a>.
+			</p>
+		`,
+		text: `Hi,
+
+Here's a summary of what happened in your organization this past week:
+- ${stats.newPingsCount} new pings
+- ${stats.activeUsersCount} active users engaging with the community
+
+Top Pings This Week:
+${topPingsText}
+
+Jump back into Echo to see what else you missed: ${appUrl}
+
+— The Echo Team
+
+If you'd like to stop receiving these weekly updates, you can unsubscribe here: ${unsubscribeUrl}`,
 	};
 };

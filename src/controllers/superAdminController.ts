@@ -1,7 +1,9 @@
 // src/controllers/superAdminController.ts
 import { Response, NextFunction } from 'express';
 import prisma from '../config/db.js';
+import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
+import crypto from 'crypto';
 
 // ---------------------------------------------------------------------------
 // GET /api/super-admin/stats
