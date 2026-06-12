@@ -48,13 +48,12 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
     if (existingSurge) {
       // If surge exists, delete it
       await prisma.surge.delete({ where: { id: existingSurge.id } });
-      // Re-sync the denormalized count to avoid drift
-      const count = await prisma.surge.count({ 
-        where: { 
-          pingId: pingIdInt,
-          organizationId: req.organizationId!,
-        } 
-      });
+      // Re-sync the denormalized count to avoid drift — must include guest surges
+      const [regularCount, guestCount] = await Promise.all([
+        prisma.surge.count({ where: { pingId: pingIdInt, organizationId: req.organizationId! } }),
+        prisma.guestSurge.count({ where: { pingId: pingIdInt } }),
+      ]);
+      const count = regularCount + guestCount;
       await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
       // Invalidate cache after surge toggle
       await invalidateCacheAfterMutation(req.organizationId);
@@ -79,13 +78,12 @@ export const toggleSurgeOnPing = async (req: AuthRequest, res: Response, next: N
         throw err;
       }
     }
-    // Re-sync the denormalized count to avoid drift
-    const count = await prisma.surge.count({ 
-      where: { 
-        pingId: pingIdInt,
-        organizationId: req.organizationId!,
-      } 
-    });
+    // Re-sync the denormalized count to avoid drift — must include guest surges
+    const [regularCount, guestCount] = await Promise.all([
+      prisma.surge.count({ where: { pingId: pingIdInt, organizationId: req.organizationId! } }),
+      prisma.guestSurge.count({ where: { pingId: pingIdInt } }),
+    ]);
+    const count = regularCount + guestCount;
     await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
     // Invalidate cache after surge toggle
     await invalidateCacheAfterMutation(req.organizationId);
