@@ -63,3 +63,32 @@ export const markPasswordResetTokenUsed = async (
     data: { used: true },
   });
 };
+
+export const generateUnsubscribeToken = (userId: number): string => {
+  const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'echo_unsubscribe_secret';
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(`unsubscribe:${userId}`);
+  const signature = hmac.digest('hex');
+  return `${userId}.${signature}`;
+};
+
+export const verifyUnsubscribeToken = (token: string): number | null => {
+  try {
+    const [userIdStr, signature] = token.split('.');
+    if (!userIdStr || !signature) return null;
+    const userId = parseInt(userIdStr, 10);
+    if (isNaN(userId)) return null;
+
+    const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'echo_unsubscribe_secret';
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(`unsubscribe:${userId}`);
+    const expectedSignature = hmac.digest('hex');
+
+    if (signature.length === expectedSignature.length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+      return userId;
+    }
+    return null;
+  } catch (error) {
+    return null;
+  }
+};

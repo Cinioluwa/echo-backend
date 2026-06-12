@@ -514,6 +514,7 @@ model NotificationPreference {
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId              Int      @unique
   emailEnabled        Boolean  @default(true)
+  marketingEmailEnabled Boolean @default(true)
   surgeMilestone      Int      @default(100)
   notifyJoinRequests  Boolean  @default(true)
   waveStatusUpdated   Boolean  @default(true)

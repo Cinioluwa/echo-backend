@@ -4,6 +4,7 @@ import { inviteLeader } from '../controllers/organizationController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import cache from '../middleware/cacheMiddleware.js';
+import { unsubscribeFromMarketing } from '../controllers/preferenceController.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { inviteLeaderSchema, shareMetadataAliasIdSchema, shareMetadataSchema } from '../schemas/publicSchemas.js';
 
@@ -326,5 +327,29 @@ router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60, 
  *         description: Internal server error
  */
 router.post('/organizations/:id/invite-leader', authMiddleware, validate(inviteLeaderSchema), inviteLeader);
+
+/**
+ * @openapi
+ * /api/public/unsubscribe:
+ *   get:
+ *     summary: Unsubscribe from marketing emails
+ *     description: Unsubscribes a user from marketing and weekly digest emails using a signed token.
+ *     tags:
+ *       - Public
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Unsubscribed successfully
+ *       400:
+ *         description: Invalid or expired token
+ *       404:
+ *         description: User not found
+ */
+router.get('/unsubscribe', unsubscribeFromMarketing);
 
 export default router;

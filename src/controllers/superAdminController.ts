@@ -232,6 +232,44 @@ export const updateUserStatus = async (
 // Auto-reject PENDING OrganizationRequests older than N days.
 // Body: { dryRun?: boolean, olderThanDays?: number }
 // ---------------------------------------------------------------------------
+export const generateInviteToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const { email, role, organizationId } = req.body;
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        const invite = await prisma.invitation.create({
+            data: {
+                email,
+                role,
+                organizationId,
+                token,
+                expiresAt,
+            },
+        });
+
+        return res.status(201).json({ token: invite.token });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const triggerWeeklyDigest = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        // Run asynchronously, do not await, just return 202 to the caller
+        import('../services/digestService.js').then(({ sendWeeklyDigest }) => {
+            sendWeeklyDigest().catch(error => {
+                logger.error('Error in background digest generation:', error);
+            });
+        });
+
+        return res.status(202).json({ message: 'Weekly digest generation started in the background.' });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export const cleanupStaleRequests = async (
   req: AuthRequest,
   res: Response,

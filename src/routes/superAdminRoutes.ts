@@ -13,6 +13,7 @@ import {
   updateUserRoleAsSuperAdmin,
   cleanupStaleRequests,
   purgeExpiredTokens,
+  triggerWeeklyDigest,
 } from '../controllers/superAdminController.js';
 import {
   listSuperAdminOrgsSchema,
@@ -325,5 +326,20 @@ router.post('/maintenance/cleanup-stale-requests', validate(cleanupStaleRequests
  *         description: Purge result with counts per token type
  */
 router.post('/maintenance/purge-expired-tokens', validate(purgeExpiredTokensSchema), purgeExpiredTokens);
+
+/**
+ * @openapi
+ * /api/super-admin/trigger-digest:
+ *   post:
+ *     tags: [Super Admin]
+ *     summary: Trigger weekly digest generation
+ *     description: Starts the weekly digest email generation in the background.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       202:
+ *         description: Weekly digest generation started
+ */
+router.post('/trigger-digest', triggerWeeklyDigest);
 
 export default router;
