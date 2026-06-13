@@ -1,0 +1,16 @@
+name: Trigger Weekly Digest
+on:
+  schedule:
+    # Runs every Friday at 5:00 PM UTC
+    - cron: '0 17 * * 5'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  trigger-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit Digest Endpoint
+        run: |
+          curl -X POST ${{ secrets.API_URL }}/api/super-admin/trigger-digest \
+            -H "Authorization: Bearer ${{ secrets.SUPER_ADMIN_TOKEN }}" \
+            -H "Content-Type: application/json"

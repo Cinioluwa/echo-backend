@@ -478,3 +478,47 @@ Jump back into Echo to see what else you missed: ${appUrl}
 If you'd like to stop receiving these weekly updates, you can unsubscribe here: ${unsubscribeUrl}`,
 	};
 };
+
+export const buildAnnouncementEmail = (
+	organizationName: string,
+	announcementTitle: string,
+	announcementContent: string,
+	authorName: string,
+	unsubscribeToken: string
+) => {
+	const appUrl = sanitizeAppUrl();
+	const apiUrl = (process.env.API_URL || process.env.APP_URL || '').replace(/\/$/, '');
+	const unsubscribeUrl = `${apiUrl}/api/public/unsubscribe?token=${unsubscribeToken}`;
+
+	return {
+		subject: `Announcement from ${organizationName}: ${announcementTitle}`,
+		html: `
+			<p>Hi,</p>
+			<p><strong>${authorName}</strong> has posted a new announcement in <strong>${organizationName}</strong>:</p>
+			<div style="background-color: #f9f9f9; padding: 16px; border-left: 4px solid #007bff; margin: 16px 0;">
+				<h3 style="margin-top: 0;">${announcementTitle}</h3>
+				<p style="white-space: pre-wrap;">${announcementContent}</p>
+			</div>
+			<p><a href="${appUrl}">Open Echo</a></p>
+			<p>— The Echo Team</p>
+			<hr style="margin-top: 32px; border: none; border-top: 1px solid #eaeaea;" />
+			<p style="font-size: 12px; color: #888;">
+				If you'd like to stop receiving these announcement emails, you can <a href="${unsubscribeUrl}">unsubscribe here</a>.
+			</p>
+		`,
+		text: `Hi,
+
+${authorName} has posted a new announcement in ${organizationName}:
+
+${announcementTitle}
+----------------------------------------
+${announcementContent}
+----------------------------------------
+
+Open Echo: ${appUrl}
+
+— The Echo Team
+
+If you'd like to stop receiving these announcement emails, you can unsubscribe here: ${unsubscribeUrl}`,
+	};
+};

@@ -40,6 +40,58 @@ export const createAnnouncement = async (req: AuthRequest, res: Response, next: 
             return created;
         });
 
+        // Trigger email blast in the background
+        setImmediate(async () => {
+            try {
+                // Import dynamically to avoid circular dependencies if any
+                const { sendEmail, buildAnnouncementEmail } = await import('../services/emailService.js');
+                const { generateUnsubscribeToken } = await import('../services/tokenService.js');
+                
+                // Fetch users in the org who have marketing emails enabled
+                const usersToEmail = await prisma.user.findMany({
+                    where: {
+                        organizationId,
+                        notificationPreference: {
+                            marketingEmailEnabled: true
+                        }
+                    },
+                    select: { id: true, email: true }
+                });
+
+                // Fetch organization name
+                const org = await prisma.organization.findUnique({
+                    where: { id: organizationId },
+                    select: { name: true }
+                });
+
+                if (!org) return;
+
+                const authorName = newAnnouncement.author.firstName 
+                    ? `${newAnnouncement.author.firstName} ${newAnnouncement.author.lastName}`.trim()
+                    : 'A representative';
+
+                for (const user of usersToEmail) {
+                    const token = generateUnsubscribeToken(user.id);
+                    const { subject, html, text } = buildAnnouncementEmail(
+                        org.name,
+                        newAnnouncement.title,
+                        newAnnouncement.content,
+                        authorName,
+                        token
+                    );
+
+                    await sendEmail({
+                        to: user.email,
+                        subject,
+                        html,
+                        text
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to send announcement emails in background:', error);
+            }
+        });
+
         // Invalidate cache after creating announcement
         await invalidateCacheAfterMutation(organizationId);
 
