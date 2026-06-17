@@ -97,4 +97,92 @@ export const createCategory = async (req: AuthRequest, res: Response, next: Next
   }
 };
 
+// PATCH /api/categories/:id — rename or toggle isActive
+export const updateCategory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+    const organizationId = (req as any).organizationId ?? req.user?.organizationId;
+    const role = req.user?.role;
+
+    if (!organizationId) return res.status(400).json({ error: 'Organization context missing' });
+    if (Number.isNaN(categoryId)) return res.status(400).json({ error: 'Invalid category ID' });
+
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Only organization leadership can manage categories.', code: 'CATEGORY_CUSTOMIZATION_FORBIDDEN' });
+    }
+
+    const { name, isActive } = req.body as { name?: string; isActive?: boolean };
+    if (name === undefined && isActive === undefined) {
+      return res.status(400).json({ error: 'At least one of name or isActive must be provided.' });
+    }
+
+    // Ensure category belongs to this org
+    const existing = await prisma.category.findFirst({
+      where: { id: categoryId, organizationId },
+      select: { id: true, name: true },
+    });
+    if (!existing) return res.status(404).json({ error: 'Category not found' });
+
+    // If renaming, check uniqueness within org
+    if (name && name !== existing.name) {
+      const conflict = await prisma.category.findFirst({
+        where: { name, organizationId, NOT: { id: categoryId } },
+        select: { id: true },
+      });
+      if (conflict) return res.status(409).json({ error: 'A category with that name already exists.' });
+    }
+
+    const updated = await prisma.category.update({
+      where: { id: categoryId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(isActive !== undefined && { isActive }),
+      },
+      select: { id: true, name: true, isActive: true, sortOrder: true, organizationId: true },
+    });
+
+    await invalidateCacheAfterMutation(organizationId);
+    return res.status(200).json(updated);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// DELETE /api/categories/:id
+export const deleteCategory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+    const organizationId = (req as any).organizationId ?? req.user?.organizationId;
+    const role = req.user?.role;
+
+    if (!organizationId) return res.status(400).json({ error: 'Organization context missing' });
+    if (Number.isNaN(categoryId)) return res.status(400).json({ error: 'Invalid category ID' });
+
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Only organization leadership can delete categories.', code: 'CATEGORY_CUSTOMIZATION_FORBIDDEN' });
+    }
+
+    const existing = await prisma.category.findFirst({
+      where: { id: categoryId, organizationId },
+      select: { id: true, _count: { select: { pings: true } } },
+    });
+    if (!existing) return res.status(404).json({ error: 'Category not found' });
+
+    if (existing._count.pings > 0) {
+      return res.status(409).json({
+        error: `Cannot delete a category that has ${existing._count.pings} ping(s) associated with it.`,
+        code: 'CATEGORY_HAS_PINGS',
+        pingCount: existing._count.pings,
+      });
+    }
+
+    await prisma.category.delete({ where: { id: categoryId } });
+    await invalidateCacheAfterMutation(organizationId);
+
+    return res.status(200).json({ message: 'Category deleted successfully.', categoryId });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export default { getCategories };

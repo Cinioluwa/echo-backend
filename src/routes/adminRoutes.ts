@@ -27,6 +27,15 @@ import {
     getPingsByLocation,
     getStallingPings,
     getActivityTimeSeries,
+    updateOrganizationSettings,
+    suspendMemberAsAdmin,
+    unsuspendMemberAsAdmin,
+    removeMemberAsAdmin,
+    getOrganizationRules,
+    updateOrganizationRules,
+    getModerationAnalytics,
+    getFollowUpQueue,
+    getIssuesByCategory,
 } from '../controllers/adminController.js';
 import { applyModerationAction } from '../controllers/moderationController.js';
 import {
@@ -63,6 +72,10 @@ import {
     pingsByLocationSchema,
     stallingPingsSchema,
     activityTimeSeriesSchema,
+    updateOrgSettingsSchema,
+    suspendMemberSchema,
+    userIdParamOnlySchema,
+    updateOrgRulesSchema,
 } from '../schemas/adminSchemas.js';
 import { applyModerationActionSchema } from '../schemas/moderationSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
@@ -1514,6 +1527,298 @@ router.get(
     cache(60),
     getActivityTimeSeries
 );
+
+/**
+ * @openapi
+ * /api/admin/organization/settings:
+ *   patch:
+ *     summary: Update organization general settings
+ *     description: |
+ *       Update the organization's name, description, and/or logo URL.
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               logoUrl:
+ *                 type: string
+ *                 format: uri
+ *     responses:
+ *       200:
+ *         description: Organization settings updated
+ *       409:
+ *         description: Organization name already taken
+ */
+router.patch('/organization/settings', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateOrgSettingsSchema), updateOrganizationSettings);
+
+/**
+ * @openapi
+ * /api/admin/organization/rules:
+ *   get:
+ *     summary: Get organization rules
+ *     description: Retrieve the current posting, moderation, and wave rules for the organization.
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Rules retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 allowMediaAttachments:
+ *                   type: boolean
+ *                 sameTopicCooldownHours:
+ *                   type: integer
+ *                 autoFlagReportThreshold:
+ *                   type: integer
+ *                 hideFlaggedContentPending:
+ *                   type: boolean
+ *                 minSurgesForWave:
+ *                   type: integer
+ */
+router.get('/organization/rules', authMiddleware, adminMiddleware, organizationMiddleware, getOrganizationRules);
+
+/**
+ * @openapi
+ * /api/admin/organization/rules:
+ *   patch:
+ *     summary: Update organization rules
+ *     description: |
+ *       Partially update posting behaviour, moderation thresholds, and wave rules.
+ *       Only provided fields will be updated.
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               allowMediaAttachments:
+ *                 type: boolean
+ *               sameTopicCooldownHours:
+ *                 type: integer
+ *               autoFlagReportThreshold:
+ *                 type: integer
+ *               hideFlaggedContentPending:
+ *                 type: boolean
+ *               minSurgesForWave:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Rules updated
+ */
+router.patch('/organization/rules', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateOrgRulesSchema), updateOrganizationRules);
+
+/**
+ * @openapi
+ * /api/admin/users/{id}/suspend:
+ *   patch:
+ *     summary: Suspend a member
+ *     description: |
+ *       Suspend a member's posting ability for a set duration or permanently.
+ *       Cannot suspend other admins or super admins.
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - duration
+ *             properties:
+ *               duration:
+ *                 type: string
+ *                 enum: [1_DAY, 1_WEEK, 1_MONTH, PERMANENT]
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Member suspended
+ *       403:
+ *         description: Cannot suspend an admin
+ *       404:
+ *         description: User not found
+ */
+router.patch('/users/:id/suspend', authMiddleware, adminMiddleware, organizationMiddleware, validate(suspendMemberSchema), suspendMemberAsAdmin);
+
+/**
+ * @openapi
+ * /api/admin/users/{id}/unsuspend:
+ *   patch:
+ *     summary: Unsuspend a member
+ *     description: Clears a member's active suspension, restoring their posting ability.
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Member unsuspended
+ *       400:
+ *         description: User is not suspended
+ *       404:
+ *         description: User not found
+ */
+router.patch('/users/:id/unsuspend', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamOnlySchema), unsuspendMemberAsAdmin);
+
+/**
+ * @openapi
+ * /api/admin/users/{id}:
+ *   delete:
+ *     summary: Remove a member from the organization
+ *     description: |
+ *       Deactivates a member's access to the organization space. Their historical
+ *       data (pings, comments) is preserved but they can no longer access the space.
+ *       Cannot remove super admins or yourself.
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Member removed
+ *       400:
+ *         description: Cannot remove yourself
+ *       403:
+ *         description: Cannot remove a super admin
+ *       404:
+ *         description: User not found
+ */
+router.delete('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamOnlySchema), removeMemberAsAdmin);
+
+/**
+ * @openapi
+ * /api/admin/reports/analytics:
+ *   get:
+ *     summary: Get moderation analytics
+ *     description: |
+ *       Returns the three summary counts shown on the Moderation dashboard:
+ *       pending reports, reports resolved this week, and active suspensions.
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Moderation analytics retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 pendingReview:
+ *                   type: integer
+ *                 resolvedThisWeek:
+ *                   type: integer
+ *                 activeSuspensions:
+ *                   type: integer
+ */
+router.get('/reports/analytics', authMiddleware, adminMiddleware, organizationMiddleware, getModerationAnalytics);
+
+/**
+ * @openapi
+ * /api/admin/follow-up-queue:
+ *   get:
+ *     summary: Get follow-up queue summary
+ *     description: |
+ *       Returns a summary of items requiring admin follow-up action:
+ *       approved waves not being implemented, waves awaiting approval,
+ *       and acknowledged pings that are stalling.
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: staleDays
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *         description: Number of days after which an approved wave is considered stale
+ *     responses:
+ *       200:
+ *         description: Follow-up queue summary retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 approvedWavesNotImplementing:
+ *                   type: integer
+ *                 wavesAwaitingApproval:
+ *                   type: integer
+ *                 acknowledgedPingsStalling:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ */
+router.get('/follow-up-queue', authMiddleware, adminMiddleware, organizationMiddleware, getFollowUpQueue);
+
+/**
+ * @openapi
+ * /api/admin/issues-by-category:
+ *   get:
+ *     summary: Get issues breakdown by category
+ *     description: |
+ *       Returns a list of all categories with their open ping count,
+ *       resolved ping count, resolution rate percentage, and the top 2
+ *       most-surged open pings per category. Powers the Soundboard dashboard.
+ *       **Admin only**
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Issues by category retrieved
+ */
+router.get('/issues-by-category', authMiddleware, adminMiddleware, organizationMiddleware, getIssuesByCategory);
 
 export default router;
 

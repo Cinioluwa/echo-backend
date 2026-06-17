@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getCategories, createCategory } from '../controllers/categoryController.js';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '../controllers/categoryController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { cache } from '../middleware/cacheMiddleware.js';
@@ -109,8 +109,80 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-// GET /api/categories?q= - cached for 5 minutes (categories rarely change)
 router.get('/', authMiddleware, organizationMiddleware, cache(300), getCategories);
 router.post('/', authMiddleware, organizationMiddleware, createCategory);
+
+/**
+ * @openapi
+ * /api/categories/{id}:
+ *   patch:
+ *     summary: Update a category
+ *     description: |
+ *       Rename a category or toggle its active/disabled status.
+ *       **Admin only. Organization must have verified leadership claim.**
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: New name (must be unique within org)
+ *               isActive:
+ *                 type: boolean
+ *                 description: Toggle the category on or off
+ *     responses:
+ *       200:
+ *         description: Category updated
+ *       403:
+ *         description: Admin role required
+ *       404:
+ *         description: Category not found
+ *       409:
+ *         description: Category name already exists
+ */
+router.patch('/:id', authMiddleware, organizationMiddleware, updateCategory);
+
+/**
+ * @openapi
+ * /api/categories/{id}:
+ *   delete:
+ *     summary: Delete a category
+ *     description: |
+ *       Permanently delete a category. Fails if the category still has pings associated with it.
+ *       **Admin only.**
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Category deleted
+ *       403:
+ *         description: Admin role required
+ *       404:
+ *         description: Category not found
+ *       409:
+ *         description: Category has pings — cannot delete
+ */
+router.delete('/:id', authMiddleware, organizationMiddleware, deleteCategory);
 
 export default router;

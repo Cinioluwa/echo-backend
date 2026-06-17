@@ -1967,3 +1967,397 @@ export const getActivityTimeSeries = async (req: AuthRequest, res: Response, nex
         return next(error);
     }
 };
+
+// ─── Phase 1: Organization General Settings ───────────────────────────────────
+
+export const updateOrganizationSettings = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const { name, description, logoUrl } = req.body as {
+            name?: string;
+            description?: string;
+            logoUrl?: string;
+        };
+
+        // If name is being changed, ensure uniqueness
+        if (name) {
+            const existing = await prisma.organization.findFirst({
+                where: { name, NOT: { id: organizationId } },
+                select: { id: true },
+            });
+            if (existing) {
+                return res.status(409).json({ error: 'An organization with that name already exists.' });
+            }
+        }
+
+        const updated = await prisma.organization.update({
+            where: { id: organizationId },
+            data: {
+                ...(name !== undefined && { name }),
+                ...(description !== undefined && { description }),
+                ...(logoUrl !== undefined && { logoUrl }),
+            },
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                logoUrl: true,
+                domain: true,
+            },
+        });
+
+        return res.status(200).json(updated);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+// ─── Phase 3: Member Management — Suspend / Unsuspend / Remove ────────────────
+
+const SUSPEND_DURATION_MS: Record<string, number | null> = {
+    '1_DAY': 24 * 60 * 60 * 1000,
+    '1_WEEK': 7 * 24 * 60 * 60 * 1000,
+    '1_MONTH': 30 * 24 * 60 * 60 * 1000,
+    'PERMANENT': null, // null = indefinite (treated as BAN via moderationStatus)
+};
+
+export const suspendMemberAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const targetUserId = parseInt(req.params.id);
+        const { duration, reason } = req.body as { duration: string; reason?: string };
+
+        if (Number.isNaN(targetUserId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const target = await prisma.user.findFirst({
+            where: { id: targetUserId, organizationId },
+            select: { id: true, role: true, moderationStatus: true },
+        });
+
+        if (!target) {
+            return res.status(404).json({ error: 'User not found in this organization' });
+        }
+
+        // Cannot suspend another admin or super admin
+        if (target.role === 'ADMIN' || target.role === 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Cannot suspend an admin or super admin.' });
+        }
+
+        const durationMs = SUSPEND_DURATION_MS[duration];
+        const suspendedUntil = durationMs !== null ? new Date(Date.now() + durationMs) : null;
+
+        const updated = await prisma.user.update({
+            where: { id: targetUserId },
+            data: {
+                moderationStatus: 'SUSPENDED',
+                suspendedUntil,
+                ...(reason && { moderationNote: reason }),
+            },
+            select: { id: true, moderationStatus: true, suspendedUntil: true },
+        });
+
+        return res.status(200).json({
+            userId: updated.id,
+            moderationStatus: updated.moderationStatus,
+            suspendedUntil: updated.suspendedUntil,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const unsuspendMemberAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const targetUserId = parseInt(req.params.id);
+
+        if (Number.isNaN(targetUserId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const target = await prisma.user.findFirst({
+            where: { id: targetUserId, organizationId },
+            select: { id: true, moderationStatus: true },
+        });
+
+        if (!target) {
+            return res.status(404).json({ error: 'User not found in this organization' });
+        }
+
+        if (target.moderationStatus !== 'SUSPENDED') {
+            return res.status(400).json({ error: 'User is not currently suspended.' });
+        }
+
+        const updated = await prisma.user.update({
+            where: { id: targetUserId },
+            data: {
+                moderationStatus: 'ACTIVE',
+                suspendedUntil: null,
+                moderationNote: null,
+            },
+            select: { id: true, moderationStatus: true, suspendedUntil: true },
+        });
+
+        return res.status(200).json({
+            userId: updated.id,
+            moderationStatus: updated.moderationStatus,
+            suspendedUntil: updated.suspendedUntil,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const removeMemberAsAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const actorId = req.user!.userId;
+        const targetUserId = parseInt(req.params.id);
+
+        if (Number.isNaN(targetUserId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        if (targetUserId === actorId) {
+            return res.status(400).json({ error: 'You cannot remove yourself from the organization.' });
+        }
+
+        const target = await prisma.user.findFirst({
+            where: { id: targetUserId, organizationId },
+            select: { id: true, role: true, email: true },
+        });
+
+        if (!target) {
+            return res.status(404).json({ error: 'User not found in this organization' });
+        }
+
+        if (target.role === 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Cannot remove a super admin.' });
+        }
+
+        // Removing a member: set status to INACTIVE. We keep their organizationId
+        // for historical data integrity but they can no longer access the space.
+        await prisma.user.update({
+            where: { id: targetUserId },
+            data: { status: 'INACTIVE' },
+        });
+
+        return res.status(200).json({ message: 'Member removed from organization successfully.', userId: targetUserId });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+// ─── Phase 4: Organization Rules ─────────────────────────────────────────────
+
+export const getOrganizationRules = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+
+        const org = await prisma.organization.findUnique({
+            where: { id: organizationId },
+            select: {
+                allowMediaOnPings: true,
+                sameTopicCooldownHours: true,
+                reportsAutoFlagThreshold: true,
+                hideFlaggedPendingReview: true,
+                minSurgesForWave: true,
+            },
+        });
+
+        if (!org) {
+            return res.status(404).json({ error: 'Organization not found' });
+        }
+
+        return res.status(200).json({
+            allowMediaAttachments: org.allowMediaOnPings,
+            sameTopicCooldownHours: org.sameTopicCooldownHours,
+            autoFlagReportThreshold: org.reportsAutoFlagThreshold,
+            hideFlaggedContentPending: org.hideFlaggedPendingReview,
+            minSurgesForWave: org.minSurgesForWave,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const updateOrganizationRules = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const {
+            allowMediaAttachments,
+            sameTopicCooldownHours,
+            autoFlagReportThreshold,
+            hideFlaggedContentPending,
+            minSurgesForWave,
+        } = req.body;
+
+        const updated = await prisma.organization.update({
+            where: { id: organizationId },
+            data: {
+                ...(allowMediaAttachments !== undefined && { allowMediaOnPings: allowMediaAttachments }),
+                ...(sameTopicCooldownHours !== undefined && { sameTopicCooldownHours }),
+                ...(autoFlagReportThreshold !== undefined && { reportsAutoFlagThreshold: autoFlagReportThreshold }),
+                ...(hideFlaggedContentPending !== undefined && { hideFlaggedPendingReview: hideFlaggedContentPending }),
+                ...(minSurgesForWave !== undefined && { minSurgesForWave }),
+            },
+            select: {
+                allowMediaOnPings: true,
+                sameTopicCooldownHours: true,
+                reportsAutoFlagThreshold: true,
+                hideFlaggedPendingReview: true,
+                minSurgesForWave: true,
+            },
+        });
+
+        return res.status(200).json({
+            allowMediaAttachments: updated.allowMediaOnPings,
+            sameTopicCooldownHours: updated.sameTopicCooldownHours,
+            autoFlagReportThreshold: updated.reportsAutoFlagThreshold,
+            hideFlaggedContentPending: updated.hideFlaggedPendingReview,
+            minSurgesForWave: updated.minSurgesForWave,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+// ─── Phase 5: Moderation Analytics ───────────────────────────────────────────
+
+export const getModerationAnalytics = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * MS_IN_DAY);
+
+        const [pendingReview, resolvedThisWeek, activeSuspensions] = await Promise.all([
+            prisma.report.count({
+                where: { organizationId, status: 'PENDING' },
+            }),
+            prisma.report.count({
+                where: {
+                    organizationId,
+                    status: { in: ['RESOLVED', 'DISMISSED'] },
+                    actionedAt: { gte: sevenDaysAgo },
+                },
+            }),
+            prisma.user.count({
+                where: {
+                    organizationId,
+                    moderationStatus: 'SUSPENDED',
+                    OR: [
+                        { suspendedUntil: { gt: now } },
+                        { suspendedUntil: null }, // PERMANENT suspension
+                    ],
+                },
+            }),
+        ]);
+
+        return res.status(200).json({ pendingReview, resolvedThisWeek, activeSuspensions });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+// ─── Phase 6: Follow-Up Queue ─────────────────────────────────────────────────
+
+export const getFollowUpQueue = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+        const now = new Date();
+        const fourteenDaysAgo = new Date(now.getTime() - 14 * MS_IN_DAY);
+        const staleDaysParam = req.query.staleDays ? parseInt(req.query.staleDays as string) : 7;
+        const staleDays = Number.isFinite(staleDaysParam) && staleDaysParam > 0 ? Math.min(staleDaysParam, 365) : 7;
+        const staleDate = new Date(now.getTime() - staleDays * MS_IN_DAY);
+
+        const [approvedWavesNotImplementing, wavesAwaitingApproval, acknowledgedPingsStalling] = await Promise.all([
+            // Waves approved but have not moved to COMPLETED — created more than `staleDays` ago
+            prisma.wave.count({
+                where: {
+                    organizationId,
+                    status: 'APPROVED',
+                    createdAt: { lt: staleDate },
+                },
+            }),
+            // Waves sitting in UNDER_REVIEW waiting for a decision
+            prisma.wave.count({
+                where: { organizationId, status: 'UNDER_REVIEW' },
+            }),
+            // Pings acknowledged but not progressed for 14+ days
+            prisma.ping.count({
+                where: {
+                    organizationId,
+                    progressStatus: 'ACKNOWLEDGED',
+                    acknowledgedAt: { lt: fourteenDaysAgo },
+                    resolvedAt: null,
+                },
+            }),
+        ]);
+
+        const total = approvedWavesNotImplementing + wavesAwaitingApproval + acknowledgedPingsStalling;
+
+        return res.status(200).json({
+            approvedWavesNotImplementing,
+            wavesAwaitingApproval,
+            acknowledgedPingsStalling,
+            total,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+// ─── Phase 7: Issues by Category (Soundboard) ────────────────────────────────
+
+export const getIssuesByCategory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const organizationId = req.organizationId!;
+
+        // Fetch all categories for this org
+        const categories = await prisma.category.findMany({
+            where: { organizationId },
+            select: { id: true, name: true },
+        });
+
+        const results = await Promise.all(
+            categories.map(async (cat) => {
+                const [openPings, resolvedPings, topPings] = await Promise.all([
+                    prisma.ping.count({
+                        where: { organizationId, categoryId: cat.id, resolvedAt: null },
+                    }),
+                    prisma.ping.count({
+                        where: { organizationId, categoryId: cat.id, resolvedAt: { not: null } },
+                    }),
+                    prisma.ping.findMany({
+                        where: { organizationId, categoryId: cat.id, resolvedAt: null },
+                        orderBy: { surgeCount: 'desc' },
+                        take: 2,
+                        select: { id: true, title: true, surgeCount: true, createdAt: true },
+                    }),
+                ]);
+
+                const totalPings = openPings + resolvedPings;
+                const resolutionRate = totalPings > 0 ? Math.round((resolvedPings / totalPings) * 100) : 0;
+
+                return {
+                    categoryId: cat.id,
+                    categoryName: cat.name,
+                    openCount: openPings,
+                    resolvedCount: resolvedPings,
+                    resolutionRate,
+                    topPings,
+                };
+            })
+        );
+
+        // Sort by openCount descending so most-active categories appear first
+        results.sort((a, b) => b.openCount - a.openCount);
+
+        return res.status(200).json(results);
+    } catch (error) {
+        return next(error);
+    }
+};
+
