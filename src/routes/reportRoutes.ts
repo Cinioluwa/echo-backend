@@ -60,7 +60,15 @@ router.post('/', authMiddleware, organizationMiddleware, validate(createReportSc
  * /api/reports:
  *   get:
  *     summary: Get all reports
- *     description: Retrieve a paginated list of reports for the organization. Can be filtered by status.
+ *     description: |
+ *       Retrieve a paginated list of reports for the organization. Can be filtered by status.
+ *
+ *       Each report item is enriched with:
+ *       - **`reportCount`** – total number of reports filed against the same piece of content
+ *         (ping, wave, or comment). Useful for displaying how many times a wave/ping has been
+ *         reported without requiring extra frontend queries.
+ *       - **`ping.category.name`** – category name of a directly reported ping.
+ *       - **`wave.ping.category.name`** – category name of the parent ping for a reported wave.
  *     tags:
  *       - Reports
  *       - Admin
@@ -82,7 +90,88 @@ router.post('/', authMiddleware, organizationMiddleware, validate(createReportSc
  *           enum: [PENDING, REVIEWED, RESOLVED, DISMISSED]
  *     responses:
  *       200:
- *         description: A list of reports
+ *         description: A paginated list of reports, each including reportCount and category names
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       reason:
+ *                         type: string
+ *                         nullable: true
+ *                       status:
+ *                         type: string
+ *                         enum: [PENDING, REVIEWED, RESOLVED, DISMISSED]
+ *                       reportCount:
+ *                         type: integer
+ *                         description: Total number of reports filed against the same content (ping/wave/comment)
+ *                       ping:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           title:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           category:
+ *                             type: object
+ *                             properties:
+ *                               name:
+ *                                 type: string
+ *                       wave:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           solution:
+ *                             type: string
+ *                           ping:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: integer
+ *                               title:
+ *                                 type: string
+ *                               category:
+ *                                 type: object
+ *                                 properties:
+ *                                   name:
+ *                                     type: string
+ *                       comment:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           content:
+ *                             type: string
+ *                           pingId:
+ *                             type: integer
+ *                             nullable: true
+ *                           waveId:
+ *                             type: integer
+ *                             nullable: true
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     currentPage:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
  *       401:
  *         description: Unauthorized
  *       403:

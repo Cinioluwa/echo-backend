@@ -24,6 +24,9 @@ const REPORT_INCLUDE = {
       id: true,
       title: true,
       content: true,
+      category: {
+        select: { name: true },
+      },
     },
   },
   wave: {
@@ -34,6 +37,9 @@ const REPORT_INCLUDE = {
         select: {
           id: true,
           title: true,
+          category: {
+            select: { name: true },
+          },
         },
       },
     },
@@ -247,8 +253,51 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
       prisma.report.count({ where }),
     ]);
 
+    // ── Attach reportCount to each item ──────────────────────────────────────
+    // Collect the distinct content IDs present in this page so we can run a
+    // single grouped query instead of N+1 individual counts.
+    const pingIds = [...new Set(data.map((r) => r.pingId).filter((id): id is number => id !== null))];
+    const waveIds = [...new Set(data.map((r) => r.waveId).filter((id): id is number => id !== null))];
+    const commentIds = [...new Set(data.map((r) => r.commentId).filter((id): id is number => id !== null))];
+
+    const countRows = await prisma.report.groupBy({
+      by: ['pingId', 'waveId', 'commentId'],
+      where: {
+        organizationId,
+        OR: [
+          ...(pingIds.length ? [{ pingId: { in: pingIds } }] : []),
+          ...(waveIds.length ? [{ waveId: { in: waveIds } }] : []),
+          ...(commentIds.length ? [{ commentId: { in: commentIds } }] : []),
+        ],
+      },
+      _count: { id: true },
+    });
+
+    // Build fast lookup maps keyed by content id
+    const pingCountMap = new Map<number, number>();
+    const waveCountMap = new Map<number, number>();
+    const commentCountMap = new Map<number, number>();
+
+    for (const row of countRows) {
+      if (row.pingId !== null) pingCountMap.set(row.pingId, row._count.id);
+      if (row.waveId !== null) waveCountMap.set(row.waveId, row._count.id);
+      if (row.commentId !== null) commentCountMap.set(row.commentId, row._count.id);
+    }
+
+    const dataWithCount = data.map((report) => ({
+      ...report,
+      reportCount:
+        report.pingId !== null
+          ? (pingCountMap.get(report.pingId) ?? 1)
+          : report.waveId !== null
+            ? (waveCountMap.get(report.waveId) ?? 1)
+            : report.commentId !== null
+              ? (commentCountMap.get(report.commentId) ?? 1)
+              : 1,
+    }));
+
     return res.status(200).json({
-      data,
+      data: dataWithCount,
       pagination: {
         total,
         totalPages: Math.ceil(total / limit),
