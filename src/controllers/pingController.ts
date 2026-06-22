@@ -57,6 +57,7 @@ const withHasSurged = (ping: any, currentUserId?: string | number) => ({
 const publicWavePreviewSelect = {
   id: true,
   solution: true,
+  status: true,
   createdAt: true,
   surgeCount: true,
   author: {

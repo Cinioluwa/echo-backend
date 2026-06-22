@@ -161,6 +161,37 @@ router.post('/', authMiddleware, organizationMiddleware, validate(createReportSc
  *                           waveId:
  *                             type: integer
  *                             nullable: true
+ *                           ping:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               id:
+ *                                 type: integer
+ *                               title:
+ *                                 type: string
+ *                               category:
+ *                                 type: object
+ *                                 properties:
+ *                                   name:
+ *                                     type: string
+ *                           wave:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               id:
+ *                                 type: integer
+ *                               ping:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: integer
+ *                                   title:
+ *                                     type: string
+ *                                   category:
+ *                                     type: object
+ *                                     properties:
+ *                                       name:
+ *                                         type: string
  *                 pagination:
  *                   type: object
  *                   properties:

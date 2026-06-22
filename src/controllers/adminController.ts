@@ -1241,7 +1241,7 @@ export const getAdminOverviewDashboard = async (req: AuthRequest, res: Response,
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-        const [recentSurges, stalledWaves, stalledAcknowledgedPings] = await prisma.$transaction([
+        const [recentSurges, stalledWaves, wavesAwaitingApproval, stalledAcknowledgedPings] = await prisma.$transaction([
             prisma.surge.groupBy({
                 by: ['pingId'],
                 where: {
@@ -1265,6 +1265,9 @@ export const getAdminOverviewDashboard = async (req: AuthRequest, res: Response,
                         },
                     },
                 },
+            }),
+            prisma.wave.count({
+                where: { organizationId, status: 'UNDER_REVIEW' },
             }),
             prisma.ping.count({
                 where: {
@@ -1516,6 +1519,7 @@ export const getAdminOverviewDashboard = async (req: AuthRequest, res: Response,
             },
             surgeVelocity,
             stalledWavesCount: stalledWaves,
+            wavesAwaitingApproval,
             stalledAcknowledgedPingsCount: stalledAcknowledgedPings,
             categoriesStats,
         });

@@ -50,6 +50,25 @@ const REPORT_INCLUDE = {
       content: true,
       pingId: true,
       waveId: true,
+      ping: {
+        select: {
+          id: true,
+          title: true,
+          category: { select: { name: true } },
+        },
+      },
+      wave: {
+        select: {
+          id: true,
+          ping: {
+            select: {
+              id: true,
+              title: true,
+              category: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   },
 } as const;
