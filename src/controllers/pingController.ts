@@ -255,14 +255,14 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     const skip = (page - 1) * limit;
 
     // --- Filtering Logic ---
-    const { category, status } = req.query;
+    const { categoryId, status } = req.query;
     const organizationId = req.user?.organizationId; // Get organizationId from authenticated user
     const whereClause: any = {
       organizationId: organizationId,
     };
 
-    if (category) {
-      whereClause.categoryId = parseInt(category as string);
+    if (categoryId) {
+      whereClause.categoryId = parseInt(categoryId as string);
     }
     if (status) {
       whereClause.status = status;

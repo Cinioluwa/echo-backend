@@ -170,7 +170,7 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
     if (since) where.createdAt = { gte: since };
 
     // Filter by category if provided
-    const categoryId = req.query.category ? Number(req.query.category) : undefined;
+    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
     if (categoryId) {
       where.categoryId = categoryId;
     }
@@ -260,7 +260,7 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
     if (since) where.createdAt = { gte: since };
 
     // Filter by category if provided
-    const categoryId = req.query.category ? Number(req.query.category) : undefined;
+    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
     if (categoryId) {
       where.ping = { categoryId };
     }
