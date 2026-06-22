@@ -109,9 +109,12 @@ router.post('/', authMiddleware, organizationMiddleware, validate(createReportSc
  *                       status:
  *                         type: string
  *                         enum: [PENDING, REVIEWED, RESOLVED, DISMISSED]
+ *                       reportType:
+ *                         type: string
+ *                         description: The type/reason of the report (matches reason, or 'other' if null)
  *                       reportCount:
  *                         type: integer
- *                         description: Total number of reports filed against the same content (ping/wave/comment)
+ *                         description: Total number of reports filed against the same content for this specific reason
  *                       ping:
  *                         type: object
  *                         nullable: true

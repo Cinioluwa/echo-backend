@@ -647,7 +647,7 @@ export const getAllWavesAsAdmin = async (req: AuthRequest, res: Response, next: 
                 take: limit,
                 orderBy: { createdAt: 'desc' },
                 include: {
-                    ping: { select: { id: true, title: true, progressStatus: true } },
+                    ping: { select: { id: true, title: true, progressStatus: true, category: { select: { id: true, name: true } } } },
                     flaggedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
                     _count: { select: { surges: true, comments: true } },
                 },

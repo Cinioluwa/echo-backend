@@ -261,16 +261,23 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
       ...(status ? { status } : {}),
     };
 
-    const [data, total] = await prisma.$transaction([
+    const [data, allDistinctGroups] = await prisma.$transaction([
       prisma.report.findMany({
         where,
+        distinct: ['pingId', 'waveId', 'commentId', 'reason'],
         include: REPORT_INCLUDE,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.report.count({ where }),
+      prisma.report.findMany({
+        where,
+        distinct: ['pingId', 'waveId', 'commentId', 'reason'],
+        select: { id: true },
+      }),
     ]);
+
+    const total = allDistinctGroups.length;
 
     // ── Attach reportCount to each item ──────────────────────────────────────
     // Collect the distinct content IDs present in this page so we can run a
@@ -280,7 +287,7 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
     const commentIds = [...new Set(data.map((r) => r.commentId).filter((id): id is number => id !== null))];
 
     const countRows = await prisma.report.groupBy({
-      by: ['pingId', 'waveId', 'commentId'],
+      by: ['pingId', 'waveId', 'commentId', 'reason'],
       where: {
         organizationId,
         OR: [
@@ -292,27 +299,20 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
       _count: { id: true },
     });
 
-    // Build fast lookup maps keyed by content id
-    const pingCountMap = new Map<number, number>();
-    const waveCountMap = new Map<number, number>();
-    const commentCountMap = new Map<number, number>();
+    const getCountMapKey = (row: { pingId: number | null; waveId: number | null; commentId: number | null; reason: string | null }) => {
+      return `${row.pingId}-${row.waveId}-${row.commentId}-${row.reason}`;
+    };
+
+    const countMap = new Map<string, number>();
 
     for (const row of countRows) {
-      if (row.pingId !== null) pingCountMap.set(row.pingId, row._count.id);
-      if (row.waveId !== null) waveCountMap.set(row.waveId, row._count.id);
-      if (row.commentId !== null) commentCountMap.set(row.commentId, row._count.id);
+      countMap.set(getCountMapKey(row), row._count.id);
     }
 
     const dataWithCount = data.map((report) => ({
       ...report,
-      reportCount:
-        report.pingId !== null
-          ? (pingCountMap.get(report.pingId) ?? 1)
-          : report.waveId !== null
-            ? (waveCountMap.get(report.waveId) ?? 1)
-            : report.commentId !== null
-              ? (commentCountMap.get(report.commentId) ?? 1)
-              : 1,
+      reportType: report.reason || "other",
+      reportCount: countMap.get(getCountMapKey(report)) ?? 1,
     }));
 
     return res.status(200).json({
