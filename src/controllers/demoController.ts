@@ -1,4 +1,4 @@
-﻿// src/controllers/demoController.ts
+// src/controllers/demoController.ts
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
@@ -6,11 +6,24 @@ import { provisionDemo } from '../services/demoProvisioningService.js';
 import { env } from '../config/env.js';
 import logger from '../config/logger.js';
 
-const provisionSchema = z.object({
-  institutionName: z.string().min(2).max(120),
-  contactEmail: z.string().email(),
-  contactName: z.string().max(80).optional(),
-});
+const provisionSchema = z.union([
+  // Supabase Webhook format
+  z.object({
+    type: z.literal('INSERT'),
+    table: z.string(),
+    record: z.object({
+      institution: z.string().min(2).max(120),
+      email: z.string().email(),
+      full_name: z.string().max(80).optional(),
+    }).passthrough(),
+  }).passthrough(),
+  // Direct API format (for Postman/manual testing)
+  z.object({
+    institutionName: z.string().min(2).max(120),
+    contactEmail: z.string().email(),
+    contactName: z.string().max(80).optional(),
+  })
+]);
 
 export async function handleProvisionDemo(req: Request, res: Response): Promise<void> {
   // ── Secret header guard ─────────────────────────────────────────────────────
@@ -37,7 +50,21 @@ export async function handleProvisionDemo(req: Request, res: Response): Promise<
     return;
   }
 
-  const { institutionName, contactEmail, contactName } = parsed.data;
+  let institutionName: string;
+  let contactEmail: string;
+  let contactName: string | undefined;
+
+  if ('record' in parsed.data) {
+    // Supabase payload
+    institutionName = parsed.data.record.institution;
+    contactEmail = parsed.data.record.email;
+    contactName = parsed.data.record.full_name;
+  } else {
+    // Direct API payload
+    institutionName = parsed.data.institutionName;
+    contactEmail = parsed.data.contactEmail;
+    contactName = parsed.data.contactName;
+  }
 
   try {
     const result = await provisionDemo({ institutionName, contactEmail, contactName });
