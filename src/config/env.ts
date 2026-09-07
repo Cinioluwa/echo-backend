@@ -56,9 +56,10 @@ const envSchema = z.object({
   VAPID_SUBJECT: z.string().url('VAPID_SUBJECT must be a valid mailto: or URL').optional(),
 
   // Self-serve demo provisioning
-  DEMO_PROVISION_SECRET: z.string().min(16, 'DEMO_PROVISION_SECRET must be at least 16 characters').optional(),
-  DEMO_TTL_DAYS: z.coerce.number().int().positive().default(14),
-  DEMO_APP_URL: z.string().url('DEMO_APP_URL must be a valid URL').optional(),
+  DEMO_PROVISION_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(16, 'DEMO_PROVISION_SECRET must be at least 16 characters').optional()),
+  DEMO_TTL_DAYS: z.preprocess((v) => (v === '' || v === undefined ? 14 : v), z.coerce.number().int().positive().default(14)),
+  DEMO_APP_URL: z.preprocess((v) => (v === '' ? undefined : v), z.string().url('DEMO_APP_URL must be a valid URL').optional()),
+
 });
 
 export type Env = z.infer<typeof envSchema>;
