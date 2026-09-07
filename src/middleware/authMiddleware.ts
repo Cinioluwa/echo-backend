@@ -36,6 +36,8 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
         organization: {
           select: {
             status: true,
+            isDemo: true,
+            expiresAt: true,
           },
         },
       },
@@ -53,6 +55,19 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
       return res.status(403).json({ error: 'Organization is not active' });
     }
 
+    // Demo expiry check — SUPER_ADMIN can still access expired demos for support purposes
+    if (
+      user.organization?.isDemo &&
+      user.organization.expiresAt &&
+      user.organization.expiresAt < new Date() &&
+      user.role !== 'SUPER_ADMIN'
+    ) {
+      return res.status(403).json({
+        error: 'Your Echo demo has expired. Ready to go live? Reach out to become a Founding Partner.',
+        code: 'DEMO_EXPIRED',
+      });
+    }
+
     (req as AuthRequest).user = {
       userId: user.id,
       organizationId: user.organizationId,
@@ -64,4 +79,4 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-export default authMiddleware;
+export default authMiddleware;

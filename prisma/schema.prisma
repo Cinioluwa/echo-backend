@@ -23,6 +23,11 @@ model Organization {
   createdAt                   DateTime   @default(now())
   updatedAt                   DateTime   @updatedAt
 
+  // Self-serve demo fields
+  isDemo    Boolean   @default(false) // True for auto-provisioned demo tenants
+  expiresAt DateTime? // Demo expiry timestamp; null = never expires
+  demoSlug  String?   @unique // Slugified institution name — idempotency key for provisioning
+
   // Revamped Organization Posting & Moderation Rules
   allowMediaOnPings        Boolean @default(true)
   sameTopicCooldownHours   Int     @default(24) // 0 for none

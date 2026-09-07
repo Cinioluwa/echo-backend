@@ -54,6 +54,11 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().url('VAPID_SUBJECT must be a valid mailto: or URL').optional(),
+
+  // Self-serve demo provisioning
+  DEMO_PROVISION_SECRET: z.string().min(16, 'DEMO_PROVISION_SECRET must be at least 16 characters').optional(),
+  DEMO_TTL_DAYS: z.coerce.number().int().positive().default(14),
+  DEMO_APP_URL: z.string().url('DEMO_APP_URL must be a valid URL').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
