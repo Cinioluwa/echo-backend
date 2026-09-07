@@ -318,60 +318,61 @@ async function sendDemoWelcomeEmail(input: WelcomeEmailInput): Promise<void> {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#fafafa;margin:0;padding:40px 20px;">
-  <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #eaeaea;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.04)">
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#ffffff;margin:0;padding:40px 20px;">
+  <div style="max-width:600px;margin:0 auto;color:#1a1a1a;">
     
-    <!-- Header -->
-    <div style="padding:40px 40px 20px;text-align:center;">
-      <h1 style="color:#F97316;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">Echo</h1>
+    <div style="padding-bottom:20px;">
+      <h1 style="color:#F97316;margin:0;font-size:24px;font-weight:800;letter-spacing:-0.5px;">Echo</h1>
     </div>
 
-    <!-- Body -->
-    <div style="padding:20px 40px 40px;">
-      <h2 style="color:#1a1a1a;margin:0 0 24px;font-size:22px;font-weight:600;">You're in.</h2>
+    <h2 style="margin:0 0 20px;font-size:22px;font-weight:600;">You're in.</h2>
+    
+    <p style="font-size:16px;line-height:1.6;margin:0 0 16px;">
+      <strong>${institutionName}</strong> is now an Echo Founding Partner.
+    </p>
+    
+    <p style="font-size:16px;line-height:1.6;margin:0 0 32px;">
+      Your Founding Partner Pilot begins today, unless another start date has been agreed with Echo. The Pilot runs for approximately one academic semester, is provided at no cost, and there is no setup or onboarding fee.
+    </p>
+
+    <div style="background:#f9f9f9;border:1px solid #eaeaea;border-radius:8px;padding:24px;margin:0 0 32px">
+      <h3 style="margin:0 0 16px;font-size:14px;font-weight:600;">Your Pilot Access Credentials</h3>
       
-      <p style="font-size:16px;color:#444;line-height:1.6;margin:0 0 24px;">
-        Hi ${contactName},<br><br>
-        <strong>${institutionName}</strong> is now an Echo Founding Partner.<br>
-        Your private demo environment is ready and pre-loaded with realistic data so you can explore the full experience right away.
-      </p>
-
-      <!-- Credentials Card -->
-      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:24px;margin:0 0 32px">
-        <h3 style="margin:0 0 16px;font-size:12px;color:#c2410c;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Your Credentials</h3>
-        
-        <div style="margin-bottom:16px;">
-          <p style="margin:0 0 4px;font-size:14px;color:#1a1a1a;font-weight:600;">Student View</p>
-          <p style="margin:0 0 2px;font-size:14px;font-family:monospace;color:#444;">Email: <strong>${studentEmail}</strong></p>
-          <p style="margin:0;font-size:14px;font-family:monospace;color:#444;">Password: <strong>${password}</strong></p>
-        </div>
-
-        <div>
-          <p style="margin:0 0 4px;font-size:14px;color:#1a1a1a;font-weight:600;">Admin View</p>
-          <p style="margin:0 0 2px;font-size:14px;font-family:monospace;color:#444;">Email: <strong>${adminEmail}</strong></p>
-          <p style="margin:0;font-size:14px;font-family:monospace;color:#444;">Password: <strong>${password}</strong></p>
-        </div>
+      <div style="margin-bottom:16px;">
+        <p style="margin:0 0 4px;font-size:14px;font-weight:600;">Student View</p>
+        <p style="margin:0 0 2px;font-size:14px;font-family:monospace;color:#444;">Email: ${studentEmail}</p>
+        <p style="margin:0;font-size:14px;font-family:monospace;color:#444;">Password: ${password}</p>
       </div>
 
-      <!-- Steps -->
-      <h3 style="margin:0 0 12px;font-size:16px;color:#1a1a1a;font-weight:600;">What happens next</h3>
-      <p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 28px;">
-        1. Start as a <strong>student</strong> — browse the Soundboard, create a Ping, and surge others.<br>
-        2. Switch to <strong>admin</strong> — see the Ping Index, respond officially, and mark issues resolved.<br>
-        3. Watch the <strong>Resolution Loop</strong> in action.
-      </p>
-
-      <!-- CTA -->
-      <div style="text-align:left;margin-bottom:32px;">
-        <a href="${appUrl}" style="display:inline-block;background-color:#F97316;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:16px;font-weight:600;box-shadow:0 2px 4px rgba(249,115,22,0.2);">Enter the Pulse</a>
+      <div>
+        <p style="margin:0 0 4px;font-size:14px;font-weight:600;">Admin View</p>
+        <p style="margin:0 0 2px;font-size:14px;font-family:monospace;color:#444;">Email: ${adminEmail}</p>
+        <p style="margin:0;font-size:14px;font-family:monospace;color:#444;">Password: ${password}</p>
       </div>
-
-      <!-- Footer -->
-      <p style="font-size:13px;color:#666;line-height:1.5;margin:0;border-top:1px solid #eaeaea;padding-top:24px;">
-        This pilot environment runs until <strong>${expiryStr}</strong> and is provided at no cost.<br>
-        Questions? Reply to this email directly or write to <a href="mailto:hello@mail.echo-ng.com" style="color:#F97316;text-decoration:none;">hello@mail.echo-ng.com</a>.
-      </p>
+      
+      <div style="margin-top:24px;">
+        <a href="${appUrl}" style="display:inline-block;background-color:#F97316;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;">Enter the Pulse</a>
+      </div>
     </div>
+
+    <h3 style="margin:0 0 16px;font-size:18px;font-weight:600;">What happens next</h3>
+    <ul style="font-size:16px;line-height:1.6;margin:0 0 32px;padding-left:20px;color:#1a1a1a;">
+      <li style="margin-bottom:8px;">Echo confirms your pilot details.</li>
+      <li style="margin-bottom:8px;">Your institutional administrator setup begins.</li>
+      <li style="margin-bottom:8px;">Your team receives access and onboarding information.</li>
+      <li style="margin-bottom:8px;">Students can begin joining once your institutional rollout is ready.</li>
+    </ul>
+
+    <p style="font-size:16px;line-height:1.6;margin:0 0 32px;">
+      A confirmation email with the accepted agreement version has been sent to your institutional email address. Questions? Reply to that email or write to <a href="mailto:hello@mail.echo-ng.com" style="color:#F97316;text-decoration:none;">hello@mail.echo-ng.com</a>.
+    </p>
+
+    <div style="border-top:1px solid #eaeaea;padding-top:24px;font-size:14px;color:#666;">
+      <strong>Connect with us</strong><br>
+      <a href="https://www.echo-ng.com/" style="color:#666;text-decoration:underline;margin-right:12px;">Explore Home</a>
+      <a href="https://www.echo-ng.com/#why-us" style="color:#666;text-decoration:underline;">Why Echo</a>
+    </div>
+
   </div>
 </body>
 </html>`;
