@@ -314,43 +314,62 @@ async function sendDemoWelcomeEmail(input: WelcomeEmailInput): Promise<void> {
 
   const html = `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:Inter,Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;padding:40px 0">
-  <div style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08)">
-    <div style="background:linear-gradient(135deg,#6c3de8 0%,#3d8ef8 100%);padding:40px 40px 30px">
-      <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:700">Your Echo demo is ready</h1>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#fafafa;margin:0;padding:40px 20px;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #eaeaea;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.04)">
+    
+    <!-- Header -->
+    <div style="padding:40px 40px 20px;text-align:center;">
+      <h1 style="color:#F97316;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">Echo</h1>
     </div>
-    <div style="padding:36px 40px">
-      <p style="font-size:16px;color:#444;margin:0 0 20px">Hi ${contactName},</p>
-      <p style="font-size:16px;color:#444;margin:0 0 24px">
-        We have set up a private Echo environment for <strong>${institutionName}</strong>.
-        It is pre-loaded with realistic data so you can explore the full experience right away - no setup required.
+
+    <!-- Body -->
+    <div style="padding:20px 40px 40px;">
+      <h2 style="color:#1a1a1a;margin:0 0 24px;font-size:22px;font-weight:600;">You're in.</h2>
+      
+      <p style="font-size:16px;color:#444;line-height:1.6;margin:0 0 24px;">
+        Hi ${contactName},<br><br>
+        <strong>${institutionName}</strong> is now an Echo Founding Partner.<br>
+        Your private demo environment is ready and pre-loaded with realistic data so you can explore the full experience right away.
       </p>
 
-      <div style="background:#f8f5ff;border-left:4px solid #6c3de8;border-radius:8px;padding:20px 24px;margin:0 0 28px">
-        <p style="margin:0 0 14px;font-size:14px;color:#555;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Login credentials</p>
+      <!-- Credentials Card -->
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:24px;margin:0 0 32px">
+        <h3 style="margin:0 0 16px;font-size:12px;color:#c2410c;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Your Credentials</h3>
+        
+        <div style="margin-bottom:16px;">
+          <p style="margin:0 0 4px;font-size:14px;color:#1a1a1a;font-weight:600;">Student View</p>
+          <p style="margin:0 0 2px;font-size:14px;font-family:monospace;color:#444;">Email: <strong>${studentEmail}</strong></p>
+          <p style="margin:0;font-size:14px;font-family:monospace;color:#444;">Password: <strong>${password}</strong></p>
+        </div>
 
-        <p style="margin:0 0 6px;font-size:14px;color:#333"><strong>Student view</strong></p>
-        <p style="margin:0 0 4px;font-size:14px;font-family:monospace;color:#6c3de8">${studentEmail}</p>
-        <p style="margin:0 0 18px;font-size:14px;font-family:monospace;color:#555">Password: ${password}</p>
-
-        <p style="margin:0 0 6px;font-size:14px;color:#333"><strong>Admin view</strong></p>
-        <p style="margin:0 0 4px;font-size:14px;font-family:monospace;color:#6c3de8">${adminEmail}</p>
-        <p style="margin:0;font-size:14px;font-family:monospace;color:#555">Password: ${password}</p>
+        <div>
+          <p style="margin:0 0 4px;font-size:14px;color:#1a1a1a;font-weight:600;">Admin View</p>
+          <p style="margin:0 0 2px;font-size:14px;font-family:monospace;color:#444;">Email: <strong>${adminEmail}</strong></p>
+          <p style="margin:0;font-size:14px;font-family:monospace;color:#444;">Password: <strong>${password}</strong></p>
+        </div>
       </div>
 
-      <p style="font-size:15px;color:#444;margin:0 0 12px"><strong>Suggested exploration flow</strong></p>
-      <ol style="font-size:15px;color:#555;margin:0 0 28px;padding-left:20px;line-height:1.8">
-        <li>Start as a <strong>student</strong> - browse the Soundboard, create a Ping, surge others.</li>
-        <li>Switch to <strong>admin</strong> - see the Ping Index, respond officially, mark issues resolved.</li>
-        <li>Watch the <strong>Resolution Loop</strong> - from complaint to official response.</li>
-      </ol>
+      <!-- Steps -->
+      <h3 style="margin:0 0 12px;font-size:16px;color:#1a1a1a;font-weight:600;">What happens next</h3>
+      <p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 28px;">
+        1. Start as a <strong>student</strong> — browse the Soundboard, create a Ping, and surge others.<br>
+        2. Switch to <strong>admin</strong> — see the Ping Index, respond officially, and mark issues resolved.<br>
+        3. Watch the <strong>Resolution Loop</strong> in action.
+      </p>
 
-      <a href="${appUrl}" style="display:inline-block;background:linear-gradient(135deg,#6c3de8,#3d8ef8);color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:15px;font-weight:600;margin:0 0 28px">Open Echo</a>
+      <!-- CTA -->
+      <div style="text-align:left;margin-bottom:32px;">
+        <a href="${appUrl}" style="display:inline-block;background-color:#F97316;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:16px;font-weight:600;box-shadow:0 2px 4px rgba(249,115,22,0.2);">Enter the Pulse</a>
+      </div>
 
-      <p style="font-size:13px;color:#888;margin:28px 0 0;border-top:1px solid #eee;padding-top:20px">
-        This demo environment is active until <strong>${expiryStr}</strong>.
-        If you would like to become a Founding Partner before then, reach out and we will migrate your data.
+      <!-- Footer -->
+      <p style="font-size:13px;color:#666;line-height:1.5;margin:0;border-top:1px solid #eaeaea;padding-top:24px;">
+        This pilot environment runs until <strong>${expiryStr}</strong> and is provided at no cost.<br>
+        Questions? Reply to this email directly or write to <a href="mailto:hello@mail.echo-ng.com" style="color:#F97316;text-decoration:none;">hello@mail.echo-ng.com</a>.
       </p>
     </div>
   </div>
