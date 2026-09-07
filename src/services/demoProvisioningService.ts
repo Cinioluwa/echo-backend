@@ -1,4 +1,4 @@
-﻿// src/services/demoProvisioningService.ts
+// src/services/demoProvisioningService.ts
 //
 // Provisions a self-contained Echo demo environment for an institution.
 // Idempotent — calling it twice for the same slug returns the existing record.
@@ -82,6 +82,9 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
       data: {
         name: orgName,
         domain: `${slug}.${DEMO_EMAIL_DOMAIN}`,
+        domains: {
+          create: [{ domain: `${slug}.${DEMO_EMAIL_DOMAIN}` }]
+        },
         status: 'ACTIVE',
         isDemo: true,
         demoSlug: slug,
