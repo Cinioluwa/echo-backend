@@ -135,6 +135,21 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
       },
     });
 
+    const student2 = await tx.user.create({
+      data: {
+        email: `student2@${slug}.${DEMO_EMAIL_DOMAIN}`,
+        firstName: 'Demo',
+        lastName: 'Student 2',
+        password: passwordHash,
+        role: 'USER',
+        organizationId: org.id,
+        isVerified: true,
+        status: 'ACTIVE',
+        level: 3,
+        department: 'Electrical Engineering',
+      },
+    });
+
     // 5. Seed pings — representative mix showing the Resolution Loop in action
 
     // Ping A: POSTED with a wave — active community discussion
@@ -153,10 +168,26 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
             {
               solution:
                 'Restarting the router on Floor 2 temporarily fixes it. ICT should look at the DHCP lease table.',
-              authorId: student.id,
+              authorId: student2.id,
               organizationId: org.id,
               surgeCount: 12,
+              comments: {
+                create: [
+                  {
+                    content: 'This worked for me yesterday! But it drops again after an hour.',
+                    authorId: student.id,
+                    organizationId: org.id,
+                    surgeCount: 3
+                  }
+                ]
+              }
             },
+            {
+              solution: 'Connect to the Eduroam network instead, it seems more stable.',
+              authorId: admin.id,
+              organizationId: org.id,
+              surgeCount: 25,
+            }
           ],
         },
       },
@@ -168,13 +199,33 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
         title: 'Incorrect course codes on the portal for 300-level students',
         content:
           'The portal shows last semester course codes for several 300-level programs. Registration is blocked.',
-        authorId: student.id,
+        authorId: student2.id,
         organizationId: org.id,
         categoryId: categories['Academics']!,
         status: 'APPROVED',
         progressStatus: 'ACKNOWLEDGED',
         acknowledgedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
         surgeCount: 61,
+        waves: {
+          create: [
+            {
+              solution: 'The departmental office said they are updating it by tomorrow afternoon.',
+              authorId: student.id,
+              organizationId: org.id,
+              surgeCount: 42
+            }
+          ]
+        },
+        comments: {
+          create: [
+            {
+              content: 'Does this apply to all departments or just Engineering?',
+              authorId: student.id,
+              organizationId: org.id,
+              surgeCount: 5
+            }
+          ]
+        }
       },
     });
 
@@ -191,6 +242,16 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
         resolvedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
         acknowledgedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
         surgeCount: 24,
+        waves: {
+          create: [
+            {
+              solution: 'Can facilities please bring a replacement unit from the ground floor?',
+              authorId: student2.id,
+              organizationId: org.id,
+              surgeCount: 15
+            }
+          ]
+        }
       },
     });
 
@@ -211,11 +272,31 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
         title: 'Late fee charges applied despite on-time payment',
         content:
           'Many students paid school fees before the deadline but are still seeing late fee charges on the portal. Finance department, please look into this.',
-        authorId: student.id,
+        authorId: student2.id,
         organizationId: org.id,
         categoryId: categories['Finance']!,
         status: 'POSTED',
         surgeCount: 94,
+        waves: {
+          create: [
+            {
+              solution: 'Print your payment receipt and take it to the bursary physically. They clear it immediately.',
+              authorId: student.id,
+              organizationId: org.id,
+              surgeCount: 88,
+              comments: {
+                create: [
+                  {
+                    content: 'I did this and it worked. Make sure you go before 2 PM.',
+                    authorId: student2.id,
+                    organizationId: org.id,
+                    surgeCount: 12
+                  }
+                ]
+              }
+            }
+          ]
+        }
       },
     });
 
@@ -232,6 +313,18 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
         isAnonymous: true,
         anonymousAlias: 'CuriousBadger42',
         surgeCount: 17,
+        comments: {
+          create: [
+            {
+              content: 'Exactly! We need a point-based system visible on the portal.',
+              authorId: student2.id,
+              organizationId: org.id,
+              isAnonymous: true,
+              anonymousAlias: 'SilentObserver',
+              surgeCount: 10
+            }
+          ]
+        }
       },
     });
 
@@ -248,6 +341,22 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
         progressStatus: 'IN_PROGRESS',
         acknowledgedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
         surgeCount: 45,
+        waves: {
+          create: [
+            {
+              solution: 'Embed a Google Maps iframe with custom markers for now.',
+              authorId: student2.id,
+              organizationId: org.id,
+              surgeCount: 22
+            },
+            {
+              solution: 'We should build a custom interactive SVG map. It looks much better.',
+              authorId: student.id,
+              organizationId: org.id,
+              surgeCount: 30
+            }
+          ]
+        }
       },
     });
 
