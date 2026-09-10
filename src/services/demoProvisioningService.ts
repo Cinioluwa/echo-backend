@@ -384,6 +384,7 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
     studentEmail,
     password: DEMO_PASSWORD,
     appUrl,
+    slug,
     expiresAt,
   }).catch((err) => {
     logger.error('Failed to send demo welcome email', {
@@ -413,6 +414,7 @@ interface WelcomeEmailInput {
   studentEmail: string;
   password: string;
   appUrl: string;
+  slug: string;
   expiresAt: Date;
 }
 
@@ -425,6 +427,7 @@ async function sendDemoWelcomeEmail(input: WelcomeEmailInput): Promise<void> {
     studentEmail,
     password,
     appUrl,
+    slug,
     expiresAt,
   } = input;
 
