@@ -478,7 +478,7 @@ async function sendDemoWelcomeEmail(input: WelcomeEmailInput): Promise<void> {
           </div>
           
           <div style="margin-top:24px; text-align:center;">
-            <a href="\${appUrl}" style="display:inline-block; background-color:#E8911A; color:#FFFFFF; text-decoration:none; font-weight:700; padding:14px 34px; border-radius:999px; font-size:14px;">Enter the Pulse</a>
+            <a href="\${appUrl}?demoOrg=\${slug}" style="display:inline-block; background-color:#E8911A; color:#FFFFFF; text-decoration:none; font-weight:700; padding:14px 34px; border-radius:999px; font-size:14px;">Enter the Pulse</a>
           </div>
         </div>
 
