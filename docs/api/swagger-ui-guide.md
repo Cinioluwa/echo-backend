@@ -5,6 +5,7 @@
 When you visit `http://localhost:3000/docs`, you'll see the Swagger UI interface with:
 
 ### 1. Header Section
+
 ```
 Echo Backend API (1.0.0)
 Backend API for Echo — a social feedback platform for university students with multitenancy support.
@@ -15,7 +16,9 @@ Servers: http://localhost:3000 (API Server)
 ```
 
 ### 2. API Description
+
 The documentation includes a comprehensive overview explaining:
+
 - Features (Authentication, Multitenancy, Core Entities, Roles, Security)
 - Authentication instructions (how to get JWT tokens)
 - Multitenancy notes
@@ -24,6 +27,7 @@ The documentation includes a comprehensive overview explaining:
 ### 3. Endpoint Groups (Tags)
 
 #### Authentication
+
 - **POST /api/auth/google** - Authenticate with Google OAuth
   - Expandable section showing:
     - Request body schema (token: string)
@@ -32,40 +36,42 @@ The documentation includes a comprehensive overview explaining:
     - "Try it out" button to test the endpoint
 
 #### Pings
+
 - **POST /api/pings** - Create a new ping (issue)
   - Shows required fields: title, content, categoryId
   - Optional fields: hashtag, isAnonymous
   - Authentication required (🔒 icon)
-  
 - **GET /api/pings** - List all pings with filters
   - Query parameters: page, limit, category, status
   - Paginated response with metadata
 
 #### Categories
+
 - **GET /api/categories** - Get all categories for user's organization
   - Optional query parameter: q (search)
   - Returns array of {id, name} objects
 
 #### Public
+
 - **GET /api/public/soundboard** - Public feed of pings
   - Query params: page, limit, sort, category
   - Organization-scoped
-  
 - **GET /api/public/stream** - Public feed of waves
   - Similar to soundboard
-  
 - **GET /api/public/resolution-log** - Resolved pings feed
   - Query param: days (1-365 or 'all')
 
 #### Health
+
 - **GET /health** - Deep health check (includes database)
 - **GET /healthz** - Shallow health check
 
 ### 4. Schemas Section (at bottom)
 
 Expandable component schemas:
+
 - **User**: {id, email, firstName, lastName, role, organizationId, profilePicture}
-- **Ping**: {id, title, content, category, hashtag, isAnonymous, status, author, _count}
+- **Ping**: {id, title, content, category, hashtag, isAnonymous, status, author, \_count}
 - **Category**: {id, name}
 - **Error**: {error, code?}
 - **PaginationMeta**: {totalItems, totalPages, currentPage, itemsPerPage, hasNextPage, hasPreviousPage}
@@ -73,6 +79,7 @@ Expandable component schemas:
 ### 5. Interactive Features
 
 #### Try It Out
+
 1. Click "Try it out" button on any endpoint
 2. Edit the request body/parameters
 3. Click "Execute"
@@ -83,6 +90,7 @@ Expandable component schemas:
    - Request URL
 
 #### Authentication
+
 1. Click "Authorize" button (🔓) at top
 2. Modal appears: "Available authorizations"
 3. Enter: `Bearer <your-jwt-token>`
@@ -143,6 +151,7 @@ Example Value | Model
 ## Color Scheme
 
 Swagger UI uses a professional blue/green color scheme:
+
 - Primary actions: Blue
 - Success: Green
 - GET requests: Blue background
@@ -155,6 +164,7 @@ Swagger UI uses a professional blue/green color scheme:
 ## Mobile Responsive
 
 The Swagger UI is fully responsive and works on:
+
 - Desktop (optimal experience)
 - Tablets
 - Mobile devices (with touch-friendly controls)
@@ -162,6 +172,7 @@ The Swagger UI is fully responsive and works on:
 ## Developer Experience
 
 ### Benefits
+
 1. **Self-documenting API**: Documentation lives alongside code
 2. **Always up-to-date**: Generated from actual route definitions
 3. **Interactive testing**: No need for separate tools during development
@@ -170,6 +181,7 @@ The Swagger UI is fully responsive and works on:
 6. **Tool integration**: Import into Postman, Insomnia, etc.
 
 ### Workflow
+
 1. Write route handler
 2. Add JSDoc comment with @openapi annotation
 3. Restart dev server

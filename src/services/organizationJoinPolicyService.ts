@@ -9,9 +9,7 @@ export type OrganizationJoinPolicyContext = {
 
 type PrismaLike = PrismaClient | Prisma.TransactionClient;
 
-export const getEffectiveJoinPolicy = (
-  organization: OrganizationJoinPolicyContext
-): JoinPolicy => {
+export const getEffectiveJoinPolicy = (organization: OrganizationJoinPolicyContext): JoinPolicy => {
   if (!organization.domain || organization.isDomainLocked) {
     return 'REQUIRES_APPROVAL';
   }
@@ -19,13 +17,11 @@ export const getEffectiveJoinPolicy = (
   return organization.joinPolicy;
 };
 
-export const isJoinPolicyLocked = (
-  organization: OrganizationJoinPolicyContext
-): boolean => !organization.domain || organization.isDomainLocked;
+export const isJoinPolicyLocked = (organization: OrganizationJoinPolicyContext): boolean =>
+  !organization.domain || organization.isDomainLocked;
 
-export const shouldAutoJoinOrganization = (
-  organization: OrganizationJoinPolicyContext
-): boolean => getEffectiveJoinPolicy(organization) === 'OPEN';
+export const shouldAutoJoinOrganization = (organization: OrganizationJoinPolicyContext): boolean =>
+  getEffectiveJoinPolicy(organization) === 'OPEN';
 
 export const ensurePendingOrganizationJoinRequest = async (
   prisma: PrismaLike,

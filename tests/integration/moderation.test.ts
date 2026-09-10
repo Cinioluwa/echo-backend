@@ -133,7 +133,7 @@ describe('Moderation Actions', () => {
       organizationId: org.id,
       authorId: pingAuthor.id,
     });
-    
+
     // Create a new report
     const reportRes = await client
       .post('/api/reports')
@@ -162,7 +162,7 @@ describe('Moderation Actions', () => {
       organizationId: org.id,
       authorId: pingAuthor.id,
     });
-    
+
     // Create a new report
     const reportRes = await client
       .post('/api/reports')
@@ -194,7 +194,7 @@ describe('Moderation Actions', () => {
         categoryId: category.id,
       })
       .expect(403);
-    
+
     expect(res.body.error).toContain('Your posting privileges are temporarily restricted');
   });
 });

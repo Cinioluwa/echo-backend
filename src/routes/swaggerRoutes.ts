@@ -10,10 +10,13 @@ const router = Router();
  * This provides an interactive API documentation interface
  */
 router.use('/docs', swaggerUi.serve);
-router.get('/docs', swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Echo API Documentation',
-}));
+router.get(
+  '/docs',
+  swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Echo API Documentation',
+  })
+);
 
 /**
  * Serve raw OpenAPI spec as JSON at /docs/json

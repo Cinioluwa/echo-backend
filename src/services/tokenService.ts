@@ -8,10 +8,7 @@ type PrismaClientOrTx = PrismaClient | Prisma.TransactionClient;
 
 const generateToken = () => crypto.randomBytes(48).toString('hex');
 
-export const createEmailVerificationToken = async (
-  client: PrismaClientOrTx,
-  userId: number
-) => {
+export const createEmailVerificationToken = async (client: PrismaClientOrTx, userId: number) => {
   await client.emailVerificationToken.deleteMany({ where: { userId } });
 
   const token = generateToken();
@@ -25,10 +22,7 @@ export const createEmailVerificationToken = async (
   return record;
 };
 
-export const createPasswordResetToken = async (
-  client: PrismaClientOrTx,
-  userId: number
-) => {
+export const createPasswordResetToken = async (client: PrismaClientOrTx, userId: number) => {
   await client.passwordResetToken.deleteMany({ where: { userId } });
 
   const token = generateToken();
@@ -42,10 +36,7 @@ export const createPasswordResetToken = async (
   return record;
 };
 
-export const markEmailVerificationTokenUsed = async (
-  client: PrismaClientOrTx,
-  tokenId: number
-) => {
+export const markEmailVerificationTokenUsed = async (client: PrismaClientOrTx, tokenId: number) => {
   // Cast to any to avoid transient type mismatch before prisma generate runs
   await (client as any).emailVerificationToken.update({
     where: { id: tokenId },
@@ -53,10 +44,7 @@ export const markEmailVerificationTokenUsed = async (
   });
 };
 
-export const markPasswordResetTokenUsed = async (
-  client: PrismaClientOrTx,
-  tokenId: number
-) => {
+export const markPasswordResetTokenUsed = async (client: PrismaClientOrTx, tokenId: number) => {
   // Cast to any to avoid transient type mismatch before prisma generate runs
   await (client as any).passwordResetToken.update({
     where: { id: tokenId },
@@ -79,12 +67,16 @@ export const verifyUnsubscribeToken = (token: string): number | null => {
     const userId = parseInt(userIdStr, 10);
     if (isNaN(userId)) return null;
 
-    const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'echo_unsubscribe_secret';
+    const secret =
+      process.env.JWT_SECRET || process.env.SESSION_SECRET || 'echo_unsubscribe_secret';
     const hmac = crypto.createHmac('sha256', secret);
     hmac.update(`unsubscribe:${userId}`);
     const expectedSignature = hmac.digest('hex');
 
-    if (signature.length === expectedSignature.length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    if (
+      signature.length === expectedSignature.length &&
+      crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+    ) {
       return userId;
     }
     return null;

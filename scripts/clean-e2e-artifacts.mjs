@@ -32,7 +32,8 @@ async function main() {
       dirEntries = await readdir(dir, { withFileTypes: true });
     } catch (error) {
       // If the directory doesn't exist, skip it.
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') continue;
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+        continue;
       throw error;
     }
 
@@ -50,7 +51,8 @@ async function main() {
 
   if (dryRun) {
     console.log('Dry run: would delete:');
-    for (const c of candidates) console.log(`- ${path.relative(repoRoot, path.join(c.dir, c.name))}`);
+    for (const c of candidates)
+      console.log(`- ${path.relative(repoRoot, path.join(c.dir, c.name))}`);
     return;
   }
 
@@ -62,7 +64,8 @@ async function main() {
       deleted += 1;
     } catch (error) {
       // If it disappeared between listing and delete, ignore.
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') continue;
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+        continue;
       throw error;
     }
   }

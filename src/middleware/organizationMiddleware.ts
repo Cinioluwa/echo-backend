@@ -3,9 +3,9 @@ import { AuthRequest } from '../types/AuthRequest.js';
 
 const organizationMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const authReq = req as AuthRequest;
-  console.log(`DEBUG: organizationMiddleware [${req.method}] ${req.originalUrl}`, { 
+  console.log(`DEBUG: organizationMiddleware [${req.method}] ${req.originalUrl}`, {
     user: authReq.user,
-    organizationId: (req as any).organizationId 
+    organizationId: (req as any).organizationId,
   });
 
   if (!authReq.user) {
@@ -21,7 +21,8 @@ const organizationMiddleware = (req: Request, res: Response, next: NextFunction)
     if (!resolved) {
       console.log('DEBUG: organizationMiddleware: returning 400 - SUPER_ADMIN no resolved org');
       return res.status(400).json({
-        error: 'SUPER_ADMIN must specify an organization via x-organization-id header or organizationId query param',
+        error:
+          'SUPER_ADMIN must specify an organization via x-organization-id header or organizationId query param',
       });
     }
 
@@ -36,14 +37,18 @@ const organizationMiddleware = (req: Request, res: Response, next: NextFunction)
   }
 
   if (!authReq.user.organizationId) {
-    console.log('DEBUG: organizationMiddleware: returning 400 - no organizationId on user', { user: authReq.user });
+    console.log('DEBUG: organizationMiddleware: returning 400 - no organizationId on user', {
+      user: authReq.user,
+    });
     return res.status(400).json({ error: 'Bad Request: Organization context missing' });
   }
 
   // Attach organizationId directly to req for easy access in controllers
   (req as any).organizationId = authReq.user.organizationId;
 
-  console.log('DEBUG: organizationMiddleware: success, calling next()', { organizationId: (req as any).organizationId });
+  console.log('DEBUG: organizationMiddleware: success, calling next()', {
+    organizationId: (req as any).organizationId,
+  });
   next();
 };
 

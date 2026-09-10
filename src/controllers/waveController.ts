@@ -81,7 +81,14 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
           },
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
       },
     });
@@ -92,7 +99,9 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
     emitWaveCreated(organizationId, waveWithMedia!);
 
     if (ping.authorId !== userId) {
-      const authorName = waveWithMedia!.author.firstName ? `${waveWithMedia!.author.firstName} ${waveWithMedia!.author.lastName || ''}`.trim() : 'Someone';
+      const authorName = waveWithMedia!.author.firstName
+        ? `${waveWithMedia!.author.firstName} ${waveWithMedia!.author.lastName || ''}`.trim()
+        : 'Someone';
       await createNotification(prisma as any, {
         userId: ping.authorId,
         organizationId,
@@ -106,7 +115,11 @@ export const createWave = async (req: AuthRequest, res: Response, next: NextFunc
 
     return res.status(201).json(waveWithMedia);
   } catch (error) {
-    logger.error('Error creating wave', { error, pingId: req.params.pingId, userId: req.user?.userId });
+    logger.error('Error creating wave', {
+      error,
+      pingId: req.params.pingId,
+      userId: req.user?.userId,
+    });
     return next(error);
   }
 };
@@ -170,7 +183,14 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
             },
           },
           media: {
-            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+            select: {
+              id: true,
+              url: true,
+              filename: true,
+              mimeType: true,
+              width: true,
+              height: true,
+            },
           },
           comments: {
             take: 10,
@@ -205,7 +225,7 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
     const totalPages = Math.ceil(totalWaves / limit);
 
     // Sanitize anonymous waves and comments, add hasSurged (always boolean)
-    const sanitizedWaves = waves.map(wave => {
+    const sanitizedWaves = waves.map((wave) => {
       let hasSurged = false;
       if (userId) {
         hasSurged = Array.isArray(wave.surges) ? wave.surges.length > 0 : false;
@@ -213,7 +233,7 @@ export const getWavesForPing = async (req: AuthRequest, res: Response, next: Nex
       return {
         ...wave,
         hasSurged,
-        comments: wave.comments.map(comment => ({
+        comments: wave.comments.map((comment) => ({
           ...comment,
           author: comment.isAnonymous ? null : comment.author,
         })),
@@ -284,7 +304,14 @@ export const getMyWaves = async (req: AuthRequest, res: Response, next: NextFunc
             },
           },
           media: {
-            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+            select: {
+              id: true,
+              url: true,
+              filename: true,
+              mimeType: true,
+              width: true,
+              height: true,
+            },
           },
           ping: {
             select: {
@@ -359,7 +386,7 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
     // Fetch the wave with related data first
     const userId = req.user?.userId;
     const wave = await prisma.wave.findFirst({
-      where: { 
+      where: {
         id: waveId,
         organizationId: organizationId,
       },
@@ -380,7 +407,14 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
           },
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
         ping: {
           include: {
@@ -442,11 +476,13 @@ export const getWaveById = async (req: AuthRequest, res: Response, next: NextFun
     const sanitizedWave = {
       ...wave,
       viewCount: wave.viewCount + 1,
-      hasSurged: userId ? (wave.surges && wave.surges.length > 0) : false,
-      ping: wave.ping ? {
-        ...wave.ping,
-        hasSurged: userId ? (wave.ping.surges && wave.ping.surges.length > 0) : false,
-      } : undefined,
+      hasSurged: userId ? wave.surges && wave.surges.length > 0 : false,
+      ping: wave.ping
+        ? {
+            ...wave.ping,
+            hasSurged: userId ? wave.ping.surges && wave.ping.surges.length > 0 : false,
+          }
+        : undefined,
     };
 
     const [waveWithBadges] = await appendWaveBadges([sanitizedWave], organizationId);
@@ -608,7 +644,9 @@ export const deleteWave = async (req: AuthRequest, res: Response, next: NextFunc
     const isPingAuthor = ping?.authorId === userId;
 
     if (!isWaveAuthor && !isPingAuthor) {
-      return res.status(403).json({ error: 'Forbidden: Only the wave author or ping author can delete waves' });
+      return res
+        .status(403)
+        .json({ error: 'Forbidden: Only the wave author or ping author can delete waves' });
     }
 
     await prisma.wave.delete({

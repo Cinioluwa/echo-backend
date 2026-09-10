@@ -44,10 +44,17 @@ export async function uploadToCloudinary(
   options: UploadOptions = {}
 ): Promise<UploadResult> {
   if (!isCloudinaryConfigured()) {
-    throw new Error('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
+    throw new Error(
+      'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.'
+    );
   }
 
-  const { folder = 'echo-uploads', resourceType = 'auto', transformation, allowedFormats } = options;
+  const {
+    folder = 'echo-uploads',
+    resourceType = 'auto',
+    transformation,
+    allowedFormats,
+  } = options;
 
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -94,7 +101,10 @@ export async function uploadToCloudinary(
 /**
  * Delete a file from Cloudinary
  */
-export async function deleteFromCloudinary(publicId: string, resourceType: 'image' | 'video' | 'raw' = 'image'): Promise<boolean> {
+export async function deleteFromCloudinary(
+  publicId: string,
+  resourceType: 'image' | 'video' | 'raw' = 'image'
+): Promise<boolean> {
   if (!isCloudinaryConfigured()) {
     throw new Error('Cloudinary is not configured');
   }

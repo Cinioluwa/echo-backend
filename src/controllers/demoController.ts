@@ -8,21 +8,25 @@ import logger from '../config/logger.js';
 
 const provisionSchema = z.union([
   // Supabase Webhook format
-  z.object({
-    type: z.literal('INSERT'),
-    table: z.string(),
-    record: z.object({
-      institution: z.string().min(2).max(120),
-      email: z.string().email(),
-      full_name: z.string().max(80).optional(),
-    }).passthrough(),
-  }).passthrough(),
+  z
+    .object({
+      type: z.literal('INSERT'),
+      table: z.string(),
+      record: z
+        .object({
+          institution: z.string().min(2).max(120),
+          email: z.string().email(),
+          full_name: z.string().max(80).optional(),
+        })
+        .passthrough(),
+    })
+    .passthrough(),
   // Direct API format (for Postman/manual testing)
   z.object({
     institutionName: z.string().min(2).max(120),
     contactEmail: z.string().email(),
     contactName: z.string().max(80).optional(),
-  })
+  }),
 ]);
 
 export async function handleProvisionDemo(req: Request, res: Response): Promise<void> {

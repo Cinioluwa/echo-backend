@@ -1,12 +1,21 @@
 import { Router, type RequestHandler } from 'express';
-import { getPublicPings, getPublicWaves, getPublicResolutionLog, getShareMetadata } from '../controllers/publicController.js';
+import {
+  getPublicPings,
+  getPublicWaves,
+  getPublicResolutionLog,
+  getShareMetadata,
+} from '../controllers/publicController.js';
 import { inviteLeader } from '../controllers/organizationController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import cache from '../middleware/cacheMiddleware.js';
 import { unsubscribeFromMarketing } from '../controllers/preferenceController.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { inviteLeaderSchema, shareMetadataAliasIdSchema, shareMetadataSchema } from '../schemas/publicSchemas.js';
+import {
+  inviteLeaderSchema,
+  shareMetadataAliasIdSchema,
+  shareMetadataSchema,
+} from '../schemas/publicSchemas.js';
 
 const router = Router();
 
@@ -72,17 +81,42 @@ const router = Router();
  */
 router.get('/share/:entity/:id', validate(shareMetadataSchema), cache(300), getShareMetadata);
 
-const withShareEntity = (entity: 'feed' | 'ping' | 'wave' | 'comment'): RequestHandler =>
-	(req, _res, next) => {
-		req.params.entity = entity;
-		next();
-	};
+const withShareEntity =
+  (entity: 'feed' | 'ping' | 'wave' | 'comment'): RequestHandler =>
+  (req, _res, next) => {
+    req.params.entity = entity;
+    next();
+  };
 
 // Backward-compatible aliases for existing integration callers.
-router.get('/feed/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('feed'), cache(300), getShareMetadata);
-router.get('/comments/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('comment'), cache(300), getShareMetadata);
-router.get('/pings/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('ping'), cache(300), getShareMetadata);
-router.get('/waves/:id/metadata', validate(shareMetadataAliasIdSchema), withShareEntity('wave'), cache(300), getShareMetadata);
+router.get(
+  '/feed/:id/metadata',
+  validate(shareMetadataAliasIdSchema),
+  withShareEntity('feed'),
+  cache(300),
+  getShareMetadata
+);
+router.get(
+  '/comments/:id/metadata',
+  validate(shareMetadataAliasIdSchema),
+  withShareEntity('comment'),
+  cache(300),
+  getShareMetadata
+);
+router.get(
+  '/pings/:id/metadata',
+  validate(shareMetadataAliasIdSchema),
+  withShareEntity('ping'),
+  cache(300),
+  getShareMetadata
+);
+router.get(
+  '/waves/:id/metadata',
+  validate(shareMetadataAliasIdSchema),
+  withShareEntity('wave'),
+  cache(300),
+  getShareMetadata
+);
 
 /**
  * @openapi
@@ -92,18 +126,18 @@ router.get('/waves/:id/metadata', validate(shareMetadataAliasIdSchema), withShar
  *     description: |
  *       Retrieve a paginated, public-facing feed of pings in the user's organization.
  *       The "soundboard" displays issues and feedback from the community.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Only shows pings from user's organization.
- *       
+ *
  *       **Sorting**:
  *       - `trending`: Sort by surge count (likes), then by creation date
  *       - `new`: Sort by creation date (most recent first) - default
- *       
+ *
  *       **Filtering**:
  *       - `category`: Filter by category ID (optional)
  *       - Omit category to show "All Categories"
- *       
+ *
  *       **Anonymous pings**: Author details are hidden for anonymous posts.
  *     tags:
  *       - Public
@@ -167,7 +201,13 @@ router.get('/waves/:id/metadata', validate(shareMetadataAliasIdSchema), withShar
  *         description: Internal server error
  */
 // Soundboard (Pings) - now requires auth
-router.get('/soundboard', authMiddleware, organizationMiddleware, cache(120, { perUser: true }), getPublicPings);
+router.get(
+  '/soundboard',
+  authMiddleware,
+  organizationMiddleware,
+  cache(120, { perUser: true }),
+  getPublicPings
+);
 
 /**
  * @openapi
@@ -177,10 +217,10 @@ router.get('/soundboard', authMiddleware, organizationMiddleware, cache(120, { p
  *     description: |
  *       Retrieve a paginated, public-facing feed of waves (solutions) in the user's organization.
  *       The "stream" displays solutions and responses to community issues.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Only shows waves from user's organization.
- *       
+ *
  *       Supports same sorting and filtering options as soundboard.
  *     tags:
  *       - Public
@@ -222,7 +262,13 @@ router.get('/soundboard', authMiddleware, organizationMiddleware, cache(120, { p
  *         description: Internal server error
  */
 // Stream (Waves) - now requires auth
-router.get('/stream', authMiddleware, organizationMiddleware, cache(30, { perUser: true }), getPublicWaves);
+router.get(
+  '/stream',
+  authMiddleware,
+  organizationMiddleware,
+  cache(30, { perUser: true }),
+  getPublicWaves
+);
 
 /**
  * @openapi
@@ -232,7 +278,7 @@ router.get('/stream', authMiddleware, organizationMiddleware, cache(30, { perUse
  *     description: |
  *       Retrieve a paginated feed of recently resolved pings.
  *       Shows issues that have been marked as resolved within a specified timeframe.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Only shows resolved pings from user's organization.
  *     tags:
@@ -280,7 +326,13 @@ router.get('/stream', authMiddleware, organizationMiddleware, cache(30, { perUse
  *         description: Internal server error
  */
 // Resolution Log (resolved pings) - now requires auth
-router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60, { perUser: true }), getPublicResolutionLog);
+router.get(
+  '/resolution-log',
+  authMiddleware,
+  organizationMiddleware,
+  cache(60, { perUser: true }),
+  getPublicResolutionLog
+);
 
 /**
  * @openapi
@@ -290,7 +342,7 @@ router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60, 
  *     description: |
  *       Allows any authenticated user to send an invitation email to a potential leader
  *       to claim and lead a specific organization.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *     tags:
  *       - Public
@@ -326,7 +378,12 @@ router.get('/resolution-log', authMiddleware, organizationMiddleware, cache(60, 
  *       500:
  *         description: Internal server error
  */
-router.post('/organizations/:id/invite-leader', authMiddleware, validate(inviteLeaderSchema), inviteLeader);
+router.post(
+  '/organizations/:id/invite-leader',
+  authMiddleware,
+  validate(inviteLeaderSchema),
+  inviteLeader
+);
 
 /**
  * @openapi

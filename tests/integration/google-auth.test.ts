@@ -19,7 +19,7 @@ describe('Google Auth Integration', () => {
     const prisma = getPrisma();
     // Ensure clean state
     await prisma.organization.deleteMany();
-    
+
     // Create an organization that matches the email domain
     const org = await prisma.organization.create({
       data: {
@@ -56,9 +56,7 @@ describe('Google Auth Integration', () => {
     });
 
     // Call the endpoint
-    const res = await request
-      .post('/api/auth/google')
-      .send({ token: googleToken });
+    const res = await request.post('/api/auth/google').send({ token: googleToken });
 
     // Assertions
     expect(res.status).toBe(200);
@@ -82,9 +80,7 @@ describe('Google Auth Integration', () => {
     // Mock verification failure
     vi.mocked(verifyGoogleToken).mockRejectedValue(new Error('Invalid token payload'));
 
-    const res = await request
-      .post('/api/auth/google')
-      .send({ token: 'invalid-token' });
+    const res = await request.post('/api/auth/google').send({ token: 'invalid-token' });
 
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error', 'Invalid Google token');
@@ -101,9 +97,7 @@ describe('Google Auth Integration', () => {
       googleId: '0987654321',
     });
 
-    const res = await request
-      .post('/api/auth/google')
-      .send({ token: googleToken });
+    const res = await request.post('/api/auth/google').send({ token: googleToken });
 
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty('error');
@@ -121,9 +115,7 @@ describe('Google Auth Integration', () => {
       googleId: 'consumer-123',
     });
 
-    const res = await request
-      .post('/api/auth/google')
-      .send({ token: googleToken });
+    const res = await request.post('/api/auth/google').send({ token: googleToken });
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
@@ -147,9 +139,7 @@ describe('Google Auth Integration', () => {
       googleId: `pending-${Date.now()}`,
     });
 
-    const res = await request
-      .post('/api/auth/google')
-      .send({ token: googleToken });
+    const res = await request.post('/api/auth/google').send({ token: googleToken });
 
     expect(res.status).toBe(202);
     expect(res.body).toHaveProperty('code', 'ORG_JOIN_APPROVAL_REQUIRED');

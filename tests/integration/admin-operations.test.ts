@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { createUser, createOrganization, createCategory, createPing, createComment, createWave, cleanupTestData } from '../fixtures/index.js';
+import {
+  createUser,
+  createOrganization,
+  createCategory,
+  createPing,
+  createComment,
+  createWave,
+  cleanupTestData,
+} from '../fixtures/index.js';
 
 describe('Admin Operations', () => {
   let client: any;
@@ -25,7 +33,7 @@ describe('Admin Operations', () => {
       firstName: 'Admin',
       lastName: 'User',
       organizationId: org1.id,
-      role: 'ADMIN'
+      role: 'ADMIN',
     });
 
     regularUser = await createUser({
@@ -33,7 +41,7 @@ describe('Admin Operations', () => {
       firstName: 'Regular',
       lastName: 'User',
       organizationId: org1.id,
-      role: 'USER'
+      role: 'USER',
     });
 
     otherOrgUser = await createUser({
@@ -41,7 +49,7 @@ describe('Admin Operations', () => {
       firstName: 'Other',
       lastName: 'User',
       organizationId: org2.id,
-      role: 'USER'
+      role: 'USER',
     });
 
     // Create categories
@@ -54,7 +62,7 @@ describe('Admin Operations', () => {
       content: 'Content for ping 1',
       categoryId: category1.id,
       organizationId: org1.id,
-      authorId: regularUser.id
+      authorId: regularUser.id,
     });
 
     ping2 = await createPing({
@@ -62,7 +70,7 @@ describe('Admin Operations', () => {
       content: 'Content for ping 2',
       categoryId: category2.id,
       organizationId: org1.id,
-      authorId: regularUser.id
+      authorId: regularUser.id,
     });
 
     // Login users
@@ -134,9 +142,7 @@ describe('Admin Operations', () => {
     });
 
     it('should require authentication for stats', async () => {
-      await client
-        .get('/api/admin/stats')
-        .expect(401);
+      await client.get('/api/admin/stats').expect(401);
     });
   });
 
@@ -398,7 +404,9 @@ describe('Admin Operations', () => {
       expect(res.body.counts).toHaveProperty('positive');
       expect(res.body.counts).toHaveProperty('neutral');
       expect(res.body.counts).toHaveProperty('negative');
-      expect(res.body.counts.positive + res.body.counts.neutral + res.body.counts.negative).toBe(res.body.totalPings);
+      expect(res.body.counts.positive + res.body.counts.neutral + res.body.counts.negative).toBe(
+        res.body.totalPings
+      );
       expect(typeof res.body.averageScore).toBe('number');
     });
 
@@ -423,8 +431,18 @@ describe('Admin Operations', () => {
         surgeCount: 0,
       });
 
-      await createComment({ pingId: low.id, authorId: regularUser.id, organizationId: org1.id, content: 'comment 1' });
-      await createComment({ pingId: low.id, authorId: regularUser.id, organizationId: org1.id, content: 'comment 2' });
+      await createComment({
+        pingId: low.id,
+        authorId: regularUser.id,
+        organizationId: org1.id,
+        content: 'comment 1',
+      });
+      await createComment({
+        pingId: low.id,
+        authorId: regularUser.id,
+        organizationId: org1.id,
+        content: 'comment 2',
+      });
       await createWave({ pingId: low.id, organizationId: org1.id, solution: 'wave 1' });
 
       const res = await client
@@ -454,7 +472,7 @@ describe('Admin Operations', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           title: 'Test Announcement',
-          content: 'This is a test announcement content'
+          content: 'This is a test announcement content',
         })
         .expect(201);
 
@@ -469,7 +487,7 @@ describe('Admin Operations', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           title: 'Updated Announcement',
-          content: 'Updated content'
+          content: 'Updated content',
         })
         .expect(200);
 
@@ -494,21 +512,16 @@ describe('Admin Operations', () => {
         `/api/admin/users/${regularUser.id}`,
         '/api/admin/pings',
         '/api/admin/analytics/by-level',
-        '/api/admin/analytics/by-category'
+        '/api/admin/analytics/by-category',
       ];
 
       for (const endpoint of endpoints) {
-        await client
-          .get(endpoint)
-          .set('Authorization', `Bearer ${regularToken}`)
-          .expect(403);
+        await client.get(endpoint).set('Authorization', `Bearer ${regularToken}`).expect(403);
       }
     });
 
     it('should require authentication for admin endpoints', async () => {
-      await client
-        .get('/api/admin/stats')
-        .expect(401);
+      await client.get('/api/admin/stats').expect(401);
     });
   });
 });

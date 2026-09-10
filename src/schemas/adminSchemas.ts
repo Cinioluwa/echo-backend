@@ -135,14 +135,15 @@ export const activityTimeSeriesSchema = z.object({
 // ─── Phase 1: Organization General Settings ───────────────────────────────────
 
 export const updateOrgSettingsSchema = z.object({
-  body: z.object({
-    name: z.string().min(2).max(100).optional(),
-    description: z.string().max(1000).optional(),
-    logoUrl: z.string().url().optional(),
-  }).refine(
-    (data) => Object.keys(data).length > 0,
-    { message: 'At least one field (name, description, or logoUrl) must be provided' }
-  ),
+  body: z
+    .object({
+      name: z.string().min(2).max(100).optional(),
+      description: z.string().max(1000).optional(),
+      logoUrl: z.string().url().optional(),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+      message: 'At least one field (name, description, or logoUrl) must be provided',
+    }),
 });
 
 // ─── Phase 3: Member Management Actions ──────────────────────────────────────
@@ -166,15 +167,15 @@ export const suspendMemberSchema = z.object({
 // ─── Phase 4: Organization Rules ─────────────────────────────────────────────
 
 export const updateOrgRulesSchema = z.object({
-  body: z.object({
-    allowMediaAttachments: z.boolean().optional(),
-    sameTopicCooldownHours: z.number().int().min(0).max(168).optional(),
-    autoFlagReportThreshold: z.number().int().min(1).max(50).optional(),
-    hideFlaggedContentPending: z.boolean().optional(),
-    minSurgesForWave: z.number().int().min(0).max(10000).optional(),
-  }).refine(
-    (data) => Object.keys(data).length > 0,
-    { message: 'At least one rule field must be provided' }
-  ),
+  body: z
+    .object({
+      allowMediaAttachments: z.boolean().optional(),
+      sameTopicCooldownHours: z.number().int().min(0).max(168).optional(),
+      autoFlagReportThreshold: z.number().int().min(1).max(50).optional(),
+      hideFlaggedContentPending: z.boolean().optional(),
+      minSurgesForWave: z.number().int().min(0).max(10000).optional(),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+      message: 'At least one rule field must be provided',
+    }),
 });
-

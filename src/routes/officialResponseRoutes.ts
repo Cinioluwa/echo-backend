@@ -1,9 +1,15 @@
 import { Router } from 'express';
-import { createOfficialResponse, updateOfficialResponse } from '../controllers/officialResponseController.js';
+import {
+  createOfficialResponse,
+  updateOfficialResponse,
+} from '../controllers/officialResponseController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import representativeMiddleware from '../middleware/representativeMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { createOfficialResponseSchema, updateOfficialResponseSchema } from '../schemas/officialResponseSchemas.js';
+import {
+  createOfficialResponseSchema,
+  updateOfficialResponseSchema,
+} from '../schemas/officialResponseSchemas.js';
 
 const router = Router({ mergeParams: true });
 
@@ -14,9 +20,9 @@ const router = Router({ mergeParams: true });
  *     summary: Create an official response for a ping
  *     description: |
  *       Add an official response from a representative or admin to a ping.
- *       
+ *
  *       Each ping can only have ONE official response. Use PATCH to update.
- *       
+ *
  *       **Representative/Admin only**: Requires REPRESENTATIVE or ADMIN role.
  *     tags:
  *       - Official Responses
@@ -69,7 +75,7 @@ const router = Router({ mergeParams: true });
  *     summary: Update an official response
  *     description: |
  *       Update the official response for a ping.
- *       
+ *
  *       **Representative/Admin only**: Only the original author or an admin can update.
  *     tags:
  *       - Official Responses
@@ -112,19 +118,19 @@ const router = Router({ mergeParams: true });
  */
 
 router.post(
-    '/',
-    authMiddleware,
-    representativeMiddleware,
-    validate(createOfficialResponseSchema),
-    createOfficialResponse
+  '/',
+  authMiddleware,
+  representativeMiddleware,
+  validate(createOfficialResponseSchema),
+  createOfficialResponse
 );
 
 router.patch(
-    '/',
-    authMiddleware,
-    representativeMiddleware,
-    validate(updateOfficialResponseSchema),
-    updateOfficialResponse
+  '/',
+  authMiddleware,
+  representativeMiddleware,
+  validate(updateOfficialResponseSchema),
+  updateOfficialResponse
 );
 
 export default router;

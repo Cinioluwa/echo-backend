@@ -88,7 +88,7 @@ export function cache(
           client.setEx(cacheKey, ttlSeconds, jsonString).catch((err) => {
             logger.warn('Failed to cache response', {
               key: cacheKey,
-              error: err instanceof Error ? err.message : String(err)
+              error: err instanceof Error ? err.message : String(err),
             });
           });
         }
@@ -100,7 +100,7 @@ export function cache(
     } catch (err) {
       // On any Redis error, proceed without caching
       logger.warn('Cache middleware error', {
-        error: err instanceof Error ? err.message : String(err)
+        error: err instanceof Error ? err.message : String(err),
       });
       next();
     }
@@ -171,7 +171,7 @@ export async function invalidateCache(pattern: string): Promise<number> {
   } catch (err: unknown) {
     logger.warn('Cache invalidation failed', {
       pattern,
-      error: err instanceof Error ? err.message : String(err)
+      error: err instanceof Error ? err.message : String(err),
     });
     return 0;
   }

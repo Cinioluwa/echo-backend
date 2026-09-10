@@ -14,6 +14,7 @@ This plan covers the backend work needed for the frontend's new "three-dot" post
 ### Database Schema (Prisma)
 
 #### [MODIFY] [schema.prisma](file:///c:/Users/USER/Desktop/C.I.A/echo-backend/prisma/schema.prisma)
+
 - Add `ReportStatus` enum (`PENDING`, `REVIEWED`, `RESOLVED`, `DISMISSED`)
 - Append `POST_REPORTED` to `NotificationType` enum.
 - Add new `Report` model. It will include:
@@ -26,19 +27,23 @@ This plan covers the backend work needed for the frontend's new "three-dot" post
 ### Endpoints and Logic
 
 #### [NEW] [reportSchemas.ts](file:///c:/Users/USER/Desktop/C.I.A/echo-backend/src/schemas/reportSchemas.ts)
+
 - Add validation schemas for creating a report and updating report status.
 
 #### [NEW] [reportController.ts](file:///c:/Users/USER/Desktop/C.I.A/echo-backend/src/controllers/reportController.ts)
+
 - Add `createReport`: Handles user submissions for reporting posts. This fires a `POST_REPORTED` notification to Admins.
 - Add `getReports`: For admins to view all flagged posts globally across `Ping`, `Wave`, and `Comment`.
-- Add `updateReportStatus`: For admins to review/dismiss reports. 
+- Add `updateReportStatus`: For admins to review/dismiss reports.
 
 #### [NEW] [reportRoutes.ts](file:///c:/Users/USER/Desktop/C.I.A/echo-backend/src/routes/reportRoutes.ts)
+
 - Set up `POST /api/reports` (requires authentication).
 - Set up `GET /api/reports` (requires Admin or Super Admin).
 - Set up `PATCH /api/reports/:id/status` (requires Admin or Super Admin).
 
 #### [MODIFY] [app.ts](file:///c:/Users/USER/Desktop/C.I.A/echo-backend/src/app.ts)
+
 - Register `reportRoutes` into the express app.
 
 ---
@@ -57,6 +62,7 @@ Platforms like Telegram and LinkedIn send bots/crawlers to fetch page previews. 
 - **React SPA (Vite/CRA)**: Next.js migration is the cleanest path. Alternatively, a Node.js prerender middleware (e.g., `prerender.io` or `rendertron`) can intercept bot requests and serve a pre-rendered version of the app. This is more complex to maintain.
 
 The critical data the frontend needs for OG tags from the existing API:
+
 - `title` (Ping) or the parent Ping's `title` (Wave)
 - `content` (truncated to ~160 chars for description)
 - `media[0].url` for the image preview
@@ -65,10 +71,12 @@ The critical data the frontend needs for OG tags from the existing API:
 ## Verification Plan
 
 ### Automated Tests
+
 - Run integration tests (if set up) to ensure new routes do not crash the app.
-- Hit the embed endpoint via a mock request to see if raw HTML is returned perfectly. 
+- Hit the embed endpoint via a mock request to see if raw HTML is returned perfectly.
 - Validate Prisma updates run properly.
 
 ### Manual Verification
+
 - Ask the user to verify `npx prisma generate` runs smoothly.
 - View the new routes in action locally via REST client.

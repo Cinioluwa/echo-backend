@@ -7,7 +7,11 @@ import {
   isJoinPolicyLocked,
 } from '../services/organizationJoinPolicyService.js';
 import logger from '../config/logger.js';
-import { sendEmail, buildJoinRequestApprovedEmail, buildJoinRequestRejectedEmail } from '../services/emailService.js';
+import {
+  sendEmail,
+  buildJoinRequestApprovedEmail,
+  buildJoinRequestRejectedEmail,
+} from '../services/emailService.js';
 
 export async function getOrganizationJoinSettings(
   req: AuthRequest,
@@ -211,7 +215,9 @@ export async function approveOrganizationJoinRequest(
         select: { email: true, organization: { select: { name: true } } },
       });
       if (approvedUser) {
-        const emailContent = buildJoinRequestApprovedEmail(approvedUser.organization?.name ?? 'your organization');
+        const emailContent = buildJoinRequestApprovedEmail(
+          approvedUser.organization?.name ?? 'your organization'
+        );
         await sendEmail({ to: approvedUser.email, ...emailContent });
       }
     } catch (emailError) {
@@ -276,7 +282,7 @@ export async function rejectOrganizationJoinRequest(
       if (joinRequest) {
         const emailContent = buildJoinRequestRejectedEmail(
           joinRequest.organization?.name ?? 'the organization',
-          joinRequest.reason ?? undefined,
+          joinRequest.reason ?? undefined
         );
         await sendEmail({ to: joinRequest.email, ...emailContent });
       }

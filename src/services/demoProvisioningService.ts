@@ -59,7 +59,10 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
   // ── Idempotency check ───────────────────────────────────────────────────────
   const existing = await prisma.organization.findUnique({ where: { demoSlug: slug } });
   if (existing) {
-    logger.info('Demo already exists — returning existing credentials', { slug, orgId: existing.id });
+    logger.info('Demo already exists — returning existing credentials', {
+      slug,
+      orgId: existing.id,
+    });
     return {
       orgId: existing.id,
       orgName: existing.name,
@@ -83,7 +86,7 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
         name: orgName,
         domain: `${slug}.${DEMO_EMAIL_DOMAIN}`,
         domains: {
-          create: [{ domain: `${slug}.${DEMO_EMAIL_DOMAIN}` }]
+          create: [{ domain: `${slug}.${DEMO_EMAIL_DOMAIN}` }],
         },
         status: 'ACTIVE',
         isDemo: true,
@@ -177,17 +180,17 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
                     content: 'This worked for me yesterday! But it drops again after an hour.',
                     authorId: student.id,
                     organizationId: org.id,
-                    surgeCount: 3
-                  }
-                ]
-              }
+                    surgeCount: 3,
+                  },
+                ],
+              },
             },
             {
               solution: 'Connect to the Eduroam network instead, it seems more stable.',
               authorId: admin.id,
               organizationId: org.id,
               surgeCount: 25,
-            }
+            },
           ],
         },
       },
@@ -212,9 +215,9 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
               solution: 'The departmental office said they are updating it by tomorrow afternoon.',
               authorId: student.id,
               organizationId: org.id,
-              surgeCount: 42
-            }
-          ]
+              surgeCount: 42,
+            },
+          ],
         },
         comments: {
           create: [
@@ -222,10 +225,10 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
               content: 'Does this apply to all departments or just Engineering?',
               authorId: student.id,
               organizationId: org.id,
-              surgeCount: 5
-            }
-          ]
-        }
+              surgeCount: 5,
+            },
+          ],
+        },
       },
     });
 
@@ -248,10 +251,10 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
               solution: 'Can facilities please bring a replacement unit from the ground floor?',
               authorId: student2.id,
               organizationId: org.id,
-              surgeCount: 15
-            }
-          ]
-        }
+              surgeCount: 15,
+            },
+          ],
+        },
       },
     });
 
@@ -280,7 +283,8 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
         waves: {
           create: [
             {
-              solution: 'Print your payment receipt and take it to the bursary physically. They clear it immediately.',
+              solution:
+                'Print your payment receipt and take it to the bursary physically. They clear it immediately.',
               authorId: student.id,
               organizationId: org.id,
               surgeCount: 88,
@@ -290,13 +294,13 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
                     content: 'I did this and it worked. Make sure you go before 2 PM.',
                     authorId: student2.id,
                     organizationId: org.id,
-                    surgeCount: 12
-                  }
-                ]
-              }
-            }
-          ]
-        }
+                    surgeCount: 12,
+                  },
+                ],
+              },
+            },
+          ],
+        },
       },
     });
 
@@ -321,10 +325,10 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
               organizationId: org.id,
               isAnonymous: true,
               anonymousAlias: 'SilentObserver',
-              surgeCount: 10
-            }
-          ]
-        }
+              surgeCount: 10,
+            },
+          ],
+        },
       },
     });
 
@@ -347,16 +351,16 @@ export async function provisionDemo(input: DemoProvisionInput): Promise<DemoProv
               solution: 'Embed a Google Maps iframe with custom markers for now.',
               authorId: student2.id,
               organizationId: org.id,
-              surgeCount: 22
+              surgeCount: 22,
             },
             {
               solution: 'We should build a custom interactive SVG map. It looks much better.',
               authorId: student.id,
               organizationId: org.id,
-              surgeCount: 30
-            }
-          ]
-        }
+              surgeCount: 30,
+            },
+          ],
+        },
       },
     });
 
@@ -413,7 +417,16 @@ interface WelcomeEmailInput {
 }
 
 async function sendDemoWelcomeEmail(input: WelcomeEmailInput): Promise<void> {
-  const { to, contactName, institutionName, adminEmail, studentEmail, password, appUrl, expiresAt } = input;
+  const {
+    to,
+    contactName,
+    institutionName,
+    adminEmail,
+    studentEmail,
+    password,
+    appUrl,
+    expiresAt,
+  } = input;
 
   const expiryStr = expiresAt.toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -442,7 +455,7 @@ async function sendDemoWelcomeEmail(input: WelcomeEmailInput): Promise<void> {
         <h2 style="margin:0 0 20px; font-size:22px; font-weight:700; color:#E8911A;">You're in.</h2>
         
         <p style="margin:0 0 16px;">
-          <strong>${institutionName}</strong> is now an Echo Founding Partner.
+          <strong>\${institutionName}</strong> is now an Echo Founding Partner.
         </p>
         
         <p style="margin:0 0 32px;">
@@ -454,18 +467,18 @@ async function sendDemoWelcomeEmail(input: WelcomeEmailInput): Promise<void> {
           
           <div style="margin-bottom:20px;">
             <p style="margin:0 0 4px; font-size:14px; font-weight:600;">Student View</p>
-            <p style="margin:0 0 2px; font-size:14px; font-family:monospace; color:#444;">Email: <a href="mailto:${studentEmail}" style="color:#E8911A; text-decoration:none;">${studentEmail}</a></p>
-            <p style="margin:0; font-size:14px; font-family:monospace; color:#444;">Password: ${password}</p>
+            <p style="margin:0 0 2px; font-size:14px; font-family:monospace; color:#444;">Email: <a href="mailto:\${studentEmail}" style="color:#E8911A; text-decoration:none;">\${studentEmail}</a></p>
+            <p style="margin:0; font-size:14px; font-family:monospace; color:#444;">Password: \${password}</p>
           </div>
 
           <div>
             <p style="margin:0 0 4px; font-size:14px; font-weight:600;">Admin View</p>
-            <p style="margin:0 0 2px; font-size:14px; font-family:monospace; color:#444;">Email: <a href="mailto:${adminEmail}" style="color:#E8911A; text-decoration:none;">${adminEmail}</a></p>
-            <p style="margin:0; font-size:14px; font-family:monospace; color:#444;">Password: ${password}</p>
+            <p style="margin:0 0 2px; font-size:14px; font-family:monospace; color:#444;">Email: <a href="mailto:\${adminEmail}" style="color:#E8911A; text-decoration:none;">\${adminEmail}</a></p>
+            <p style="margin:0; font-size:14px; font-family:monospace; color:#444;">Password: \${password}</p>
           </div>
           
           <div style="margin-top:24px; text-align:center;">
-            <a href="${appUrl}" style="display:inline-block; background-color:#E8911A; color:#FFFFFF; text-decoration:none; font-weight:700; padding:14px 34px; border-radius:999px; font-size:14px;">Enter the Pulse</a>
+            <a href="\${appUrl}" style="display:inline-block; background-color:#E8911A; color:#FFFFFF; text-decoration:none; font-weight:700; padding:14px 34px; border-radius:999px; font-size:14px;">Enter the Pulse</a>
           </div>
         </div>
 

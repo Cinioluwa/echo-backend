@@ -16,17 +16,23 @@ if (process.env.DEBUG_DB_BOOTSTRAP === 'true') {
 
 // Create a single, reusable Prisma Client instance with logging
 // Use test client if available (for testing), otherwise use production client
-const prisma = globalThis.__testPrismaClient || new PrismaClient({
-  log: [
-    { level: 'warn', emit: 'event' },
-    { level: 'error', emit: 'event' },
-  ],
-});
+const prisma =
+  globalThis.__testPrismaClient ||
+  new PrismaClient({
+    log: [
+      { level: 'warn', emit: 'event' },
+      { level: 'error', emit: 'event' },
+    ],
+  });
 
 // Log Prisma warnings and errors are handled by the logger configuration above
 
 // Export a helper to connect on demand instead of forcing a process exit at import time.
-export const connectDatabase = async (options?: { retries?: number; initialDelayMs?: number; maxDelayMs?: number }) => {
+export const connectDatabase = async (options?: {
+  retries?: number;
+  initialDelayMs?: number;
+  maxDelayMs?: number;
+}) => {
   const retries = options?.retries ?? 5;
   const initialDelayMs = options?.initialDelayMs ?? 500;
   const maxDelayMs = options?.maxDelayMs ?? 3000;

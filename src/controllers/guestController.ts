@@ -23,7 +23,6 @@ export const sendGuestOtp = async (req: Request, res: Response, next: NextFuncti
     const existingUser = await prisma.user.findFirst({
       where: { email: emailNorm },
     });
-    
 
     if (existingUser) {
       return res.status(409).json({
@@ -58,16 +57,16 @@ export const sendGuestOtp = async (req: Request, res: Response, next: NextFuncti
     // Find the ping to resolve the organization
     const ping = await prisma.ping.findUnique({
       where: { id: parseInt(pingId) },
-      select: { 
-        id: true, 
-        title: true, 
+      select: {
+        id: true,
+        title: true,
         organizationId: true,
         organization: {
           select: {
             domain: true,
-            domains: { select: { domain: true } }
-          }
-        }
+            domains: { select: { domain: true } },
+          },
+        },
       },
     });
 
@@ -86,15 +85,17 @@ export const sendGuestOtp = async (req: Request, res: Response, next: NextFuncti
     const org = ping.organization;
     const allowedDomains = new Set<string>();
     if (org.domain) allowedDomains.add(org.domain.toLowerCase());
-    org.domains.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+    org.domains.forEach((d) => allowedDomains.add(d.domain.toLowerCase()));
 
     // If the org has allowed domains configured, enforce that the guest email matches
     if (allowedDomains.size > 0) {
       const candidates = getDomainCandidates(domain);
-      const isAllowed = candidates.some(c => allowedDomains.has(c));
-      
+      const isAllowed = candidates.some((c) => allowedDomains.has(c));
+
       if (!isAllowed) {
-        return res.status(403).json({ error: 'This email domain is not allowed for this institution.' });
+        return res
+          .status(403)
+          .json({ error: 'This email domain is not allowed for this institution.' });
       }
     }
 
@@ -102,7 +103,7 @@ export const sendGuestOtp = async (req: Request, res: Response, next: NextFuncti
 
     // Send email
     const emailContent = buildGuestOtpEmail(rawCode, ping.title);
-    
+
     // Non-blocking email dispatch
     setImmediate(() => {
       sendEmail({ to: emailNorm, ...emailContent }).catch((err) => {
@@ -183,11 +184,12 @@ export const verifyGuestOtp = async (req: Request, res: Response, next: NextFunc
     }
 
     // Try to surge immediately if they just verified
-    let surgeCount = await prisma.surge.count({ where: { pingId: ping.id } }) + 
-                     await prisma.guestSurge.count({ where: { pingId: ping.id } });
-                     
+    let surgeCount =
+      (await prisma.surge.count({ where: { pingId: ping.id } })) +
+      (await prisma.guestSurge.count({ where: { pingId: ping.id } }));
+
     let surged = false;
-    
+
     // Check if they already surged
     const existingSurge = await prisma.guestSurge.findUnique({
       where: {
@@ -207,14 +209,14 @@ export const verifyGuestOtp = async (req: Request, res: Response, next: NextFunc
             pingId: ping.id,
           },
         });
-        
+
         // Sync normal surge count up so public views are accurate
         surgeCount += 1;
         await prisma.ping.update({
           where: { id: ping.id },
           data: { surgeCount },
         });
-        
+
         await invalidateCacheAfterMutation(ping.organizationId);
         emitPingSurgeUpdate(ping.organizationId, { pingId: ping.id, surgeCount, surged: true });
         surged = true;
@@ -227,7 +229,7 @@ export const verifyGuestOtp = async (req: Request, res: Response, next: NextFunc
         }
       }
     } else {
-        surged = true;
+      surged = true;
     }
 
     // Issue JWT
@@ -286,9 +288,10 @@ export const guestSurgePing = async (req: Request, res: Response, next: NextFunc
 
     if (existingSurge) {
       // Idempotent: same guest token surging twice = 1 surge
-      const count = await prisma.surge.count({ where: { pingId: pingIdInt } }) +
-                    await prisma.guestSurge.count({ where: { pingId: pingIdInt } });
-                    
+      const count =
+        (await prisma.surge.count({ where: { pingId: pingIdInt } })) +
+        (await prisma.guestSurge.count({ where: { pingId: pingIdInt } }));
+
       return res.status(200).json({ message: 'Ping surged', surged: true, surgeCount: count });
     }
 
@@ -307,13 +310,18 @@ export const guestSurgePing = async (req: Request, res: Response, next: NextFunc
       }
     }
 
-    const count = await prisma.surge.count({ where: { pingId: pingIdInt } }) +
-                  await prisma.guestSurge.count({ where: { pingId: pingIdInt } });
-                  
+    const count =
+      (await prisma.surge.count({ where: { pingId: pingIdInt } })) +
+      (await prisma.guestSurge.count({ where: { pingId: pingIdInt } }));
+
     await prisma.ping.update({ where: { id: pingIdInt }, data: { surgeCount: count } });
     await invalidateCacheAfterMutation(guest.organizationId);
-    emitPingSurgeUpdate(guest.organizationId, { pingId: pingIdInt, surgeCount: count, surged: true });
-    
+    emitPingSurgeUpdate(guest.organizationId, {
+      pingId: pingIdInt,
+      surgeCount: count,
+      surged: true,
+    });
+
     return res.status(200).json({ message: 'Ping surged', surged: true, surgeCount: count });
   } catch (error) {
     logger.error('Error in guestSurgePing', { error, params: req.params });

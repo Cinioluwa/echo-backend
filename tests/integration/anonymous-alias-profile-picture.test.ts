@@ -1,7 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { cleanupTestData, createCategory, createOrganization, createUser } from '../fixtures/index.js';
+import {
+  cleanupTestData,
+  createCategory,
+  createOrganization,
+  createUser,
+} from '../fixtures/index.js';
 
 describe('Anonymous Alias Profile Picture', () => {
   let client: any;

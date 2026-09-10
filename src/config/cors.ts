@@ -29,4 +29,3 @@ export const getAllowedOrigins = (): string[] => {
   // Ensure no trailing slashes in the comparison list
   return origins.map((o) => o.replace(/\/$/, ''));
 };
-

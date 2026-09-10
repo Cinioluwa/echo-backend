@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import {
-    createPing,
-    getAllPings,
-    searchPings,
-    getMyPings,
-    getPingById,
-    deletePing,
-    updatePing,
-    updatePingStatus,
-    submitPing,
-    resolvePing
+  createPing,
+  getAllPings,
+  searchPings,
+  getMyPings,
+  getPingById,
+  deletePing,
+  updatePing,
+  updatePingStatus,
+  submitPing,
+  resolvePing,
 } from '../controllers/pingController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import moderationMiddleware from '../middleware/moderationMiddleware.js';
@@ -18,7 +18,11 @@ import adminMiddleware from '../middleware/adminMiddleware.js';
 import representativeMiddleware from '../middleware/representativeMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { createPingSchema, updatePingSchema, pingIdSchema } from '../schemas/pingSchemas.js';
-import { paginationSchema, paginationWithFiltersSchema, searchSchema } from '../schemas/paginationSchema.js';
+import {
+  paginationSchema,
+  paginationWithFiltersSchema,
+  searchSchema,
+} from '../schemas/paginationSchema.js';
 import { cache } from '../middleware/cacheMiddleware.js';
 
 const router = Router();
@@ -31,7 +35,7 @@ const router = Router();
  *     description: |
  *       Create a new ping in the user's organization. Pings represent issues,
  *       problems, or feedback items that need attention.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Ping is created in user's organization.
  *     tags:
@@ -104,7 +108,7 @@ const router = Router();
  *     summary: List all pings with filters
  *     description: |
  *       Get a paginated list of pings in the user's organization with optional filters.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Only returns pings from user's organization.
  *     tags:
@@ -163,10 +167,24 @@ const router = Router();
  */
 
 // Create a new ping - with validation
-router.post('/', authMiddleware, moderationMiddleware, organizationMiddleware, validate(createPingSchema), createPing);
+router.post(
+  '/',
+  authMiddleware,
+  moderationMiddleware,
+  organizationMiddleware,
+  validate(createPingSchema),
+  createPing
+);
 
 // Get all pings (with pagination and optional filters) - cached for 60s
-router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithFiltersSchema), cache(60, { perUser: true }), getAllPings);
+router.get(
+  '/',
+  authMiddleware,
+  organizationMiddleware,
+  validate(paginationWithFiltersSchema),
+  cache(60, { perUser: true }),
+  getAllPings
+);
 
 /**
  * @openapi
@@ -175,10 +193,10 @@ router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithF
  *     summary: Search pings by hashtag or text
  *     description: |
  *       Search for pings using hashtags or text queries.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Only searches pings in user's organization.
- *       
+ *
  *       **Search modes:**
  *       - Hashtag search: Use `#hashtag` format
  *       - Text search: Searches in title and content
@@ -226,7 +244,14 @@ router.get('/', authMiddleware, organizationMiddleware, validate(paginationWithF
  *         description: Internal server error
  */
 // Search pings by hashtag or text query (must come BEFORE /:id route) - cached for 30s
-router.get('/search', authMiddleware, organizationMiddleware, validate(searchSchema), cache(30, { perUser: true }), searchPings);
+router.get(
+  '/search',
+  authMiddleware,
+  organizationMiddleware,
+  validate(searchSchema),
+  cache(30, { perUser: true }),
+  searchPings
+);
 
 /**
  * @openapi
@@ -236,7 +261,7 @@ router.get('/search', authMiddleware, organizationMiddleware, validate(searchSch
  *     description: |
  *       Retrieve all pings created by the authenticated user.
  *       Useful for "My Posts" or profile sections.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *     tags:
  *       - Pings
@@ -273,7 +298,13 @@ router.get('/search', authMiddleware, organizationMiddleware, validate(searchSch
  *         description: Internal server error
  */
 // Get current user's pings (must come BEFORE /:id route) - cached per user for 60s
-router.get('/me', authMiddleware, validate(paginationSchema), cache(60, { perUser: true }), getMyPings);
+router.get(
+  '/me',
+  authMiddleware,
+  validate(paginationSchema),
+  cache(60, { perUser: true }),
+  getMyPings
+);
 
 /**
  * @openapi
@@ -282,7 +313,7 @@ router.get('/me', authMiddleware, validate(paginationSchema), cache(60, { perUse
  *     summary: Get a specific ping by ID
  *     description: |
  *       Retrieve detailed information about a specific ping.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Can only view pings from user's organization.
  *     tags:
@@ -313,9 +344,9 @@ router.get('/me', authMiddleware, validate(paginationSchema), cache(60, { perUse
  *     summary: Delete a ping
  *     description: |
  *       Delete a ping. Only the original author or an admin can delete.
- *       
+ *
  *       **Authorization**: Ping author or Admin only.
- *       
+ *
  *       **Warning**: This also deletes all associated waves, comments, and surges.
  *     tags:
  *       - Pings
@@ -342,7 +373,7 @@ router.get('/me', authMiddleware, validate(paginationSchema), cache(60, { perUse
  *     summary: Update a ping
  *     description: |
  *       Update the content of a ping. Only the original author can update.
- *       
+ *
  *       **Authorization**: Ping author only.
  *     tags:
  *       - Pings
@@ -383,13 +414,27 @@ router.get('/me', authMiddleware, validate(paginationSchema), cache(60, { perUse
  *         description: Internal server error
  */
 // Get a specific ping by ID - with ID validation - cached for 60s
-router.get('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), cache(60, { perUser: true }), getPingById);
+router.get(
+  '/:id',
+  authMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  cache(60, { perUser: true }),
+  getPingById
+);
 
 // Delete a ping - with ID validation
 router.delete('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), deletePing);
 
 // Update a ping - with ID and body validation
-router.patch('/:id', authMiddleware, organizationMiddleware, validate(pingIdSchema), validate(updatePingSchema), updatePing);
+router.patch(
+  '/:id',
+  authMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  validate(updatePingSchema),
+  updatePing
+);
 
 /**
  * @openapi
@@ -398,7 +443,7 @@ router.patch('/:id', authMiddleware, organizationMiddleware, validate(pingIdSche
  *     summary: Mark a ping as resolved
  *     description: |
  *       Mark a ping as resolved. Only the original author can resolve their ping.
- *       
+ *
  *       **Authorization**: Ping author only.
  *     tags:
  *       - Pings
@@ -435,7 +480,13 @@ router.patch('/:id', authMiddleware, organizationMiddleware, validate(pingIdSche
  *         description: Internal server error
  */
 // Resolve a ping (author only) - with ID validation
-router.patch('/:id/resolve', authMiddleware, organizationMiddleware, validate(pingIdSchema), resolvePing);
+router.patch(
+  '/:id/resolve',
+  authMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  resolvePing
+);
 
 /**
  * @openapi
@@ -444,7 +495,7 @@ router.patch('/:id/resolve', authMiddleware, organizationMiddleware, validate(pi
  *     summary: Update ping moderation status
  *     description: |
  *       Update the moderation status of a ping (approve/decline).
- *       
+ *
  *       **Admin only**: Requires ADMIN role.
  *     tags:
  *       - Pings
@@ -481,7 +532,14 @@ router.patch('/:id/resolve', authMiddleware, organizationMiddleware, validate(pi
  *         description: Internal server error
  */
 // Update ping status (admin only) - with ID validation
-router.patch('/:id/status', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), updatePingStatus);
+router.patch(
+  '/:id/status',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  updatePingStatus
+);
 
 /**
  * @openapi
@@ -491,7 +549,7 @@ router.patch('/:id/status', authMiddleware, adminMiddleware, organizationMiddlew
  *     description: |
  *       Submit a ping to be reviewed by organization representatives.
  *       This escalates the issue for official attention.
- *       
+ *
  *       **Representative only**: Requires REPRESENTATIVE or ADMIN role.
  *     tags:
  *       - Pings
@@ -525,6 +583,13 @@ router.patch('/:id/status', authMiddleware, adminMiddleware, organizationMiddlew
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/submit', authMiddleware, representativeMiddleware, organizationMiddleware, validate(pingIdSchema), submitPing);
+router.patch(
+  '/:id/submit',
+  authMiddleware,
+  representativeMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  submitPing
+);
 
 export default router;

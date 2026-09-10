@@ -8,7 +8,9 @@ export interface WaveBadgeInfo {
  * Given an array of waves, computes and attaches wave-specific badge properties
  * like `isCommunityPick` (the most surged wave for its parent ping).
  */
-export const appendWaveBadges = async <T extends { id: number; pingId: number; surgeCount: number }>(
+export const appendWaveBadges = async <
+  T extends { id: number; pingId: number; surgeCount: number },
+>(
   waves: T[],
   organizationId: number
 ): Promise<(T & WaveBadgeInfo)[]> => {
@@ -30,12 +32,10 @@ export const appendWaveBadges = async <T extends { id: number; pingId: number; s
   );
 
   const topWaves = await Promise.all(topWavesPromise);
-  
+
   // A wave is a community pick if it's the exact top wave ID for its ping AND it has at least 1 surge (to avoid day-1 0-surge picks).
   const communityPickWaveIds = new Set(
-    topWaves
-      .filter((w) => w !== null && w.surgeCount > 0)
-      .map((w) => w!.id)
+    topWaves.filter((w) => w !== null && w.surgeCount > 0).map((w) => w!.id)
   );
 
   return waves.map((wave) => ({

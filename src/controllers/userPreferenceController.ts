@@ -78,16 +78,21 @@ export const patchMyPreferences = async (req: AuthRequest, res: Response, next: 
         const lastChanged = (userOptions as any).anonymousAliasUpdatedAt ?? userOptions.createdAt;
         const now = new Date();
         const msElapsed = now.getTime() - new Date(lastChanged).getTime();
-        const GRACE_PERIOD_MS = 15 * 60 * 1000;       // 15 minutes
-        const COOLDOWN_MS     = 30 * 24 * 60 * 60 * 1000; // 30 days
+        const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 minutes
+        const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
         const isWithinCooldown = msElapsed > GRACE_PERIOD_MS && msElapsed < COOLDOWN_MS;
 
         // Block if trying to change within cooldown, UNLESS this is the first time setting it
-        if (isWithinCooldown && userOptions.anonymousAlias !== null && patch.anonymousAlias !== null) {
+        if (
+          isWithinCooldown &&
+          userOptions.anonymousAlias !== null &&
+          patch.anonymousAlias !== null
+        ) {
           const cooldownEndsAt = new Date(new Date(lastChanged).getTime() + COOLDOWN_MS);
           return res.status(429).json({
-            error: 'You can only change your alias once every 30 days. The 15-minute correction window has passed.',
+            error:
+              'You can only change your alias once every 30 days. The 15-minute correction window has passed.',
             code: 'ALIAS_COOLDOWN',
             cooldownEndsAt: cooldownEndsAt.toISOString(),
           });

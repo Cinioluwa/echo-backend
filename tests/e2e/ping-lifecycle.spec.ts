@@ -23,8 +23,8 @@ test.describe('Ping Lifecycle E2E', () => {
     const userResponse = await request.post('/api/users/login', {
       data: {
         email: 'user@testorg1.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
     if (userResponse.status() !== 200) {
       console.log('User Login Failed:', await userResponse.json());
@@ -37,8 +37,8 @@ test.describe('Ping Lifecycle E2E', () => {
     const adminResponse = await request.post('/api/users/login', {
       data: {
         email: 'admin@testorg1.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
     if (adminResponse.status() !== 200) {
       console.log('Admin Login Failed:', await adminResponse.json());
@@ -50,11 +50,11 @@ test.describe('Ping Lifecycle E2E', () => {
     // Create a test category with admin privileges
     const categoryResponse = await request.post('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
       },
       data: {
-        name: `E2E Ping Lifecycle Category ${Date.now()}`
-      }
+        name: `E2E Ping Lifecycle Category ${Date.now()}`,
+      },
     });
     if (categoryResponse.status() !== 201) {
       console.log('Category Creation Failed:', await categoryResponse.json());
@@ -69,14 +69,15 @@ test.describe('Ping Lifecycle E2E', () => {
     // Step 1: User creates a ping
     const pingResponse = await request.post('/api/pings', {
       headers: {
-        'Authorization': `Bearer ${userToken}`
+        Authorization: `Bearer ${userToken}`,
       },
       data: {
         title: 'Urgent: Server outage affecting students',
-        content: 'The main application server is down and students cannot access their assignments. This is affecting the entire campus.',
+        content:
+          'The main application server is down and students cannot access their assignments. This is affecting the entire campus.',
         hashtag: '#server-outage',
-        categoryId: testCategory.id
-      }
+        categoryId: testCategory.id,
+      },
     });
 
     expect(pingResponse.status()).toBe(201);
@@ -87,7 +88,7 @@ test.describe('Ping Lifecycle E2E', () => {
     // Step 2: Multiple users surge the ping (simulate community support)
     // Surge with the creator
     const surgeResponse1 = await request.post(`/api/pings/${testPing.id}/surge`, {
-      headers: { 'Authorization': `Bearer ${userToken}` }
+      headers: { Authorization: `Bearer ${userToken}` },
     });
     expect(surgeResponse1.status()).toBe(200);
 
@@ -103,8 +104,8 @@ test.describe('Ping Lifecycle E2E', () => {
           password,
           firstName: `Surge${i}`,
           lastName: 'User',
-          level: 1
-        }
+          level: 1,
+        },
       });
       expect(registerResponse.status()).toBe(201);
       const { user } = await registerResponse.json();
@@ -113,13 +114,13 @@ test.describe('Ping Lifecycle E2E', () => {
       console.log(`Activating user ${user.id} (${email})...`);
       const updateResult = await prisma.user.update({
         where: { id: user.id },
-        data: { status: 'ACTIVE', isVerified: true }
+        data: { status: 'ACTIVE', isVerified: true },
       });
       console.log('Update Result:', updateResult);
 
       // Login
       const loginResponse = await request.post('/api/users/login', {
-        data: { email, password }
+        data: { email, password },
       });
       if (loginResponse.status() !== 200) {
         console.log('Login Failed:', await loginResponse.json());
@@ -129,7 +130,7 @@ test.describe('Ping Lifecycle E2E', () => {
 
       // Surge
       const surgeResponse = await request.post(`/api/pings/${testPing.id}/surge`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       expect(surgeResponse.status()).toBe(200);
     }
@@ -137,8 +138,8 @@ test.describe('Ping Lifecycle E2E', () => {
     // Verify surge count increased
     const pingAfterSurge = await request.get(`/api/pings/${testPing.id}`, {
       headers: {
-        'Authorization': `Bearer ${userToken}`
-      }
+        Authorization: `Bearer ${userToken}`,
+      },
     });
     const pingData = await pingAfterSurge.json();
     expect(pingData.surgeCount).toBeGreaterThanOrEqual(3);
@@ -148,49 +149,53 @@ test.describe('Ping Lifecycle E2E', () => {
       'This is really affecting my final project deadline!',
       'Same here, I cannot submit my assignment.',
       'IT department has been notified, but no ETA yet.',
-      'This has been happening intermittently all week.'
+      'This has been happening intermittently all week.',
     ];
 
     for (const commentText of comments) {
       const commentResponse = await request.post(`/api/pings/${testPing.id}/comments`, {
         headers: {
-          'Authorization': `Bearer ${userToken}`
+          Authorization: `Bearer ${userToken}`,
         },
         data: {
-          content: commentText
-        }
+          content: commentText,
+        },
       });
       expect(commentResponse.status()).toBe(201);
     }
 
     // Step 4: Admin reviews and updates progress status
-    const progressResponse = await request.patch(`/api/admin/pings/${testPing.id}/progress-status`, {
-      headers: {
-        'Authorization': `Bearer ${adminToken}`
-      },
-      data: {
-        status: 'IN_PROGRESS'
+    const progressResponse = await request.patch(
+      `/api/admin/pings/${testPing.id}/progress-status`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+        data: {
+          status: 'IN_PROGRESS',
+        },
       }
-    });
+    );
     expect(progressResponse.status()).toBe(200);
 
     // Step 5: Admin adds official response
     const officialResponse = await request.post(`/api/pings/${testPing.id}/official-response`, {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
       },
       data: {
-        content: 'IT department has identified the issue. Server maintenance is underway and should be resolved within 2 hours. We apologize for the inconvenience.',
-        isResolved: false
-      }
+        content:
+          'IT department has identified the issue. Server maintenance is underway and should be resolved within 2 hours. We apologize for the inconvenience.',
+        isResolved: false,
+      },
     });
     expect(officialResponse.status()).toBe(201);
 
     // Step 6: Verify official response appears in ping
     const pingWithResponse = await request.get(`/api/pings/${testPing.id}`, {
       headers: {
-        'Authorization': `Bearer ${userToken}`
-      }
+        Authorization: `Bearer ${userToken}`,
+      },
     });
     const updatedPing = await pingWithResponse.json();
     expect(updatedPing.officialResponse).toBeTruthy();
@@ -199,20 +204,21 @@ test.describe('Ping Lifecycle E2E', () => {
     // Step 7: Admin marks issue as resolved
     const resolveResponse = await request.patch(`/api/pings/${testPing.id}/official-response`, {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
       },
       data: {
-        content: 'Issue has been resolved. Server is back online and all services are functioning normally.',
-        isResolved: true
-      }
+        content:
+          'Issue has been resolved. Server is back online and all services are functioning normally.',
+        isResolved: true,
+      },
     });
     expect(resolveResponse.status()).toBe(200);
 
     // Step 8: Verify final state
     const finalPingResponse = await request.get(`/api/pings/${testPing.id}`, {
       headers: {
-        'Authorization': `Bearer ${userToken}`
-      }
+        Authorization: `Bearer ${userToken}`,
+      },
     });
     const finalPing = await finalPingResponse.json();
     expect(finalPing.officialResponse.isResolved).toBe(true);
@@ -221,19 +227,19 @@ test.describe('Ping Lifecycle E2E', () => {
     // Step 9: Community feedback on resolution
     const resolutionComment = await request.post(`/api/pings/${testPing.id}/comments`, {
       headers: {
-        'Authorization': `Bearer ${userToken}`
+        Authorization: `Bearer ${userToken}`,
       },
       data: {
-        content: 'Thank you for the quick resolution! Everything is working now.'
-      }
+        content: 'Thank you for the quick resolution! Everything is working now.',
+      },
     });
     expect(resolutionComment.status()).toBe(201);
 
     // Step 10: Verify complete ping data
     const completePingResponse = await request.get(`/api/pings/${testPing.id}`, {
       headers: {
-        'Authorization': `Bearer ${userToken}`
-      }
+        Authorization: `Bearer ${userToken}`,
+      },
     });
     const completePing = await completePingResponse.json();
 

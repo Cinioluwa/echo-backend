@@ -63,20 +63,22 @@ export function createApp(options: CreateAppOptions = {}) {
 
   const allowedOrigins = getAllowedOrigins();
 
-  app.use(cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        // Helpful for debugging Render/Vercel logs
-        const error = new Error(`Not allowed by CORS: ${origin}`);
-        logger.error('CORS rejection', { origin, url: '/api/cors-rejection' });
-        callback(error);
-      }
-    },
-    credentials: true
-  }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          // Helpful for debugging Render/Vercel logs
+          const error = new Error(`Not allowed by CORS: ${origin}`);
+          logger.error('CORS rejection', { origin, url: '/api/cors-rejection' });
+          callback(error);
+        }
+      },
+      credentials: true,
+    })
+  );
 
   app.use(express.json({ limit: '1mb' }));
   app.use(requestLogger);
@@ -86,7 +88,6 @@ export function createApp(options: CreateAppOptions = {}) {
       next();
     });
   }
-
 
   // ─── PROBLEM: Wrong sendCommand adapter for createCluster vs createClient ──
   //
@@ -112,12 +113,13 @@ export function createApp(options: CreateAppOptions = {}) {
   //
   // Only use Redis if a connected client was explicitly passed in.
   // Using standalone createClient (not createCluster) for Azure Managed Redis.
-  const redisClient = !options.disableRateLimiting && options.redisClient
-    ? options.redisClient
-    : null;
+  const redisClient =
+    !options.disableRateLimiting && options.redisClient ? options.redisClient : null;
 
-  const makeSendCommand = (client: NonNullable<typeof redisClient>) =>
-    (...args: string[]) => (client as any).sendCommand(args);
+  const makeSendCommand =
+    (client: NonNullable<typeof redisClient>) =>
+    (...args: string[]) =>
+      (client as any).sendCommand(args);
 
   let globalStore: InstanceType<typeof RedisStore> | undefined;
   let authStore: InstanceType<typeof RedisStore> | undefined;
@@ -125,16 +127,21 @@ export function createApp(options: CreateAppOptions = {}) {
 
   if (redisClient) {
     try {
-      globalStore = new RedisStore({ prefix: 'rl:global:', sendCommand: makeSendCommand(redisClient) });
+      globalStore = new RedisStore({
+        prefix: 'rl:global:',
+        sendCommand: makeSendCommand(redisClient),
+      });
       authStore = new RedisStore({ prefix: 'rl:auth:', sendCommand: makeSendCommand(redisClient) });
-      writeStore = new RedisStore({ prefix: 'rl:write:', sendCommand: makeSendCommand(redisClient) });
+      writeStore = new RedisStore({
+        prefix: 'rl:write:',
+        sendCommand: makeSendCommand(redisClient),
+      });
     } catch (err) {
       logger.warn('Failed to initialise Redis rate-limit stores — falling back to memory', {
         error: err instanceof Error ? err.message : String(err),
       });
     }
   }
-
 
   // Azure (and some proxies) forward IP:port in X-Forwarded-For — strip the port if present,
   // then pass through ipKeyGenerator to satisfy express-rate-limit IPv6 validation.
@@ -215,12 +222,17 @@ export function createApp(options: CreateAppOptions = {}) {
 
   const writeLimiter = options.disableRateLimiting ? [] : [applyCreateLimiter];
 
-  app.use('/api/users', (req, res, next) => {
-    if (enableRouteDebugLog) {
-      logger.debug('Route request', { prefix: '/api/users', method: req.method, url: req.url });
-    }
-    next();
-  }, ...writeLimiter, userRoutes);
+  app.use(
+    '/api/users',
+    (req, res, next) => {
+      if (enableRouteDebugLog) {
+        logger.debug('Route request', { prefix: '/api/users', method: req.method, url: req.url });
+      }
+      next();
+    },
+    ...writeLimiter,
+    userRoutes
+  );
   app.use('/api/auth', ...writeLimiter, authRoutes);
   app.use('/api/pings/:pingId/comments', ...writeLimiter, pingCommentRouter);
 
@@ -232,10 +244,15 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use('/api/comments', ...writeLimiter, commentRouter);
   app.use('/api/pings/:pingId/waves', ...writeLimiter, waveRoutes);
 
-  app.use('/api/pings', (req, res, next) => {
-    console.log(`DEBUG: Route match: /api/pings [${req.method}] ${req.originalUrl}`);
-    next();
-  }, ...writeLimiter, pingRoutes);
+  app.use(
+    '/api/pings',
+    (req, res, next) => {
+      console.log(`DEBUG: Route match: /api/pings [${req.method}] ${req.originalUrl}`);
+      next();
+    },
+    ...writeLimiter,
+    pingRoutes
+  );
   app.use('/api/waves', waveStandaloneRoutes);
   app.use('/api/pings/:pingId/official-response', ...writeLimiter, officialResponseRoutes);
   app.use('/api/admin', ...writeLimiter, adminRoutes);

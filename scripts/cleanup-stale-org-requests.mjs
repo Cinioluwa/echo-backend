@@ -49,17 +49,19 @@ const main = async () => {
     });
 
     if (!stale.length) {
-      console.log(`[cleanup-stale-org-requests] No stale PENDING org requests found (cutoff=${cutoff.toISOString()}).`);
+      console.log(
+        `[cleanup-stale-org-requests] No stale PENDING org requests found (cutoff=${cutoff.toISOString()}).`
+      );
       return;
     }
 
     console.log(
-      `[cleanup-stale-org-requests] Found ${stale.length} stale PENDING org request(s) older than ${days} day(s) (cutoff=${cutoff.toISOString()}).`,
+      `[cleanup-stale-org-requests] Found ${stale.length} stale PENDING org request(s) older than ${days} day(s) (cutoff=${cutoff.toISOString()}).`
     );
 
     for (const row of stale) {
       console.log(
-        `- #${row.id} ${row.domain} (${row.organizationName}) requester=${row.requesterEmail} createdAt=${row.createdAt.toISOString()}`,
+        `- #${row.id} ${row.domain} (${row.organizationName}) requester=${row.requesterEmail} createdAt=${row.createdAt.toISOString()}`
       );
     }
 
@@ -72,7 +74,9 @@ const main = async () => {
 
     for (const row of stale) {
       const existingMetadata =
-        row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata : {};
+        row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+          ? row.metadata
+          : {};
 
       await prisma.organizationRequest.update({
         where: { id: row.id },

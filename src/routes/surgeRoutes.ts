@@ -1,6 +1,10 @@
 // src/routes/surgeRoutes.ts
 import { Router } from 'express';
-import { toggleSurgeOnPing, toggleSurgeOnWave, toggleSurgeOnComment } from '../controllers/surgeController.js';
+import {
+  toggleSurgeOnPing,
+  toggleSurgeOnWave,
+  toggleSurgeOnComment,
+} from '../controllers/surgeController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
@@ -16,10 +20,10 @@ import { commentParamSchema } from '../schemas/commentSchemas.js';
  *       Like or unlike a ping. Works as a toggle:
  *       - If user hasn't surged: creates a surge (like)
  *       - If user has already surged: removes the surge (unlike)
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Can only surge pings in user's organization.
- *       
+ *
  *       Surges help surface popular issues to the top of feeds.
  *     tags:
  *       - Surges
@@ -61,7 +65,13 @@ import { commentParamSchema } from '../schemas/commentSchemas.js';
 
 // Router for ping surges: /api/pings/:pingId/surge
 export const pingSurgeRouter = Router({ mergeParams: true });
-pingSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(pingParamSchema), toggleSurgeOnPing);  // Toggle surge on a ping (like/unlike)
+pingSurgeRouter.post(
+  '/',
+  authMiddleware,
+  organizationMiddleware,
+  validate(pingParamSchema),
+  toggleSurgeOnPing
+); // Toggle surge on a ping (like/unlike)
 
 /**
  * @openapi
@@ -72,10 +82,10 @@ pingSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(pingP
  *       Like or unlike a wave. Works as a toggle:
  *       - If user hasn't surged: creates a surge (like)
  *       - If user has already surged: removes the surge (unlike)
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Can only surge waves in user's organization.
- *       
+ *
  *       Surges help surface popular solutions.
  *     tags:
  *       - Surges
@@ -117,10 +127,22 @@ pingSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(pingP
 
 // Router for wave surges: /api/waves/:waveId/surge
 export const waveSurgeRouter = Router({ mergeParams: true });
-waveSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(waveParamSchema), toggleSurgeOnWave);  // Toggle surge on a wave (like/unlike)
+waveSurgeRouter.post(
+  '/',
+  authMiddleware,
+  organizationMiddleware,
+  validate(waveParamSchema),
+  toggleSurgeOnWave
+); // Toggle surge on a wave (like/unlike)
 
 export const commentSurgeRouter = Router({ mergeParams: true });
-commentSurgeRouter.post('/', authMiddleware, organizationMiddleware, validate(commentParamSchema), toggleSurgeOnComment);  // Toggle surge on a comment (like/unlike)
+commentSurgeRouter.post(
+  '/',
+  authMiddleware,
+  organizationMiddleware,
+  validate(commentParamSchema),
+  toggleSurgeOnComment
+); // Toggle surge on a comment (like/unlike)
 
 // Default export for backward compatibility (wave surges)
 export default waveSurgeRouter;

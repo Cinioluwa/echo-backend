@@ -7,7 +7,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
 
   // JWT
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters for production security'),
+  JWT_SECRET: z
+    .string()
+    .min(32, 'JWT_SECRET must be at least 32 characters for production security'),
 
   // Server
   PORT: z.coerce.number().int().positive().default(3000),
@@ -17,7 +19,10 @@ const envSchema = z.object({
   APP_URL: z.string().url('APP_URL must be a valid URL').default('http://localhost:3000'),
 
   // CORS
-  ALLOWED_ORIGINS: z.string().transform((val) => val.split(',').map((origin) => origin.trim())).optional(),
+  ALLOWED_ORIGINS: z
+    .string()
+    .transform((val) => val.split(',').map((origin) => origin.trim()))
+    .optional(),
 
   // OAuth
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required for Google auth').optional(),
@@ -56,10 +61,18 @@ const envSchema = z.object({
   VAPID_SUBJECT: z.string().url('VAPID_SUBJECT must be a valid mailto: or URL').optional(),
 
   // Self-serve demo provisioning
-  DEMO_PROVISION_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(16, 'DEMO_PROVISION_SECRET must be at least 16 characters').optional()),
-  DEMO_TTL_DAYS: z.preprocess((v) => (v === '' || v === undefined ? 14 : v), z.coerce.number().int().positive().default(14)),
-  DEMO_APP_URL: z.preprocess((v) => (v === '' ? undefined : v), z.string().url('DEMO_APP_URL must be a valid URL').optional()),
-
+  DEMO_PROVISION_SECRET: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().min(16, 'DEMO_PROVISION_SECRET must be at least 16 characters').optional()
+  ),
+  DEMO_TTL_DAYS: z.preprocess(
+    (v) => (v === '' || v === undefined ? 14 : v),
+    z.coerce.number().int().positive().default(14)
+  ),
+  DEMO_APP_URL: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().url('DEMO_APP_URL must be a valid URL').optional()
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -71,9 +84,7 @@ export type Env = z.infer<typeof envSchema>;
 export function validateEnv(): Env {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
-    const errors = result.error.issues.map(
-      (err) => `${err.path.join('.')}: ${err.message}`
-    );
+    const errors = result.error.issues.map((err) => `${err.path.join('.')}: ${err.message}`);
     // Use console to avoid logger dependency here
     console.error('Environment validation failed:', errors);
     throw new Error(`Invalid environment variables:\n${errors.join('\n')}`);

@@ -1,9 +1,9 @@
 // src/routes/userRoutes.ts
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { 
-  registerUser, 
-  loginUser, 
+import {
+  registerUser,
+  loginUser,
   loginWithGoogle,
   verifyEmail,
   resendVerificationEmail,
@@ -13,8 +13,8 @@ import {
   requestOrganizationAdminAccess,
   listOrganizationsForOnboarding,
   submitOrganizationClaim,
-  deleteCurrentUser, 
-  updateCurrentUser, 
+  deleteCurrentUser,
+  updateCurrentUser,
   getCurrentUser,
   getMySurges,
   getMyComments,
@@ -30,17 +30,14 @@ import {
   getMyNotificationPreferences,
   patchMyNotificationPreferences,
 } from '../controllers/notificationPreferenceController.js';
-import {
-  getMyPreferences,
-  patchMyPreferences,
-} from '../controllers/userPreferenceController.js';
+import { getMyPreferences, patchMyPreferences } from '../controllers/userPreferenceController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
 import { env } from '../config/env.js';
-import { 
-  registerSchema, 
-  loginSchema, 
-  updateUserSchema, 
+import {
+  registerSchema,
+  loginSchema,
+  updateUserSchema,
   googleAuthSchema,
   verifyEmailSchema,
   resendVerificationEmailSchema,
@@ -95,7 +92,11 @@ const router = Router();
  *       200:
  *         description: Organization list returned
  */
-router.get('/organizations', validate(onboardingOrganizationLookupSchema), listOrganizationsForOnboarding);
+router.get(
+  '/organizations',
+  validate(onboardingOrganizationLookupSchema),
+  listOrganizationsForOnboarding
+);
 
 /**
  * @openapi
@@ -104,15 +105,15 @@ router.get('/organizations', validate(onboardingOrganizationLookupSchema), listO
  *     summary: Register a new user account
  *     description: |
  *       Create a new user account. The user's organization is determined by their email domain.
- *       
+ *
  *       **Flow:**
  *       1. Validates email format and password requirements
  *       2. Extracts domain from email to find matching organization
  *       3. Creates user with PENDING status
  *       4. Sends verification email with token link
- *       
+ *
  *       **Password requirements:** Minimum 8 characters
- *       
+ *
  *       **Note:** User must verify email before they can log in.
  *     tags:
  *       - Users
@@ -197,13 +198,13 @@ router.post('/register', validate(registerSchema), registerUser);
  *     summary: Login with email and password
  *     description: |
  *       Authenticate a user with their email and password.
- *       
+ *
  *       **Requirements:**
  *       - User must have verified their email
  *       - User's organization must be ACTIVE
  *       - Password must match
  *       - Personal email domains (for example gmail.com) must include `organizationId`
- *       
+ *
  *       **Returns:** JWT token valid for 24 hours
  *     tags:
  *       - Users
@@ -284,7 +285,7 @@ router.post('/2fa/login', loginWith2fa);
  *     summary: Login or register with Google OAuth
  *     description: |
  *       Authenticate using a Google ID token. Creates a new account if the user doesn't exist.
- *       
+ *
  *       **Note:** This is a legacy endpoint. Prefer using `/api/auth/google` for new integrations.
  *     tags:
  *       - Users
@@ -332,7 +333,7 @@ router.post('/google', validate(googleAuthSchema), loginWithGoogle);
  *     description: |
  *       Verify a user's email address by clicking the link sent to their email.
  *       This endpoint is designed for browser use - it redirects to the app after verification.
- *       
+ *
  *       **Note:** For API/Postman usage, use the POST version instead.
  *     tags:
  *       - Users
@@ -389,7 +390,8 @@ router.post('/google', validate(googleAuthSchema), loginWithGoogle);
  */
 // Email verification (Browser Link Support - Option B)
 // This GET route allows users to verify email by clicking the link directly
-router.get('/verify-email', 
+router.get(
+  '/verify-email',
   // 1. Move token from query string to body for validation
   (req: Request, res: Response, next: NextFunction) => {
     if (req.query.token) {
@@ -403,12 +405,10 @@ router.get('/verify-email',
   async (req: Request, res: Response, next: NextFunction) => {
     // Override json method to redirect instead of sending JSON
     const originalJson = res.json.bind(res);
-    res.json = function(body: unknown) {
+    res.json = function (body: unknown) {
       const isSuccess = res.statusCode >= 200 && res.statusCode < 300;
       // Redirect to clean login URL (frontend doesn't need the query param)
-      const redirectUrl = isSuccess 
-        ? `${env.APP_URL}`
-        : `${env.APP_URL}`;  // Could redirect to an error page if needed
+      const redirectUrl = isSuccess ? `${env.APP_URL}` : `${env.APP_URL}`; // Could redirect to an error page if needed
       return res.redirect(redirectUrl);
     } as typeof res.json;
 
@@ -477,7 +477,11 @@ router.post('/verify-email', validate(verifyEmailSchema), verifyEmail);
  *         description: Too many resend attempts
  */
 // Resend email verification link (always returns a generic message to avoid account enumeration)
-router.post('/resend-verification', validate(resendVerificationEmailSchema), resendVerificationEmail);
+router.post(
+  '/resend-verification',
+  validate(resendVerificationEmailSchema),
+  resendVerificationEmail
+);
 
 /**
  * @openapi
@@ -486,7 +490,7 @@ router.post('/resend-verification', validate(resendVerificationEmailSchema), res
  *     summary: Request password reset email
  *     description: |
  *       Send a password reset link to the user's email address.
- *       
+ *
  *       **Security:** Always returns success even if email doesn't exist to prevent user enumeration.
  *     tags:
  *       - Users
@@ -529,7 +533,7 @@ router.post('/forgot-password', validate(forgotPasswordSchema), requestPasswordR
  *     summary: Reset password with token
  *     description: |
  *       Reset the user's password using the token received via email.
- *       
+ *
  *       **Token validity:** 1 hour
  *       **Password requirements:** Minimum 8 characters
  *     tags:
@@ -583,7 +587,7 @@ router.patch('/reset-password', validate(resetPasswordSchema), resetPassword);
  *       Submit a reviewed request to add a new organization to the platform.
  *       This endpoint does not create an organization immediately.
  *       It queues the request for super-admin approval.
- *       
+ *
  *       **Flow:**
  *       1. User submits their organization details
  *       2. Request is reviewed by super admins
@@ -700,11 +704,7 @@ router.post(
  *         description: Organization already claimed or duplicate pending claim
  */
 
-router.post(
-  '/organizations/:id/claim',
-  validate(organizationClaimSchema),
-  submitOrganizationClaim
-);
+router.post('/organizations/:id/claim', validate(organizationClaimSchema), submitOrganizationClaim);
 
 /**
  * @openapi
@@ -861,7 +861,7 @@ router.post(
  *     summary: Delete current user account
  *     description: |
  *       Permanently delete the authenticated user's account.
- *       
+ *
  *       **Warning:** This action is irreversible. All user data will be deleted.
  *     tags:
  *       - Users
@@ -884,10 +884,11 @@ router.post(
  *         description: Internal server error
  */
 // Current user routes (get, update, delete profile)
-router.route('/me')
-  .get(authMiddleware, getCurrentUser)                                   // Get current user profile
-  .patch(authMiddleware, validate(updateUserSchema), updateCurrentUser)  // Update profile (firstName/lastName) - with validation
-  .delete(authMiddleware, deleteCurrentUser);                            // Delete account
+router
+  .route('/me')
+  .get(authMiddleware, getCurrentUser) // Get current user profile
+  .patch(authMiddleware, validate(updateUserSchema), updateCurrentUser) // Update profile (firstName/lastName) - with validation
+  .delete(authMiddleware, deleteCurrentUser); // Delete account
 
 // Two-Factor Authentication (2FA) Routes
 router.get('/me/2fa/setup', authMiddleware, setup2FA);
@@ -943,8 +944,18 @@ router.post('/me/2fa/disable', authMiddleware, disable2FA);
  *       200:
  *         description: Updated notification preferences
  */
-router.get('/me/notification-preferences', authMiddleware, validate(getNotificationPreferencesSchema), getMyNotificationPreferences);
-router.patch('/me/notification-preferences', authMiddleware, validate(patchNotificationPreferencesSchema), patchMyNotificationPreferences);
+router.get(
+  '/me/notification-preferences',
+  authMiddleware,
+  validate(getNotificationPreferencesSchema),
+  getMyNotificationPreferences
+);
+router.patch(
+  '/me/notification-preferences',
+  authMiddleware,
+  validate(patchNotificationPreferencesSchema),
+  patchMyNotificationPreferences
+);
 
 /**
  * @openapi
@@ -1017,7 +1028,12 @@ router.patch('/me/notification-preferences', authMiddleware, validate(patchNotif
  *         description: No valid fields provided
  */
 router.get('/me/preferences', authMiddleware, validate(getUserPreferencesSchema), getMyPreferences);
-router.patch('/me/preferences', authMiddleware, validate(patchUserPreferencesSchema), patchMyPreferences);
+router.patch(
+  '/me/preferences',
+  authMiddleware,
+  validate(patchUserPreferencesSchema),
+  patchMyPreferences
+);
 
 /**
  * @openapi
@@ -1094,7 +1110,7 @@ router.patch('/me/password', authMiddleware, validate(changePasswordSchema), cha
  *         description: Internal server error
  */
 // User activity routes (must come after /me to avoid route conflicts)
-router.get('/me/surges', authMiddleware, getMySurges);      // Get all my surges (likes)
+router.get('/me/surges', authMiddleware, getMySurges); // Get all my surges (likes)
 
 /**
  * @openapi
@@ -1122,7 +1138,7 @@ router.get('/me/surges', authMiddleware, getMySurges);      // Get all my surges
  *       500:
  *         description: Internal server error
  */
-router.get('/me/comments', authMiddleware, getMyComments);  // Get all my comments
+router.get('/me/comments', authMiddleware, getMyComments); // Get all my comments
 
 /**
  * @openapi
@@ -1165,10 +1181,10 @@ router.get('/me/comments', authMiddleware, getMyComments);  // Get all my commen
  *                   items:
  *                     type: object
  *                     properties:
- *                       date: 
+ *                       date:
  *                         type: string
  *                         example: "2026-03-02"
- *                       day: 
+ *                       day:
  *                         type: string
  *                         example: "Sun"
  *                       surges:
@@ -1191,14 +1207,14 @@ router.get('/me/analytics', authMiddleware, validate(userAnalyticsSchema), getMy
  *     summary: Get a user's public community profile
  *     description: |
  *       Returns a community-facing profile card for any authenticated member to view.
- *       
+ *
  *       **Includes:**
  *       - Display name (or full name if no display name set)
  *       - Role (for frontend badge rendering: `USER`, `REPRESENTATIVE`, `ADMIN`, `SUPER_ADMIN`)
  *       - Previous display names with timestamps (full transparency/accountability log)
  *       - 10 most recent non-anonymous Pings raised by the user
  *       - 10 most recent Waves (solutions) contributed by the user
- *       
+ *
  *       **Note:** Only returns data scoped to the requesting user's organization.
  *     tags:
  *       - Users

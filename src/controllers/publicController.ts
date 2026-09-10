@@ -16,12 +16,16 @@ const trimText = (value: string | null | undefined, maxLength: number): string =
   return `${normalized.slice(0, maxLength - 1).trimEnd()}…`;
 };
 
-const safeImageUrl = (media: Array<{ url: string; mimeType: string }> | undefined): string | null => {
+const safeImageUrl = (
+  media: Array<{ url: string; mimeType: string }> | undefined
+): string | null => {
   if (!media || media.length === 0) return null;
   const image = media.find((item) => item.mimeType.startsWith('image/'));
   if (image?.url) {
     const appBaseUrl = env.APP_URL.replace(/\/$/, '');
-    return image.url.startsWith('http') ? image.url : `${appBaseUrl}${image.url.startsWith('/') ? '' : '/'}${image.url}`;
+    return image.url.startsWith('http')
+      ? image.url
+      : `${appBaseUrl}${image.url.startsWith('/') ? '' : '/'}${image.url}`;
   }
   return null;
 };
@@ -44,16 +48,16 @@ const notFound = (res: Response) =>
 
 const sanitizePublicPing = (ping: any, currentUserId?: string | number) => {
   const isOwner = currentUserId ? ping?.author?.id === currentUserId : false;
-  const nonAnonymousAlias = [ping?.author?.firstName, ping?.author?.lastName]
-    .filter(Boolean)
-    .join(' ')
-    .trim() || null;
+  const nonAnonymousAlias =
+    [ping?.author?.firstName, ping?.author?.lastName].filter(Boolean).join(' ').trim() || null;
 
   return {
     ...ping,
-    author: ping?.isAnonymous ? null : ping?.author ?? null,
+    author: ping?.isAnonymous ? null : (ping?.author ?? null),
     anonymousAlias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : undefined,
-    anonymousProfilePicture: ping?.isAnonymous ? (ping?.anonymousProfilePicture ?? null) : undefined,
+    anonymousProfilePicture: ping?.isAnonymous
+      ? (ping?.anonymousProfilePicture ?? null)
+      : undefined,
     isOwner,
     alias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : nonAnonymousAlias,
   };
@@ -66,10 +70,11 @@ function parsePagination(req: Request) {
   const top = req.query.top ? Math.max(1, Math.min(50, Number(req.query.top))) : undefined; // e.g., top=3
   const sort = (req.query.sort as string) === 'new' ? 'new' : 'trending'; // trending|new
   const daysParam = req.query.days;
-  const days = (!daysParam || daysParam === 'all') ? 'all' : Number(daysParam);
-  const since = days === 'all' || !Number.isFinite(days) 
-    ? undefined 
-    : new Date(Date.now() - (days as number) * 24 * 60 * 60 * 1000);
+  const days = !daysParam || daysParam === 'all' ? 'all' : Number(daysParam);
+  const since =
+    days === 'all' || !Number.isFinite(days)
+      ? undefined
+      : new Date(Date.now() - (days as number) * 24 * 60 * 60 * 1000);
   return { page, limit, skip, top, sort, since };
 }
 
@@ -90,7 +95,6 @@ export async function getPublicResolutionLog(req: AuthRequest, res: Response, ne
     if (since) {
       where.resolvedAt = { gte: since };
     }
-
 
     const userId = req.user?.userId;
     const [items, total] = await Promise.all([
@@ -124,7 +128,9 @@ export async function getPublicResolutionLog(req: AuthRequest, res: Response, ne
     const data = items.map((ping) => {
       const approvedWave = ping.waves?.[0] ?? null;
       const resolvedAt = ping.resolvedAt ?? null;
-      const msToResolve = resolvedAt ? Math.max(0, resolvedAt.getTime() - ping.createdAt.getTime()) : null;
+      const msToResolve = resolvedAt
+        ? Math.max(0, resolvedAt.getTime() - ping.createdAt.getTime())
+        : null;
 
       return {
         id: ping.id,
@@ -136,15 +142,13 @@ export async function getPublicResolutionLog(req: AuthRequest, res: Response, ne
         msToResolve,
         approvedWave,
         officialResponse: ping.officialResponse ?? null,
-        hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
+        hasSurged: userId ? ping.surges && ping.surges.length > 0 : false,
       };
     });
 
     return res.status(200).json({
       data,
-      pagination: top
-        ? { top }
-        : { page: Math.floor(skip / limit) + 1, limit, total },
+      pagination: top ? { top } : { page: Math.floor(skip / limit) + 1, limit, total },
     });
   } catch (error) {
     return next(error);
@@ -215,7 +219,16 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
               _count: { select: { surges: true, comments: true } },
             },
           },
-          media: { select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true } },
+          media: {
+            select: {
+              id: true,
+              url: true,
+              filename: true,
+              mimeType: true,
+              width: true,
+              height: true,
+            },
+          },
           surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
@@ -224,7 +237,7 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
 
     const sanitizedItems = items.map((ping) => ({
       ...sanitizePublicPing(ping, userId),
-      hasSurged: userId ? (ping.surges && ping.surges.length > 0) : false,
+      hasSurged: userId ? ping.surges && ping.surges.length > 0 : false,
       surges: undefined,
     }));
 
@@ -232,9 +245,7 @@ export async function getPublicPings(req: AuthRequest, res: Response, next: Next
 
     res.status(200).json({
       data: itemsWithBadges,
-      pagination: top
-        ? { top, sort }
-        : { page: Math.floor(skip / limit) + 1, limit, total, sort },
+      pagination: top ? { top, sort } : { page: Math.floor(skip / limit) + 1, limit, total, sort },
     });
   } catch (error) {
     return next(error);
@@ -274,7 +285,7 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
         take: top ?? limit,
         include: {
           author: {
-            select: { id: true, firstName: true, lastName: true }
+            select: { id: true, firstName: true, lastName: true },
           },
           ping: {
             select: {
@@ -285,7 +296,7 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
               category: { select: { id: true, name: true } },
               author: { select: { id: true, firstName: true, lastName: true } },
               surges: userId ? { where: { userId }, select: { id: true } } : false,
-            }
+            },
           },
           surges: userId ? { where: { userId }, select: { id: true } } : false,
           _count: { select: { surges: true, comments: true } },
@@ -295,9 +306,9 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
     ]);
 
     // Add hasSurged and flatten ping fields
-    const data = items.map(wave => ({
+    const data = items.map((wave) => ({
       ...wave,
-      hasSurged: userId ? (wave.surges && wave.surges.length > 0) : false,
+      hasSurged: userId ? wave.surges && wave.surges.length > 0 : false,
       author: wave.author,
       ping: {
         id: wave.ping.id,
@@ -306,7 +317,7 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
         createdAt: wave.ping.createdAt,
         category: wave.ping.category,
         author: wave.ping.author,
-        hasSurged: userId ? (wave.ping.surges && wave.ping.surges.length > 0) : false,
+        hasSurged: userId ? wave.ping.surges && wave.ping.surges.length > 0 : false,
       },
       // Remove surges arrays from response for cleanliness
       surges: undefined,
@@ -316,9 +327,7 @@ export async function getPublicWaves(req: AuthRequest, res: Response, next: Next
 
     res.status(200).json({
       data: dataWithBadges,
-      pagination: top
-        ? { top, sort }
-        : { page: Math.floor(skip / limit) + 1, limit, total, sort },
+      pagination: top ? { top, sort } : { page: Math.floor(skip / limit) + 1, limit, total, sort },
     });
   } catch (error) {
     return next(error);
@@ -346,7 +355,14 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           surgeCount: true,
           _count: { select: { waves: true, comments: true } },
           category: { select: { name: true } },
-          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
+          organization: {
+            select: {
+              name: true,
+              logoUrl: true,
+              domain: true,
+              domains: { select: { domain: true } },
+            },
+          },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -358,7 +374,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
 
       const allowedDomains = new Set<string>();
       if (ping.organization?.domain) allowedDomains.add(ping.organization.domain.toLowerCase());
-      ping.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+      ping.organization?.domains?.forEach((d) => allowedDomains.add(d.domain.toLowerCase()));
 
       return res.status(200).json({
         type: 'ping',
@@ -387,7 +403,14 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           surgeCount: true,
           _count: { select: { comments: true } },
           ping: { select: { title: true, category: { select: { name: true } } } },
-          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
+          organization: {
+            select: {
+              name: true,
+              logoUrl: true,
+              domain: true,
+              domains: { select: { domain: true } },
+            },
+          },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -403,7 +426,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
 
       const allowedDomains = new Set<string>();
       if (wave.organization?.domain) allowedDomains.add(wave.organization.domain.toLowerCase());
-      wave.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+      wave.organization?.domains?.forEach((d) => allowedDomains.add(d.domain.toLowerCase()));
 
       return res.status(200).json({
         type: 'wave',
@@ -431,7 +454,14 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           surgeCount: true,
           _count: { select: { waves: true, comments: true } },
           category: { select: { name: true } },
-          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
+          organization: {
+            select: {
+              name: true,
+              logoUrl: true,
+              domain: true,
+              domains: { select: { domain: true } },
+            },
+          },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -442,7 +472,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
       if (ping) {
         const allowedDomains = new Set<string>();
         if (ping.organization?.domain) allowedDomains.add(ping.organization.domain.toLowerCase());
-        ping.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+        ping.organization?.domains?.forEach((d) => allowedDomains.add(d.domain.toLowerCase()));
 
         return res.status(200).json({
           type: 'ping',
@@ -470,7 +500,14 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
           surgeCount: true,
           _count: { select: { comments: true } },
           ping: { select: { title: true, category: { select: { name: true } } } },
-          organization: { select: { name: true, logoUrl: true, domain: true, domains: { select: { domain: true } } } },
+          organization: {
+            select: {
+              name: true,
+              logoUrl: true,
+              domain: true,
+              domains: { select: { domain: true } },
+            },
+          },
           media: {
             select: { url: true, mimeType: true },
             orderBy: { createdAt: 'asc' },
@@ -486,7 +523,7 @@ export async function getShareMetadata(req: Request, res: Response, next: NextFu
 
       const allowedDomains = new Set<string>();
       if (wave.organization?.domain) allowedDomains.add(wave.organization.domain.toLowerCase());
-      wave.organization?.domains?.forEach(d => allowedDomains.add(d.domain.toLowerCase()));
+      wave.organization?.domains?.forEach((d) => allowedDomains.add(d.domain.toLowerCase()));
 
       return res.status(200).json({
         type: 'wave',

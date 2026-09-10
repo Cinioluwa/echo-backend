@@ -143,7 +143,7 @@ describe('Notifications', () => {
       .get('/api/notifications/unread-count')
       .set('Authorization', `Bearer ${authorToken}`)
       .expect(200);
-    
+
     expect(beforeRes.body.unreadCount).toBeGreaterThan(0);
 
     await client
@@ -155,7 +155,7 @@ describe('Notifications', () => {
       .get('/api/notifications/unread-count')
       .set('Authorization', `Bearer ${authorToken}`)
       .expect(200);
-    
+
     expect(afterRes.body.unreadCount).toBe(0);
   });
 

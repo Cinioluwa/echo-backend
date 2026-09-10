@@ -3,7 +3,11 @@ import { Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { verifyGoogleToken } from '../services/googleAuthService.js';
-import { extractDomainFromEmail, getDomainCandidates, isConsumerEmailDomain } from '../utils/domainUtils.js';
+import {
+  extractDomainFromEmail,
+  getDomainCandidates,
+  isConsumerEmailDomain,
+} from '../utils/domainUtils.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import {
   ensurePendingOrganizationJoinRequest,
@@ -14,11 +18,7 @@ import logger from '../config/logger.js';
 import { env } from '../config/env.js';
 import type { Role } from '@prisma/client';
 
-const issueJwtForUser = (user: {
-  id: number;
-  organizationId: number;
-  role: Role;
-}) =>
+const issueJwtForUser = (user: { id: number; organizationId: number; role: Role }) =>
   jwt.sign(
     {
       userId: user.id,
@@ -31,7 +31,7 @@ const issueJwtForUser = (user: {
 
 /**
  * Google OAuth Sign-In/Sign-Up Handler
- * 
+ *
  * Flow:
  * 1. Verify Google ID token
  * 2. Extract email and lookup organization by domain
@@ -60,9 +60,7 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     }
 
     // Step 3: Lookup organization by domain
-    let organization = null as Awaited<
-      ReturnType<typeof prisma.organization.findUnique>
-    >;
+    let organization = null as Awaited<ReturnType<typeof prisma.organization.findUnique>>;
 
     for (const candidate of getDomainCandidates(domain)) {
       // eslint-disable-next-line no-await-in-loop
@@ -198,7 +196,10 @@ export async function googleAuth(req: AuthRequest, res: Response) {
     logger.error('Google auth error', { error });
 
     if (error instanceof Error) {
-      if (error.message.includes('Invalid Google token') || error.message.includes('Invalid token payload')) {
+      if (
+        error.message.includes('Invalid Google token') ||
+        error.message.includes('Invalid token payload')
+      ) {
         return res.status(401).json({ error: 'Invalid Google token' });
       }
       if (error.message.includes('Email not verified')) {

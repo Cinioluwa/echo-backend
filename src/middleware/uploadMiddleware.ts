@@ -4,22 +4,11 @@ import type { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env.js';
 
 // Allowed MIME types for different upload contexts
-export const ALLOWED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-];
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-export const ALLOWED_VIDEO_TYPES = [
-  'video/mp4',
-  'video/webm',
-  'video/quicktime',
-];
+export const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 
-export const ALLOWED_DOCUMENT_TYPES = [
-  'application/pdf',
-];
+export const ALLOWED_DOCUMENT_TYPES = ['application/pdf'];
 
 export const ALLOWED_MEDIA_TYPES = [
   ...ALLOWED_IMAGE_TYPES,
@@ -37,11 +26,7 @@ const storage = multer.memoryStorage();
 
 // File filter function
 const createFileFilter = (allowedTypes: string[]) => {
-  return (
-    _req: Request,
-    file: Express.Multer.File,
-    callback: multer.FileFilterCallback
-  ) => {
+  return (_req: Request, file: Express.Multer.File, callback: multer.FileFilterCallback) => {
     if (allowedTypes.includes(file.mimetype)) {
       callback(null, true);
     } else {
@@ -128,11 +113,7 @@ export const handleMulterError = (
 };
 
 // Helper to check if file exists in request
-export const requireFile = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const requireFile = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.file && (!req.files || (Array.isArray(req.files) && req.files.length === 0))) {
     res.status(400).json({
       error: 'No file uploaded',

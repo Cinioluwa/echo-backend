@@ -56,20 +56,21 @@ const PORT = env.PORT;
     });
 
     // Connect Redis in the background — failures are logged but never crash the process.
-    connectRedis().then(async (redisClient) => {
-      if (redisClient) {
-        logger.info('Redis connected — rate-limit stores will use Redis on next deploy');
-      } else {
-        logger.warn('Redis unavailable — using in-memory rate-limit stores');
-      }
-      // @ts-ignore: Redis configuration typing differs based on internal imported generic but works perfectly fine at runtime
-      await initializeSocketIO(server, redisClient);
-    }).catch((err) => {
-      logger.error('Unexpected error during background Redis connect', {
-        error: err instanceof Error ? err.message : String(err),
+    connectRedis()
+      .then(async (redisClient) => {
+        if (redisClient) {
+          logger.info('Redis connected — rate-limit stores will use Redis on next deploy');
+        } else {
+          logger.warn('Redis unavailable — using in-memory rate-limit stores');
+        }
+        // @ts-ignore: Redis configuration typing differs based on internal imported generic but works perfectly fine at runtime
+        await initializeSocketIO(server, redisClient);
+      })
+      .catch((err) => {
+        logger.error('Unexpected error during background Redis connect', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
-    });
-
   } catch (err) {
     logger.error('Failed to start server during startup', { error: err });
     process.exit(1);

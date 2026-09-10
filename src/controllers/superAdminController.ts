@@ -12,7 +12,7 @@ import crypto from 'crypto';
 export const getPlatformWideStats = async (
   _req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const [
@@ -57,11 +57,7 @@ export const getPlatformWideStats = async (
 // All organizations with user/ping counts.
 // Query: ?status=ACTIVE|PENDING, ?page=1, ?limit=50
 // ---------------------------------------------------------------------------
-export const listAllOrganizations = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) => {
+export const listAllOrganizations = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 50));
@@ -114,7 +110,7 @@ export const listAllOrganizations = async (
 export const updateOrganizationStatus = async (
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const orgId = parseInt(req.params.id, 10);
@@ -142,11 +138,7 @@ export const updateOrganizationStatus = async (
 // All users across all organizations.
 // Query: ?orgId=, ?role=, ?status=, ?search= (email), ?page=, ?limit=
 // ---------------------------------------------------------------------------
-export const listAllUsers = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) => {
+export const listAllUsers = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 50));
@@ -195,11 +187,7 @@ export const listAllUsers = async (
 // Body: { status: "ACTIVE" | "PENDING" }
 // Note: SUPER_ADMIN accounts cannot be deactivated via this endpoint.
 // ---------------------------------------------------------------------------
-export const updateUserStatus = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) => {
+export const updateUserStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = parseInt(req.params.id, 10);
     const { status } = req.body as { status: 'ACTIVE' | 'PENDING' };
@@ -235,48 +223,44 @@ export const updateUserStatus = async (
 // Body: { dryRun?: boolean, olderThanDays?: number }
 // ---------------------------------------------------------------------------
 export const generateInviteToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-        const { email, role, organizationId } = req.body;
+  try {
+    const { email, role, organizationId } = req.body;
 
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-        const invite = await prisma.invitation.create({
-            data: {
-                email,
-                role,
-                organizationId,
-                token,
-                expiresAt,
-            },
-        });
+    const invite = await prisma.invitation.create({
+      data: {
+        email,
+        role,
+        organizationId,
+        token,
+        expiresAt,
+      },
+    });
 
-        return res.status(201).json({ token: invite.token });
-    } catch (error) {
-        return next(error);
-    }
+    return res.status(201).json({ token: invite.token });
+  } catch (error) {
+    return next(error);
+  }
 };
 
 export const triggerWeeklyDigest = async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-        // Run asynchronously, do not await, just return 202 to the caller
-        import('../services/digestService.js').then(({ sendWeeklyDigest }) => {
-            sendWeeklyDigest().catch(error => {
-                logger.error('Error in background digest generation:', error);
-            });
-        });
+  try {
+    // Run asynchronously, do not await, just return 202 to the caller
+    import('../services/digestService.js').then(({ sendWeeklyDigest }) => {
+      sendWeeklyDigest().catch((error) => {
+        logger.error('Error in background digest generation:', error);
+      });
+    });
 
-        return res.status(202).json({ message: 'Weekly digest generation started in the background.' });
-    } catch (error) {
-        return next(error);
-    }
+    return res.status(202).json({ message: 'Weekly digest generation started in the background.' });
+  } catch (error) {
+    return next(error);
+  }
 };
 
-export const cleanupStaleRequests = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) => {
+export const cleanupStaleRequests = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const dryRun: boolean = req.body.dryRun ?? false;
     const olderThanDays: number = req.body.olderThanDays ?? 30;
@@ -326,7 +310,7 @@ export const cleanupStaleRequests = async (
             },
           },
         });
-      }),
+      })
     );
 
     return res.json({
@@ -347,7 +331,7 @@ export const cleanupStaleRequests = async (
 export const updateOrganizationDetails = async (
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const orgId = parseInt(req.params.id, 10);
@@ -405,7 +389,9 @@ export const updateOrganizationDetails = async (
       if (domain !== undefined && domain !== org.domain) {
         // Remove the old domain entry if one existed
         if (org.domain) {
-          await tx.organizationDomain.deleteMany({ where: { domain: org.domain, organizationId: orgId } });
+          await tx.organizationDomain.deleteMany({
+            where: { domain: org.domain, organizationId: orgId },
+          });
         }
         // Create the new domain entry if a domain was provided
         if (domain !== null) {
@@ -430,7 +416,7 @@ export const updateOrganizationDetails = async (
 export const updateUserRoleAsSuperAdmin = async (
   req: AuthRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const userId = parseInt(req.params.id, 10);
@@ -468,11 +454,7 @@ export const updateUserRoleAsSuperAdmin = async (
 // These accumulate indefinitely and are never cleaned up automatically.
 // Body: { dryRun?: boolean }
 // ---------------------------------------------------------------------------
-export const purgeExpiredTokens = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) => {
+export const purgeExpiredTokens = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const dryRun: boolean = req.body.dryRun ?? false;
     const now = new Date();

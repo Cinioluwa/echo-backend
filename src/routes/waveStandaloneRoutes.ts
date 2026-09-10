@@ -33,7 +33,13 @@ const waveStandaloneRouter = Router();
  *       200:
  *         description: User waves retrieved successfully
  */
-waveStandaloneRouter.get('/me', authMiddleware, organizationMiddleware, cache(30, { perUser: true }), getMyWaves);
+waveStandaloneRouter.get(
+  '/me',
+  authMiddleware,
+  organizationMiddleware,
+  cache(30, { perUser: true }),
+  getMyWaves
+);
 
 /**
  * @openapi
@@ -42,10 +48,10 @@ waveStandaloneRouter.get('/me', authMiddleware, organizationMiddleware, cache(30
  *     summary: Get a specific wave by ID
  *     description: |
  *       Retrieve detailed information about a specific wave (solution).
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Can only view waves from user's organization.
- *       
+ *
  *       Includes author info (unless anonymous), surge count, comments count, and parent ping reference.
  *     tags:
  *       - Waves
@@ -75,7 +81,7 @@ waveStandaloneRouter.get('/me', authMiddleware, organizationMiddleware, cache(30
  *     summary: Update a wave
  *     description: |
  *       Update the content of a wave. Only the original author can update their wave.
- *       
+ *
  *       **Authorization**: Only the wave author can update it.
  *     tags:
  *       - Waves
@@ -120,9 +126,9 @@ waveStandaloneRouter.get('/me', authMiddleware, organizationMiddleware, cache(30
  *     summary: Delete a wave
  *     description: |
  *       Delete a wave. Only the original author or an admin can delete a wave.
- *       
+ *
  *       **Authorization**: Wave author or Admin only.
- *       
+ *
  *       **Warning**: This also deletes all associated comments and surges.
  *     tags:
  *       - Waves
@@ -157,12 +163,32 @@ waveStandaloneRouter.get('/me', authMiddleware, organizationMiddleware, cache(30
  */
 
 // GET /api/waves/:id - Get a specific wave by ID - cached for 60s
-waveStandaloneRouter.get('/:id', authMiddleware, organizationMiddleware, validate(waveIdParamSchema), cache(60), getWaveById);
+waveStandaloneRouter.get(
+  '/:id',
+  authMiddleware,
+  organizationMiddleware,
+  validate(waveIdParamSchema),
+  cache(60),
+  getWaveById
+);
 
 // PATCH /api/waves/:id - Update a wave
-waveStandaloneRouter.patch('/:id', authMiddleware, organizationMiddleware, validate(waveIdParamSchema), validate(updateWaveSchema), updateWave);
+waveStandaloneRouter.patch(
+  '/:id',
+  authMiddleware,
+  organizationMiddleware,
+  validate(waveIdParamSchema),
+  validate(updateWaveSchema),
+  updateWave
+);
 
 // DELETE /api/waves/:id - Delete a wave
-waveStandaloneRouter.delete('/:id', authMiddleware, organizationMiddleware, validate(waveIdParamSchema), deleteWave);
+waveStandaloneRouter.delete(
+  '/:id',
+  authMiddleware,
+  organizationMiddleware,
+  validate(waveIdParamSchema),
+  deleteWave
+);
 
 export default waveStandaloneRouter;

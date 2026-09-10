@@ -168,4 +168,3 @@ describe('Notification Preferences', () => {
     expect(row).toBeUndefined();
   });
 });
-

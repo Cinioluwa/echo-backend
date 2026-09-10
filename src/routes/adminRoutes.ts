@@ -2,102 +2,105 @@ import { Router } from 'express';
 import { getAllPingsAsAdmin } from '../controllers/pingController.js';
 import cache from '../middleware/cacheMiddleware.js';
 import {
-    getPlatformStats,
-    deleteAnyPing,
-    getAllUsers,
-    updateUserRole,
-    getPingStatsByCategory,
-    getPingsByLevel,
-    getUserByIdAsAdmin,
-    updatePingProgressStatus,
-    acknowledgePing,
-    resolvePing,
-    getResponseTimeAnalytics,
-    getAllWavesAsAdmin,
-    updateWaveStatusAsAdmin,
-    getActiveUsersAnalytics,
-    getTrendingCategories,
-    getPingSentimentAnalytics,
-    getPriorityPings,
-    exportPingsAsCsv,
-    getAdminOverviewDashboard,
-    getSurgingIssues,
-    getTopContributors,
-    getCommunityMood,
-    getPingsByLocation,
-    getStallingPings,
-    getActivityTimeSeries,
-    updateOrganizationSettings,
-    suspendMemberAsAdmin,
-    unsuspendMemberAsAdmin,
-    removeMemberAsAdmin,
-    getOrganizationRules,
-    updateOrganizationRules,
-    getModerationAnalytics,
-    getFollowUpQueue,
-    getIssuesByCategory,
+  getPlatformStats,
+  deleteAnyPing,
+  getAllUsers,
+  updateUserRole,
+  getPingStatsByCategory,
+  getPingsByLevel,
+  getUserByIdAsAdmin,
+  updatePingProgressStatus,
+  acknowledgePing,
+  resolvePing,
+  getResponseTimeAnalytics,
+  getAllWavesAsAdmin,
+  updateWaveStatusAsAdmin,
+  getActiveUsersAnalytics,
+  getTrendingCategories,
+  getPingSentimentAnalytics,
+  getPriorityPings,
+  exportPingsAsCsv,
+  getAdminOverviewDashboard,
+  getSurgingIssues,
+  getTopContributors,
+  getCommunityMood,
+  getPingsByLocation,
+  getStallingPings,
+  getActivityTimeSeries,
+  updateOrganizationSettings,
+  suspendMemberAsAdmin,
+  unsuspendMemberAsAdmin,
+  removeMemberAsAdmin,
+  getOrganizationRules,
+  updateOrganizationRules,
+  getModerationAnalytics,
+  getFollowUpQueue,
+  getIssuesByCategory,
 } from '../controllers/adminController.js';
 import { applyModerationAction } from '../controllers/moderationController.js';
 import {
-    createAnnouncement,
-    updateAnnouncement,
-    deleteAnnouncement
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
 } from '../controllers/announcementController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 import superAdminMiddleware from '../middleware/superAdminMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { paginationWithFiltersSchema, paginationWithStatusSchema } from '../schemas/paginationSchema.js';
+import {
+  paginationWithFiltersSchema,
+  paginationWithStatusSchema,
+} from '../schemas/paginationSchema.js';
 import { paginationSchema } from '../schemas/paginationSchema.js';
 import { pingIdSchema } from '../schemas/pingSchemas.js';
 import { userIdParamSchema } from '../schemas/userSchemas.js';
 import {
-    analyticsWindowOptionalSchema,
-    analyticsWindowSchema,
-    adminOverviewDashboardSchema,
-    communityMoodSchema,
-    listOrganizationClaimsSchema,
-    listOrganizationJoinRequestsSchema,
-    organizationClaimIdSchema,
-    organizationJoinRequestIdSchema,
-    priorityPingsSchema,
-    rejectOrganizationClaimSchema,
-    rejectOrganizationJoinRequestSchema,
-    responseTimeAnalyticsSchema,
-    surgingIssuesSchema,
-    topContributorsSchema,
-    updateOrganizationJoinPolicySchema,
-    updateUserRoleSchema,
-    pingsByLocationSchema,
-    stallingPingsSchema,
-    activityTimeSeriesSchema,
-    updateOrgSettingsSchema,
-    suspendMemberSchema,
-    userIdParamOnlySchema,
-    updateOrgRulesSchema,
+  analyticsWindowOptionalSchema,
+  analyticsWindowSchema,
+  adminOverviewDashboardSchema,
+  communityMoodSchema,
+  listOrganizationClaimsSchema,
+  listOrganizationJoinRequestsSchema,
+  organizationClaimIdSchema,
+  organizationJoinRequestIdSchema,
+  priorityPingsSchema,
+  rejectOrganizationClaimSchema,
+  rejectOrganizationJoinRequestSchema,
+  responseTimeAnalyticsSchema,
+  surgingIssuesSchema,
+  topContributorsSchema,
+  updateOrganizationJoinPolicySchema,
+  updateUserRoleSchema,
+  pingsByLocationSchema,
+  stallingPingsSchema,
+  activityTimeSeriesSchema,
+  updateOrgSettingsSchema,
+  suspendMemberSchema,
+  userIdParamOnlySchema,
+  updateOrgRulesSchema,
 } from '../schemas/adminSchemas.js';
 import { applyModerationActionSchema } from '../schemas/moderationSchemas.js';
 import { waveIdParamSchema, updateWaveStatusSchema } from '../schemas/waveSchemas.js';
 import {
-    createAnnouncementSchema,
-    updateAnnouncementSchema
+  createAnnouncementSchema,
+  updateAnnouncementSchema,
 } from '../schemas/announcementSchemas.js';
 import {
-    approveOrganizationRequest,
-    approveOrganizationClaim,
-    listOrganizationAdminAccessRequests,
-    listOrganizationClaims,
-    listOrganizationRequests,
-    rejectOrganizationClaim,
-    rejectOrganizationRequest,
+  approveOrganizationRequest,
+  approveOrganizationClaim,
+  listOrganizationAdminAccessRequests,
+  listOrganizationClaims,
+  listOrganizationRequests,
+  rejectOrganizationClaim,
+  rejectOrganizationRequest,
 } from '../controllers/organizationRequestController.js';
 import {
-    approveOrganizationJoinRequest,
-    getOrganizationJoinSettings,
-    listOrganizationJoinRequests,
-    rejectOrganizationJoinRequest,
-    updateOrganizationJoinPolicy,
+  approveOrganizationJoinRequest,
+  getOrganizationJoinSettings,
+  listOrganizationJoinRequests,
+  rejectOrganizationJoinRequest,
+  updateOrganizationJoinPolicy,
 } from '../controllers/organizationJoinPolicyController.js';
 
 const router = Router();
@@ -109,7 +112,7 @@ const router = Router();
  *     summary: Apply a moderation action to a report
  *     description: |
  *       Apply a moderation action (DISMISS, WARN, REMOVE_POST, SUSPEND, BAN, REQUEST_IDENTITY_DISCLOSURE).
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -134,12 +137,12 @@ const router = Router();
  *         description: Report already finalized
  */
 router.post(
-    '/reports/:id/action',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(applyModerationActionSchema),
-    applyModerationAction
+  '/reports/:id/action',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(applyModerationActionSchema),
+  applyModerationAction
 );
 
 /**
@@ -152,7 +155,7 @@ router.post(
  *       - Total pings, waves, comments, users
  *       - Active users count
  *       - Resolution rates
- *       
+ *
  *       **Admin only**: Requires ADMIN or REPRESENTATIVE role.
  *     tags:
  *       - Admin
@@ -183,7 +186,14 @@ router.post(
  *       403:
  *         description: Forbidden - Admin access required
  */
-router.get('/stats', authMiddleware, adminMiddleware, organizationMiddleware, cache(60), getPlatformStats);
+router.get(
+  '/stats',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  cache(60),
+  getPlatformStats
+);
 
 /**
  * @openapi
@@ -192,7 +202,7 @@ router.get('/stats', authMiddleware, adminMiddleware, organizationMiddleware, ca
  *     summary: List organization onboarding requests
  *     description: |
  *       List all pending organization onboarding requests.
- *       
+ *
  *       **Super Admin only**: Platform-wide endpoint.
  *     tags:
  *       - Admin
@@ -226,7 +236,12 @@ router.get('/stats', authMiddleware, adminMiddleware, organizationMiddleware, ca
  *         description: Super Admin access required
  */
 // Platform-wide onboarding requests (SUPER_ADMIN only)
-router.get('/organization-requests', authMiddleware, superAdminMiddleware, listOrganizationRequests);
+router.get(
+  '/organization-requests',
+  authMiddleware,
+  superAdminMiddleware,
+  listOrganizationRequests
+);
 
 /**
  * @openapi
@@ -236,7 +251,7 @@ router.get('/organization-requests', authMiddleware, superAdminMiddleware, listO
  *     description: |
  *       Approve a pending organization onboarding request.
  *       Creates the organization and enables user registration.
- *       
+ *
  *       **Super Admin only**
  *     tags:
  *       - Admin
@@ -257,7 +272,12 @@ router.get('/organization-requests', authMiddleware, superAdminMiddleware, listO
  *       403:
  *         description: Super Admin access required
  */
-router.post('/organization-requests/:id/approve', authMiddleware, superAdminMiddleware, approveOrganizationRequest);
+router.post(
+  '/organization-requests/:id/approve',
+  authMiddleware,
+  superAdminMiddleware,
+  approveOrganizationRequest
+);
 
 /**
  * @openapi
@@ -266,7 +286,7 @@ router.post('/organization-requests/:id/approve', authMiddleware, superAdminMidd
  *     summary: Reject an organization request
  *     description: |
  *       Reject a pending organization onboarding request.
- *       
+ *
  *       **Super Admin only**
  *     tags:
  *       - Admin
@@ -287,7 +307,12 @@ router.post('/organization-requests/:id/approve', authMiddleware, superAdminMidd
  *       403:
  *         description: Super Admin access required
  */
-router.post('/organization-requests/:id/reject', authMiddleware, superAdminMiddleware, rejectOrganizationRequest);
+router.post(
+  '/organization-requests/:id/reject',
+  authMiddleware,
+  superAdminMiddleware,
+  rejectOrganizationRequest
+);
 
 /**
  * @openapi
@@ -317,19 +342,19 @@ router.post('/organization-requests/:id/reject', authMiddleware, superAdminMiddl
  *         description: Super Admin access required
  */
 router.get(
-    '/organization-claims',
-    authMiddleware,
-    superAdminMiddleware,
-    validate(listOrganizationClaimsSchema),
-    listOrganizationClaims
+  '/organization-claims',
+  authMiddleware,
+  superAdminMiddleware,
+  validate(listOrganizationClaimsSchema),
+  listOrganizationClaims
 );
 
 router.get(
-    '/organization-admin-access-requests',
-    authMiddleware,
-    superAdminMiddleware,
-    validate(listOrganizationClaimsSchema),
-    listOrganizationAdminAccessRequests
+  '/organization-admin-access-requests',
+  authMiddleware,
+  superAdminMiddleware,
+  validate(listOrganizationClaimsSchema),
+  listOrganizationAdminAccessRequests
 );
 
 /**
@@ -364,11 +389,11 @@ router.get(
  *         description: Claim not pending or organization already claimed
  */
 router.post(
-    '/organization-claims/:id/approve',
-    authMiddleware,
-    superAdminMiddleware,
-    validate(organizationClaimIdSchema),
-    approveOrganizationClaim
+  '/organization-claims/:id/approve',
+  authMiddleware,
+  superAdminMiddleware,
+  validate(organizationClaimIdSchema),
+  approveOrganizationClaim
 );
 
 /**
@@ -409,57 +434,57 @@ router.post(
  *         description: Claim not pending
  */
 router.post(
-    '/organization-claims/:id/reject',
-    authMiddleware,
-    superAdminMiddleware,
-    validate(organizationClaimIdSchema),
-    validate(rejectOrganizationClaimSchema),
-    rejectOrganizationClaim
+  '/organization-claims/:id/reject',
+  authMiddleware,
+  superAdminMiddleware,
+  validate(organizationClaimIdSchema),
+  validate(rejectOrganizationClaimSchema),
+  rejectOrganizationClaim
 );
 
 router.get(
-    '/organization/settings',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    getOrganizationJoinSettings
+  '/organization/settings',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  getOrganizationJoinSettings
 );
 
 router.patch(
-    '/organization/join-policy',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(updateOrganizationJoinPolicySchema),
-    updateOrganizationJoinPolicy
+  '/organization/join-policy',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(updateOrganizationJoinPolicySchema),
+  updateOrganizationJoinPolicy
 );
 
 router.get(
-    '/organization/join-requests',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(listOrganizationJoinRequestsSchema),
-    listOrganizationJoinRequests
+  '/organization/join-requests',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(listOrganizationJoinRequestsSchema),
+  listOrganizationJoinRequests
 );
 
 router.post(
-    '/organization/join-requests/:id/approve',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(organizationJoinRequestIdSchema),
-    approveOrganizationJoinRequest
+  '/organization/join-requests/:id/approve',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(organizationJoinRequestIdSchema),
+  approveOrganizationJoinRequest
 );
 
 router.post(
-    '/organization/join-requests/:id/reject',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(organizationJoinRequestIdSchema),
-    validate(rejectOrganizationJoinRequestSchema),
-    rejectOrganizationJoinRequest
+  '/organization/join-requests/:id/reject',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(organizationJoinRequestIdSchema),
+  validate(rejectOrganizationJoinRequestSchema),
+  rejectOrganizationJoinRequest
 );
 
 /**
@@ -470,7 +495,7 @@ router.post(
  *     description: |
  *       Retrieve all pings in the organization with admin-level access.
  *       Includes all statuses and additional metadata.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -504,7 +529,13 @@ router.post(
  *       403:
  *         description: Admin access required
  */
-router.get('/pings', authMiddleware, adminMiddleware, validate(paginationWithFiltersSchema), getAllPingsAsAdmin);
+router.get(
+  '/pings',
+  authMiddleware,
+  adminMiddleware,
+  validate(paginationWithFiltersSchema),
+  getAllPingsAsAdmin
+);
 
 /**
  * @openapi
@@ -513,7 +544,7 @@ router.get('/pings', authMiddleware, adminMiddleware, validate(paginationWithFil
  *     summary: Delete any ping
  *     description: |
  *       Delete any ping regardless of author.
- *       
+ *
  *       **Admin only**: Admins can delete any ping for moderation purposes.
  *     tags:
  *       - Admin
@@ -533,7 +564,14 @@ router.get('/pings', authMiddleware, adminMiddleware, validate(paginationWithFil
  *       403:
  *         description: Admin access required
  */
-router.delete('/pings/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), deleteAnyPing);
+router.delete(
+  '/pings/:id',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  deleteAnyPing
+);
 
 /**
  * @openapi
@@ -542,7 +580,7 @@ router.delete('/pings/:id', authMiddleware, adminMiddleware, organizationMiddlew
  *     summary: Get all users in organization
  *     description: |
  *       Retrieve all users in the organization with their roles and statuses.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -569,7 +607,7 @@ router.get('/users', authMiddleware, adminMiddleware, organizationMiddleware, ge
  *     summary: Update a user's role
  *     description: |
  *       Change a user's role (USER, REPRESENTATIVE, ADMIN).
- *       
+ *
  *       **Admin only**: Cannot demote yourself or other admins.
  *     tags:
  *       - Admin
@@ -604,7 +642,14 @@ router.get('/users', authMiddleware, adminMiddleware, organizationMiddleware, ge
  *       404:
  *         description: User not found
  */
-router.patch('/users/:id/role', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateUserRoleSchema), updateUserRole);
+router.patch(
+  '/users/:id/role',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(updateUserRoleSchema),
+  updateUserRole
+);
 
 /**
  * @openapi
@@ -614,7 +659,7 @@ router.patch('/users/:id/role', authMiddleware, adminMiddleware, organizationMid
  *     description: |
  *       Create a new organization-wide announcement.
  *       Announcements are displayed to all users in the organization.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -660,7 +705,14 @@ router.patch('/users/:id/role', authMiddleware, adminMiddleware, organizationMid
  *       403:
  *         description: Admin access required
  */
-router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddleware, validate(createAnnouncementSchema), createAnnouncement);
+router.post(
+  '/announcements',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(createAnnouncementSchema),
+  createAnnouncement
+);
 
 /**
  * @openapi
@@ -669,7 +721,7 @@ router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddl
  *     summary: Update an announcement
  *     description: |
  *       Update an existing announcement.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -705,7 +757,7 @@ router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddl
  *     summary: Delete an announcement
  *     description: |
  *       Delete an announcement.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -725,8 +777,21 @@ router.post('/announcements', authMiddleware, adminMiddleware, organizationMiddl
  *       403:
  *         description: Admin access required
  */
-router.patch('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateAnnouncementSchema), updateAnnouncement);
-router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizationMiddleware, deleteAnnouncement);
+router.patch(
+  '/announcements/:id',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(updateAnnouncementSchema),
+  updateAnnouncement
+);
+router.delete(
+  '/announcements/:id',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  deleteAnnouncement
+);
 
 /**
  * @openapi
@@ -779,13 +844,13 @@ router.delete('/announcements/:id', authMiddleware, adminMiddleware, organizatio
  */
 // Admin overview dashboard contract used by redesigned admin homepage
 router.get(
-    '/overview',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(adminOverviewDashboardSchema),
-    cache(120),
-    getAdminOverviewDashboard
+  '/overview',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(adminOverviewDashboardSchema),
+  cache(120),
+  getAdminOverviewDashboard
 );
 
 /**
@@ -839,13 +904,13 @@ router.get(
  */
 // Surging issues list with per-hour velocity for alert banners
 router.get(
-    '/overview/surging-issues',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(surgingIssuesSchema),
-    cache(60),
-    getSurgingIssues
+  '/overview/surging-issues',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(surgingIssuesSchema),
+  cache(60),
+  getSurgingIssues
 );
 
 /**
@@ -885,13 +950,13 @@ router.get(
  */
 // Top contributors leaderboard (ranked by waves cast / surges)
 router.get(
-    '/overview/top-contributors',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(topContributorsSchema),
-    cache(120),
-    getTopContributors
+  '/overview/top-contributors',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(topContributorsSchema),
+  cache(120),
+  getTopContributors
 );
 
 /**
@@ -924,13 +989,13 @@ router.get(
  */
 // Community mood computed from comment sentiment trend
 router.get(
-    '/overview/community-mood',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(communityMoodSchema),
-    cache(120),
-    getCommunityMood
+  '/overview/community-mood',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(communityMoodSchema),
+  cache(120),
+  getCommunityMood
 );
 
 /**
@@ -940,7 +1005,7 @@ router.get(
  *     summary: Get ping statistics by user level
  *     description: |
  *       Analyze ping distribution across different user levels.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -959,7 +1024,15 @@ router.get(
  *       403:
  *         description: Admin access required
  */
-router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), cache(120), getPingsByLevel);
+router.get(
+  '/analytics/by-level',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(analyticsWindowOptionalSchema),
+  cache(120),
+  getPingsByLevel
+);
 
 /**
  * @openapi
@@ -969,7 +1042,7 @@ router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationM
  *     description: |
  *       Analyze ping distribution across categories.
  *       Shows which categories have the most activity.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1000,7 +1073,15 @@ router.get('/analytics/by-level', authMiddleware, adminMiddleware, organizationM
  *       403:
  *         description: Admin access required
  */
-router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowOptionalSchema), cache(120), getPingStatsByCategory);
+router.get(
+  '/analytics/by-category',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(analyticsWindowOptionalSchema),
+  cache(120),
+  getPingStatsByCategory
+);
 
 /**
  * @openapi
@@ -1009,7 +1090,7 @@ router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizati
  *     summary: Get active users analytics
  *     description: |
  *       Analyze user activity patterns over time.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1028,7 +1109,15 @@ router.get('/analytics/by-category', authMiddleware, adminMiddleware, organizati
  *       403:
  *         description: Admin access required
  */
-router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), cache(120), getActiveUsersAnalytics);
+router.get(
+  '/analytics/active-users',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(analyticsWindowSchema),
+  cache(120),
+  getActiveUsersAnalytics
+);
 
 /**
  * @openapi
@@ -1037,7 +1126,7 @@ router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizat
  *     summary: Get trending categories
  *     description: |
  *       Identify categories with increasing activity.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1056,7 +1145,15 @@ router.get('/analytics/active-users', authMiddleware, adminMiddleware, organizat
  *       403:
  *         description: Admin access required
  */
-router.get('/analytics/trending', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), cache(120), getTrendingCategories);
+router.get(
+  '/analytics/trending',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(analyticsWindowSchema),
+  cache(120),
+  getTrendingCategories
+);
 
 /**
  * @openapi
@@ -1065,7 +1162,7 @@ router.get('/analytics/trending', authMiddleware, adminMiddleware, organizationM
  *     summary: Get ping sentiment analytics
  *     description: |
  *       Analyze sentiment distribution across pings.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1084,7 +1181,15 @@ router.get('/analytics/trending', authMiddleware, adminMiddleware, organizationM
  *       403:
  *         description: Admin access required
  */
-router.get('/analytics/sentiment', authMiddleware, adminMiddleware, organizationMiddleware, validate(analyticsWindowSchema), cache(120), getPingSentimentAnalytics);
+router.get(
+  '/analytics/sentiment',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(analyticsWindowSchema),
+  cache(120),
+  getPingSentimentAnalytics
+);
 
 /**
  * @openapi
@@ -1093,7 +1198,7 @@ router.get('/analytics/sentiment', authMiddleware, adminMiddleware, organization
  *     summary: Get a specific user's details
  *     description: |
  *       Retrieve detailed information about a specific user.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1117,7 +1222,14 @@ router.get('/analytics/sentiment', authMiddleware, adminMiddleware, organization
  *       403:
  *         description: Admin access required
  */
-router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamSchema), getUserByIdAsAdmin);
+router.get(
+  '/users/:id',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(userIdParamSchema),
+  getUserByIdAsAdmin
+);
 
 /**
  * @openapi
@@ -1127,7 +1239,7 @@ router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware
  *     description: |
  *       Get pings that require attention based on surge count and age.
  *       Useful for identifying issues that need immediate response.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1151,7 +1263,14 @@ router.get('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware
  *       403:
  *         description: Admin access required
  */
-router.get('/pings/priority', authMiddleware, adminMiddleware, organizationMiddleware, validate(priorityPingsSchema), getPriorityPings);
+router.get(
+  '/pings/priority',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(priorityPingsSchema),
+  getPriorityPings
+);
 
 /**
  * @openapi
@@ -1160,7 +1279,7 @@ router.get('/pings/priority', authMiddleware, adminMiddleware, organizationMiddl
  *     summary: Update ping progress status
  *     description: |
  *       Update the progress status of a ping.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1192,7 +1311,13 @@ router.get('/pings/priority', authMiddleware, adminMiddleware, organizationMiddl
  *       403:
  *         description: Admin access required
  */
-router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, organizationMiddleware, updatePingProgressStatus);
+router.patch(
+  '/pings/:id/progress-status',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  updatePingProgressStatus
+);
 
 /**
  * @openapi
@@ -1201,7 +1326,7 @@ router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, orga
  *     summary: Acknowledge a ping
  *     description: |
  *       Mark a ping as acknowledged. Sets acknowledgedAt timestamp.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1221,7 +1346,14 @@ router.patch('/pings/:id/progress-status', authMiddleware, adminMiddleware, orga
  *       403:
  *         description: Admin access required
  */
-router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), acknowledgePing);
+router.post(
+  '/pings/:id/acknowledge',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  acknowledgePing
+);
 
 /**
  * @openapi
@@ -1230,7 +1362,7 @@ router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizat
  *     summary: Resolve a ping
  *     description: |
  *       Mark a ping as resolved. Sets resolvedAt timestamp.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1250,7 +1382,14 @@ router.post('/pings/:id/acknowledge', authMiddleware, adminMiddleware, organizat
  *       403:
  *         description: Admin access required
  */
-router.post('/pings/:id/resolve', authMiddleware, adminMiddleware, organizationMiddleware, validate(pingIdSchema), resolvePing);
+router.post(
+  '/pings/:id/resolve',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(pingIdSchema),
+  resolvePing
+);
 
 /**
  * @openapi
@@ -1259,7 +1398,7 @@ router.post('/pings/:id/resolve', authMiddleware, adminMiddleware, organizationM
  *     summary: Get response time analytics
  *     description: |
  *       Analyze how quickly pings are being acknowledged and resolved.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1288,7 +1427,14 @@ router.post('/pings/:id/resolve', authMiddleware, adminMiddleware, organizationM
  *       403:
  *         description: Admin access required
  */
-router.get('/analytics/response-times', authMiddleware, adminMiddleware, organizationMiddleware, validate(responseTimeAnalyticsSchema), getResponseTimeAnalytics);
+router.get(
+  '/analytics/response-times',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(responseTimeAnalyticsSchema),
+  getResponseTimeAnalytics
+);
 
 /**
  * @openapi
@@ -1297,7 +1443,7 @@ router.get('/analytics/response-times', authMiddleware, adminMiddleware, organiz
  *     summary: Export pings as CSV
  *     description: |
  *       Download all pings as a CSV file for reporting/analysis.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1313,7 +1459,13 @@ router.get('/analytics/response-times', authMiddleware, adminMiddleware, organiz
  *       403:
  *         description: Admin access required
  */
-router.get('/export/pings', authMiddleware, adminMiddleware, organizationMiddleware, exportPingsAsCsv);
+router.get(
+  '/export/pings',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  exportPingsAsCsv
+);
 
 /**
  * @openapi
@@ -1323,7 +1475,7 @@ router.get('/export/pings', authMiddleware, adminMiddleware, organizationMiddlew
  *     description: |
  *       Retrieve all waves in the organization for moderation.
  *       Includes all statuses and flagged waves.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1352,7 +1504,14 @@ router.get('/export/pings', authMiddleware, adminMiddleware, organizationMiddlew
  *         description: Admin access required
  */
 // Waves moderation (ADMIN)
-router.get('/waves', authMiddleware, adminMiddleware, organizationMiddleware, validate(paginationWithStatusSchema), getAllWavesAsAdmin);
+router.get(
+  '/waves',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(paginationWithStatusSchema),
+  getAllWavesAsAdmin
+);
 
 /**
  * @openapi
@@ -1361,7 +1520,7 @@ router.get('/waves', authMiddleware, adminMiddleware, organizationMiddleware, va
  *     summary: Update wave status
  *     description: |
  *       Approve or decline a wave for moderation.
- *       
+ *
  *       **Admin only**
  *     tags:
  *       - Admin
@@ -1393,7 +1552,15 @@ router.get('/waves', authMiddleware, adminMiddleware, organizationMiddleware, va
  *       403:
  *         description: Admin access required
  */
-router.patch('/waves/:id/status', authMiddleware, adminMiddleware, organizationMiddleware, validate(waveIdParamSchema), validate(updateWaveStatusSchema), updateWaveStatusAsAdmin);
+router.patch(
+  '/waves/:id/status',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(waveIdParamSchema),
+  validate(updateWaveStatusSchema),
+  updateWaveStatusAsAdmin
+);
 
 /**
  * @openapi
@@ -1435,13 +1602,13 @@ router.patch('/waves/:id/status', authMiddleware, adminMiddleware, organizationM
  *         description: Admin access required
  */
 router.get(
-    '/analytics/by-location',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(pingsByLocationSchema),
-    cache(120),
-    getPingsByLocation
+  '/analytics/by-location',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(pingsByLocationSchema),
+  cache(120),
+  getPingsByLocation
 );
 
 /**
@@ -1481,13 +1648,13 @@ router.get(
  *         description: Admin access required
  */
 router.get(
-    '/pings/stalling',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(stallingPingsSchema),
-    cache(60),
-    getStallingPings
+  '/pings/stalling',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(stallingPingsSchema),
+  cache(60),
+  getStallingPings
 );
 
 /**
@@ -1519,13 +1686,13 @@ router.get(
  *         description: Admin access required
  */
 router.get(
-    '/analytics/activity',
-    authMiddleware,
-    adminMiddleware,
-    organizationMiddleware,
-    validate(activityTimeSeriesSchema),
-    cache(60),
-    getActivityTimeSeries
+  '/analytics/activity',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(activityTimeSeriesSchema),
+  cache(60),
+  getActivityTimeSeries
 );
 
 /**
@@ -1560,7 +1727,14 @@ router.get(
  *       409:
  *         description: Organization name already taken
  */
-router.patch('/organization/settings', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateOrgSettingsSchema), updateOrganizationSettings);
+router.patch(
+  '/organization/settings',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(updateOrgSettingsSchema),
+  updateOrganizationSettings
+);
 
 /**
  * @openapi
@@ -1591,7 +1765,13 @@ router.patch('/organization/settings', authMiddleware, adminMiddleware, organiza
  *                 minSurgesForWave:
  *                   type: integer
  */
-router.get('/organization/rules', authMiddleware, adminMiddleware, organizationMiddleware, getOrganizationRules);
+router.get(
+  '/organization/rules',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  getOrganizationRules
+);
 
 /**
  * @openapi
@@ -1627,7 +1807,14 @@ router.get('/organization/rules', authMiddleware, adminMiddleware, organizationM
  *       200:
  *         description: Rules updated
  */
-router.patch('/organization/rules', authMiddleware, adminMiddleware, organizationMiddleware, validate(updateOrgRulesSchema), updateOrganizationRules);
+router.patch(
+  '/organization/rules',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(updateOrgRulesSchema),
+  updateOrganizationRules
+);
 
 /**
  * @openapi
@@ -1670,7 +1857,14 @@ router.patch('/organization/rules', authMiddleware, adminMiddleware, organizatio
  *       404:
  *         description: User not found
  */
-router.patch('/users/:id/suspend', authMiddleware, adminMiddleware, organizationMiddleware, validate(suspendMemberSchema), suspendMemberAsAdmin);
+router.patch(
+  '/users/:id/suspend',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(suspendMemberSchema),
+  suspendMemberAsAdmin
+);
 
 /**
  * @openapi
@@ -1696,7 +1890,14 @@ router.patch('/users/:id/suspend', authMiddleware, adminMiddleware, organization
  *       404:
  *         description: User not found
  */
-router.patch('/users/:id/unsuspend', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamOnlySchema), unsuspendMemberAsAdmin);
+router.patch(
+  '/users/:id/unsuspend',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(userIdParamOnlySchema),
+  unsuspendMemberAsAdmin
+);
 
 /**
  * @openapi
@@ -1728,7 +1929,14 @@ router.patch('/users/:id/unsuspend', authMiddleware, adminMiddleware, organizati
  *       404:
  *         description: User not found
  */
-router.delete('/users/:id', authMiddleware, adminMiddleware, organizationMiddleware, validate(userIdParamOnlySchema), removeMemberAsAdmin);
+router.delete(
+  '/users/:id',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(userIdParamOnlySchema),
+  removeMemberAsAdmin
+);
 
 /**
  * @openapi
@@ -1758,7 +1966,13 @@ router.delete('/users/:id', authMiddleware, adminMiddleware, organizationMiddlew
  *                 activeSuspensions:
  *                   type: integer
  */
-router.get('/reports/analytics', authMiddleware, adminMiddleware, organizationMiddleware, getModerationAnalytics);
+router.get(
+  '/reports/analytics',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  getModerationAnalytics
+);
 
 /**
  * @openapi
@@ -1798,7 +2012,13 @@ router.get('/reports/analytics', authMiddleware, adminMiddleware, organizationMi
  *                 total:
  *                   type: integer
  */
-router.get('/follow-up-queue', authMiddleware, adminMiddleware, organizationMiddleware, getFollowUpQueue);
+router.get(
+  '/follow-up-queue',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  getFollowUpQueue
+);
 
 /**
  * @openapi
@@ -1818,7 +2038,12 @@ router.get('/follow-up-queue', authMiddleware, adminMiddleware, organizationMidd
  *       200:
  *         description: Issues by category retrieved
  */
-router.get('/issues-by-category', authMiddleware, adminMiddleware, organizationMiddleware, getIssuesByCategory);
+router.get(
+  '/issues-by-category',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  getIssuesByCategory
+);
 
 export default router;
-

@@ -34,9 +34,7 @@ import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
 import type { Role } from '@prisma/client';
 import { generateBase32Secret, verifyTOTP, generateOtpauthUri } from '../utils/twoFactorUtils.js';
 
-const googleClient = env.GOOGLE_CLIENT_ID
-  ? new OAuth2Client(env.GOOGLE_CLIENT_ID)
-  : null;
+const googleClient = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null;
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const normalizeName = (value: string) => value.trim();
@@ -48,17 +46,15 @@ const sanitizePingAuthor = (ping: any) =>
   ping
     ? {
         ...ping,
-        author: ping?.isAnonymous ? null : ping?.author ?? null,
+        author: ping?.isAnonymous ? null : (ping?.author ?? null),
         anonymousAlias: ping?.isAnonymous ? (ping?.anonymousAlias ?? null) : undefined,
-        anonymousProfilePicture: ping?.isAnonymous ? (ping?.anonymousProfilePicture ?? null) : undefined,
+        anonymousProfilePicture: ping?.isAnonymous
+          ? (ping?.anonymousProfilePicture ?? null)
+          : undefined,
       }
     : ping;
 
-const issueJwtForUser = (user: {
-  id: number;
-  organizationId: number;
-  role: Role;
-}) =>
+const issueJwtForUser = (user: { id: number; organizationId: number; role: Role }) =>
   jwt.sign(
     {
       userId: user.id,
@@ -70,13 +66,10 @@ const issueJwtForUser = (user: {
   );
 // Even though this is a TypeScript file, when using moduleResolution "node16"/"nodenext" with ESM,
 // relative imports must include the .js extension to match the emitted JavaScript files.
-export const registerUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, firstName, lastName, level, department, hall, organizationId } = req.body;
+    const { email, password, firstName, lastName, level, department, hall, organizationId } =
+      req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -85,13 +78,11 @@ export const registerUser = async (
     let domain: string;
     try {
       domain = extractDomainFromEmail(email);
-  } catch {
+    } catch {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    let organization = null as Awaited<
-      ReturnType<typeof prisma.organization.findUnique>
-    >;
+    let organization = null as Awaited<ReturnType<typeof prisma.organization.findUnique>>;
 
     if (isConsumerEmailDomain(domain)) {
       // Personal email: require explicit org selection
@@ -209,10 +200,7 @@ export const registerUser = async (
       return { user: createdUser, verificationToken: tokenRecord };
     });
 
-    const verificationEmail = buildVerificationEmail(
-      verificationToken.token,
-      firstName
-    );
+    const verificationEmail = buildVerificationEmail(verificationToken.token, firstName);
 
     try {
       await sendEmail({ to: normalizedEmail, ...verificationEmail });
@@ -246,11 +234,7 @@ export const registerUser = async (
   }
 };
 
-export const loginUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, organizationId } = req.body;
 
@@ -261,13 +245,11 @@ export const loginUser = async (
     let domain: string;
     try {
       domain = extractDomainFromEmail(email);
-  } catch {
+    } catch {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    let organization = null as Awaited<
-      ReturnType<typeof prisma.organization.findUnique>
-    >;
+    let organization = null as Awaited<ReturnType<typeof prisma.organization.findUnique>>;
 
     if (isConsumerEmailDomain(domain)) {
       if (!organizationId) {
@@ -412,15 +394,9 @@ export const loginUser = async (
   }
 };
 
-export const loginWithGoogle = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
   if (!googleClient || !env.GOOGLE_CLIENT_ID) {
-    return res
-      .status(501)
-      .json({ error: 'Google authentication is not configured.' });
+    return res.status(501).json({ error: 'Google authentication is not configured.' });
   }
 
   try {
@@ -445,13 +421,11 @@ export const loginWithGoogle = async (
     let domain: string;
     try {
       domain = extractDomainFromEmail(email);
-  } catch {
+    } catch {
       return res.status(400).json({ error: 'Google email is invalid' });
     }
 
-    let organization = null as Awaited<
-      ReturnType<typeof prisma.organization.findUnique>
-    >;
+    let organization = null as Awaited<ReturnType<typeof prisma.organization.findUnique>>;
 
     for (const candidate of getDomainCandidates(domain)) {
       // eslint-disable-next-line no-await-in-loop
@@ -496,8 +470,7 @@ export const loginWithGoogle = async (
       const passwordPlaceholder = crypto.randomBytes(48).toString('hex');
       const hashedPassword = await bcrypt.hash(passwordPlaceholder, 10);
 
-      const derivedFirstName =
-        payload.given_name ?? payload.name?.split(' ')[0] ?? 'Echo';
+      const derivedFirstName = payload.given_name ?? payload.name?.split(' ')[0] ?? 'Echo';
       const derivedLastName =
         payload.family_name ?? payload.name?.split(' ').slice(1).join(' ') ?? 'User';
 
@@ -565,11 +538,7 @@ export const loginWithGoogle = async (
   }
 };
 
-export const verifyEmail = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token } = req.body;
 
@@ -659,20 +628,14 @@ export const verifyEmail = async (
         : result.requiresJoinApproval
           ? 'Email verified. Your account is pending organization approval.'
           : 'Email verified successfully.',
-      ...(result.requiresJoinApproval
-        ? { code: 'ORG_JOIN_APPROVAL_REQUIRED' }
-        : {}),
+      ...(result.requiresJoinApproval ? { code: 'ORG_JOIN_APPROVAL_REQUIRED' } : {}),
     });
   } catch (error) {
     return next(error);
   }
 };
 
-export const resendVerificationEmail = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const resendVerificationEmail = async (req: Request, res: Response, next: NextFunction) => {
   const genericResponse = {
     message: 'If an account exists for that email, a verification link will arrive shortly.',
   };
@@ -691,9 +654,7 @@ export const resendVerificationEmail = async (
       return res.status(200).json(genericResponse);
     }
 
-    let organization = null as Awaited<
-      ReturnType<typeof prisma.organization.findUnique>
-    >;
+    let organization = null as Awaited<ReturnType<typeof prisma.organization.findUnique>>;
 
     if (isConsumerEmailDomain(domain)) {
       // Personal email requires explicit org selection.
@@ -749,10 +710,7 @@ export const resendVerificationEmail = async (
       createEmailVerificationToken(tx, user.id)
     );
 
-    const verificationEmail = buildVerificationEmail(
-      tokenRecord.token,
-      user.firstName
-    );
+    const verificationEmail = buildVerificationEmail(tokenRecord.token, user.firstName);
 
     try {
       await sendEmail({ to: normalizedEmail, ...verificationEmail });
@@ -770,39 +728,31 @@ export const resendVerificationEmail = async (
   }
 };
 
-export const requestPasswordReset = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const requestPasswordReset = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
 
     if (typeof email !== 'string') {
       return res.status(200).json({
-        message:
-          'If an account exists for that email, a password reset link will arrive shortly.',
+        message: 'If an account exists for that email, a password reset link will arrive shortly.',
       });
     }
 
     let domain: string | null = null;
     try {
       domain = extractDomainFromEmail(email);
-  } catch {
+    } catch {
       // Swallow to avoid leaking
       domain = null;
     }
 
     if (!domain) {
       return res.status(200).json({
-        message:
-          'If an account exists for that email, a password reset link will arrive shortly.',
+        message: 'If an account exists for that email, a password reset link will arrive shortly.',
       });
     }
 
-    let organization = null as Awaited<
-      ReturnType<typeof prisma.organization.findUnique>
-    >;
+    let organization = null as Awaited<ReturnType<typeof prisma.organization.findUnique>>;
 
     for (const candidate of getDomainCandidates(domain)) {
       // eslint-disable-next-line no-await-in-loop
@@ -818,8 +768,7 @@ export const requestPasswordReset = async (
 
     if (!organization) {
       return res.status(200).json({
-        message:
-          'If an account exists for that email, a password reset link will arrive shortly.',
+        message: 'If an account exists for that email, a password reset link will arrive shortly.',
       });
     }
 
@@ -841,8 +790,7 @@ export const requestPasswordReset = async (
 
     if (!user) {
       return res.status(200).json({
-        message:
-          'If an account exists for that email, a password reset link will arrive shortly.',
+        message: 'If an account exists for that email, a password reset link will arrive shortly.',
       });
     }
 
@@ -867,19 +815,14 @@ export const requestPasswordReset = async (
     });
 
     return res.status(200).json({
-      message:
-        'If an account exists for that email, a password reset link will arrive shortly.',
+      message: 'If an account exists for that email, a password reset link will arrive shortly.',
     });
   } catch (error) {
     return next(error);
   }
 };
 
-export const resetPassword = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token, password, newPassword } = req.body;
     const finalPassword = password || newPassword;
@@ -925,18 +868,12 @@ export const resetPassword = async (
       requestId: (req as any).requestId,
     });
 
-    return res
-      .status(200)
-      .json({ message: 'Password reset successful. You can now log in.' });
+    return res.status(200).json({ message: 'Password reset successful. You can now log in.' });
   } catch (error) {
     return next(error);
   }
 };
-export const changePassword = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authReq = req as AuthRequest;
     const { currentPassword, newPassword } = req.body;
@@ -990,13 +927,12 @@ export const requestOrganizationOnboarding = async (
   next: NextFunction
 ) => {
   try {
-    const { organizationName, email, firstName, lastName, metadata } =
-      req.body;
+    const { organizationName, email, firstName, lastName, metadata } = req.body;
 
     let domain: string;
     try {
       domain = extractDomainFromEmail(email);
-  } catch {
+    } catch {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
@@ -1039,8 +975,7 @@ export const requestOrganizationOnboarding = async (
     }
 
     const resolvedMetadata =
-      metadata ??
-      (Object.keys(requesterMetadata).length > 0 ? requesterMetadata : undefined);
+      metadata ?? (Object.keys(requesterMetadata).length > 0 ? requesterMetadata : undefined);
 
     const requestRecord = await prisma.organizationRequest.create({
       data: {
@@ -1054,10 +989,7 @@ export const requestOrganizationOnboarding = async (
     setImmediate(() => {
       const notifyTo = env.PLATFORM_ADMIN_EMAIL ?? env.EMAIL_FROM;
       if (notifyTo) {
-        const notification = buildOrganizationRequestEmail(
-          organizationName,
-          normalizedDomain
-        );
+        const notification = buildOrganizationRequestEmail(organizationName, normalizedDomain);
 
         sendEmail({ to: notifyTo, ...notification }).catch((notifyError) => {
           logger.warn('Failed to notify platform admins of new org request', {
@@ -1093,9 +1025,7 @@ export const listOrganizationsForOnboarding = async (
     const query = typeof req.query.query === 'string' ? req.query.query.trim() : '';
     const queryLower = query.toLowerCase();
     const limitRaw = Number(req.query.limit);
-    const limit = Number.isFinite(limitRaw)
-      ? Math.max(1, Math.min(100, Math.trunc(limitRaw)))
-      : 25;
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(100, Math.trunc(limitRaw))) : 25;
 
     const organizations = await prisma.organization.findMany({
       where: {
@@ -1114,9 +1044,10 @@ export const listOrganizationsForOnboarding = async (
     const filtered =
       queryLower.length === 0
         ? organizations
-        : organizations.filter((organization) =>
-            organization.name.toLowerCase().includes(queryLower) ||
-            (organization.domain ?? '').toLowerCase().includes(queryLower)
+        : organizations.filter(
+            (organization) =>
+              organization.name.toLowerCase().includes(queryLower) ||
+              (organization.domain ?? '').toLowerCase().includes(queryLower)
           );
 
     const results = filtered.slice(0, limit);
@@ -1130,11 +1061,7 @@ export const listOrganizationsForOnboarding = async (
   }
 };
 
-export const submitOrganizationClaim = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const submitOrganizationClaim = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const organizationId = Number(req.params.id);
     if (Number.isNaN(organizationId)) {
@@ -1319,10 +1246,7 @@ export const submitOrganizationClaim = async (
       });
     }
 
-    const verificationEmail = buildVerificationEmail(
-      claimResult.verificationToken,
-      firstName
-    );
+    const verificationEmail = buildVerificationEmail(claimResult.verificationToken, firstName);
 
     try {
       await sendEmail({ to: normalizedEmail, ...verificationEmail });
@@ -1510,10 +1434,7 @@ export const requestOrganizationAdminAccess = async (
       });
     }
 
-    const verificationEmail = buildVerificationEmail(
-      requestResult.verificationToken,
-      firstName
-    );
+    const verificationEmail = buildVerificationEmail(requestResult.verificationToken, firstName);
 
     try {
       await sendEmail({ to: normalizedEmail, ...verificationEmail });
@@ -1574,8 +1495,7 @@ export const requestOrganizationAdminAccess = async (
     });
 
     return res.status(201).json({
-      message:
-        'Admin access request submitted. Verify your email and wait for leadership review.',
+      message: 'Admin access request submitted. Verify your email and wait for leadership review.',
       code: 'ORG_ADMIN_ACCESS_REQUEST_SUBMITTED',
       request: {
         id: requestResult.claim.id,
@@ -1590,7 +1510,6 @@ export const requestOrganizationAdminAccess = async (
 
 export const deleteCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -1638,16 +1557,17 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
         const lastChanged = currentUser.displayNameUpdatedAt ?? currentUser.createdAt;
         const now = new Date();
         const msElapsed = now.getTime() - new Date(lastChanged).getTime();
-        const GRACE_PERIOD_MS = 15 * 60 * 1000;       // 15 minutes
-        const COOLDOWN_MS     = 30 * 24 * 60 * 60 * 1000; // 30 days
+        const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 minutes
+        const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-        const isWithinGrace   = msElapsed <= GRACE_PERIOD_MS;
+        const isWithinGrace = msElapsed <= GRACE_PERIOD_MS;
         const isWithinCooldown = msElapsed > GRACE_PERIOD_MS && msElapsed < COOLDOWN_MS;
 
         if (isWithinCooldown && currentUser.displayName !== null) {
           const cooldownEndsAt = new Date(new Date(lastChanged).getTime() + COOLDOWN_MS);
           return res.status(429).json({
-            error: 'You can only change your display name once every 30 days. The 15-minute correction window has passed.',
+            error:
+              'You can only change your display name once every 30 days. The 15-minute correction window has passed.',
             code: 'DISPLAY_NAME_COOLDOWN',
             cooldownEndsAt: cooldownEndsAt.toISOString(),
           });
@@ -1695,7 +1615,6 @@ export const updateCurrentUser = async (req: AuthRequest, res: Response, next: N
   }
 };
 
-
 export const getCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
@@ -1714,8 +1633,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
         displayName: true,
         displayNameUpdatedAt: true,
         profilePicture: true,
-        role: true,         // ← add: needed for role-gating on the UI
-        status: true,       // ← add: so UI knows if PENDING / ACTIVE
+        role: true, // ← add: needed for role-gating on the UI
+        status: true, // ← add: so UI knows if PENDING / ACTIVE
         level: true,
         department: true,
         hall: true,
@@ -1731,8 +1650,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response, next: Next
           take: 1,
           select: {
             id: true,
-            status: true,   // PENDING | APPROVED | REJECTED
-            reason: true,   // rejection reason if rejected
+            status: true, // PENDING | APPROVED | REJECTED
+            reason: true, // rejection reason if rejected
             createdAt: true,
             organization: {
               select: {
@@ -1921,7 +1840,7 @@ export const getMyComments = async (req: AuthRequest, res: Response, next: NextF
 export const getMyAnalytics = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const period = req.query.period as 'current' | 'previous' || 'current';
+    const period = (req.query.period as 'current' | 'previous') || 'current';
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -1934,11 +1853,11 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response, next: Next
     now.setUTCHours(0, 0, 0, 0);
 
     const dayOfWeek = now.getUTCDay(); // 0 (Sun) - 6 (Sat)
-    
+
     // Start of current week (Sunday)
     const currentWeekStart = new Date(now);
     currentWeekStart.setUTCDate(now.getUTCDate() - dayOfWeek);
-    
+
     // Start of previous week (Sunday before)
     const previousWeekStart = new Date(currentWeekStart);
     previousWeekStart.setUTCDate(currentWeekStart.getUTCDate() - 7);
@@ -1958,75 +1877,72 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response, next: Next
     }
 
     // Parallelize all 4 counts over the date range
-    const [
-      totalSurges,
-      totalComments,
-      totalWaves,
-      periodSurges,
-      periodComments,
-      periodWaves
-    ] = await Promise.all([
-      // Granular All-Time Totals
-      prisma.surge.count({ where: { userId } }),
-      prisma.comment.count({ where: { authorId: userId, isAnonymous: false } }),
-      prisma.wave.count({ where: { authorId: userId } }),
+    const [totalSurges, totalComments, totalWaves, periodSurges, periodComments, periodWaves] =
+      await Promise.all([
+        // Granular All-Time Totals
+        prisma.surge.count({ where: { userId } }),
+        prisma.comment.count({ where: { authorId: userId, isAnonymous: false } }),
+        prisma.wave.count({ where: { authorId: userId } }),
 
-      // Specific Period Queries (Current or Previous Week bounding)
-      prisma.surge.findMany({
-        where: {
-          userId,
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
+        // Specific Period Queries (Current or Previous Week bounding)
+        prisma.surge.findMany({
+          where: {
+            userId,
+            createdAt: {
+              gte: startDate,
+              lt: endDate,
+            },
           },
-        },
-        select: { createdAt: true },
-      }),
-      prisma.comment.findMany({
-        where: {
-          authorId: userId,
-          isAnonymous: false,
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
+          select: { createdAt: true },
+        }),
+        prisma.comment.findMany({
+          where: {
+            authorId: userId,
+            isAnonymous: false,
+            createdAt: {
+              gte: startDate,
+              lt: endDate,
+            },
           },
-        },
-        select: { createdAt: true },
-      }),
-      prisma.wave.findMany({
-        where: {
-          authorId: userId,
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
+          select: { createdAt: true },
+        }),
+        prisma.wave.findMany({
+          where: {
+            authorId: userId,
+            createdAt: {
+              gte: startDate,
+              lt: endDate,
+            },
           },
-        },
-        select: { createdAt: true },
-      }),
-    ]);
+          select: { createdAt: true },
+        }),
+      ]);
 
     // Construct exactly 7 daily buckets for the requested week
-    const dailyMap = new Map<string, {
-      date: string;
-      day: string;
-      surges: number;
-      comments: number;
-      waves: number;
-    }>();
+    const dailyMap = new Map<
+      string,
+      {
+        date: string;
+        day: string;
+        surges: number;
+        comments: number;
+        waves: number;
+      }
+    >();
 
     const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     for (let i = 0; i < 7; i++) {
-        const bucketDate = new Date(startDate);
-        bucketDate.setUTCDate(startDate.getUTCDate() + i);
-        const dateStr = bucketDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
-        dailyMap.set(dateStr, {
-            date: dateStr,
-            day: shortDays[bucketDate.getUTCDay()],
-            surges: 0,
-            comments: 0,
-            waves: 0,
-        });
+      const bucketDate = new Date(startDate);
+      bucketDate.setUTCDate(startDate.getUTCDate() + i);
+      const dateStr = bucketDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
+      dailyMap.set(dateStr, {
+        date: dateStr,
+        day: shortDays[bucketDate.getUTCDay()],
+        surges: 0,
+        comments: 0,
+        waves: 0,
+      });
     }
 
     // Helper to bucket results into mapping
@@ -2054,7 +1970,10 @@ export const getMyAnalytics = async (req: AuthRequest, res: Response, next: Next
       daily: Array.from(dailyMap.values()),
     });
   } catch (error) {
-    logger.error(`Error fetching user analytics for period: ${req.query.period}`, { error, userId: req.user?.userId });
+    logger.error(`Error fetching user analytics for period: ${req.query.period}`, {
+      error,
+      userId: req.user?.userId,
+    });
     return next(error);
   }
 };

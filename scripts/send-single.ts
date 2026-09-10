@@ -11,9 +11,9 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 // CONFIGURATION: Edit these values before running the script
 // ============================================================================
 
-const TARGET_EMAIL = "somtochukwuonyema02@gmail.com";
-const EMAIL_SUBJECT = "Your organization is now on Echo!";
-const FROM_EMAIL = "contact@echo-ng.com"; 
+const TARGET_EMAIL = 'somtochukwuonyema02@gmail.com';
+const EMAIL_SUBJECT = 'Your organization is now on Echo!';
+const FROM_EMAIL = 'contact@echo-ng.com';
 
 const EMAIL_HTML_CONTENT = `
     <p>Hi,</p>
@@ -53,30 +53,29 @@ Welcome to Echo!
 delete process.env.RESEND_API_KEY;
 
 if (FROM_EMAIL) {
-    process.env.EMAIL_FROM = FROM_EMAIL;
+  process.env.EMAIL_FROM = FROM_EMAIL;
 }
 
 // Dynamically import to ensure process.env changes are picked up if they affect the module
 const { sendEmail } = await import('../src/services/emailService.js');
 
 async function sendSingleEmail() {
-    try {
-        console.log(`Preparing to send email to: ${TARGET_EMAIL}`);
-        console.log(`Subject: ${EMAIL_SUBJECT}`);
-        console.log(`From: ${process.env.EMAIL_FROM || process.env.SMTP_USER}`);
+  try {
+    console.log(`Preparing to send email to: ${TARGET_EMAIL}`);
+    console.log(`Subject: ${EMAIL_SUBJECT}`);
+    console.log(`From: ${process.env.EMAIL_FROM || process.env.SMTP_USER}`);
 
-        await sendEmail({
-            to: TARGET_EMAIL,
-            subject: EMAIL_SUBJECT,
-            html: EMAIL_HTML_CONTENT,
-            text: EMAIL_TEXT_CONTENT
-        });
+    await sendEmail({
+      to: TARGET_EMAIL,
+      subject: EMAIL_SUBJECT,
+      html: EMAIL_HTML_CONTENT,
+      text: EMAIL_TEXT_CONTENT,
+    });
 
-        console.log(`\n✅ Email successfully sent to ${TARGET_EMAIL}!`);
-
-    } catch (error) {
-        console.error('\n❌ An unexpected error occurred:', error);
-    }
+    console.log(`\n✅ Email successfully sent to ${TARGET_EMAIL}!`);
+  } catch (error) {
+    console.error('\n❌ An unexpected error occurred:', error);
+  }
 }
 
 sendSingleEmail();

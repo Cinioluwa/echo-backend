@@ -1,11 +1,10 @@
 import { z } from 'zod';
 
-export const getNotificationPreferencesSchema = z
-  .object({
-    query: z.record(z.string(), z.unknown()).optional(),
-    params: z.record(z.string(), z.unknown()).optional(),
-    body: z.unknown().optional(),
-  });
+export const getNotificationPreferencesSchema = z.object({
+  query: z.record(z.string(), z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
+  body: z.unknown().optional(),
+});
 
 const patchBodySchema = z
   .object({
@@ -27,10 +26,8 @@ const patchBodySchema = z
     message: 'At least one preference field must be provided',
   });
 
-export const patchNotificationPreferencesSchema = z
-  .object({
-    body: patchBodySchema,
-    query: z.record(z.string(), z.unknown()).optional(),
-    params: z.record(z.string(), z.unknown()).optional(),
-  });
-
+export const patchNotificationPreferencesSchema = z.object({
+  body: patchBodySchema,
+  query: z.record(z.string(), z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
+});

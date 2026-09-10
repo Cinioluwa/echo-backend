@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { createOrganization, createUser, createCategory, createPing, createWave, cleanupTestData } from '../fixtures/index.js';
+import {
+  createOrganization,
+  createUser,
+  createCategory,
+  createPing,
+  createWave,
+  cleanupTestData,
+} from '../fixtures/index.js';
 
 describe('Wave CRUD Operations', () => {
   let client: any;
@@ -24,13 +31,13 @@ describe('Wave CRUD Operations', () => {
       organizationId: org1.id,
       email: 'user1@org1.edu',
       firstName: 'User',
-      lastName: 'One'
+      lastName: 'One',
     });
     user2 = await createUser({
       organizationId: org2.id,
       email: 'user2@org2.edu',
       firstName: 'User',
-      lastName: 'Two'
+      lastName: 'Two',
     });
 
     // Create categories
@@ -43,7 +50,7 @@ describe('Wave CRUD Operations', () => {
       organizationId: org1.id,
       categoryId: category1.id,
       title: 'Ping1',
-      content: 'Content1'
+      content: 'Content1',
     });
 
     ping2 = await createPing({
@@ -51,7 +58,7 @@ describe('Wave CRUD Operations', () => {
       organizationId: org2.id,
       categoryId: category2.id,
       title: 'Ping2',
-      content: 'Content2'
+      content: 'Content2',
     });
 
     // Login users to get tokens
@@ -145,12 +152,12 @@ describe('Wave CRUD Operations', () => {
       wave1 = await createWave({
         pingId: ping1.id,
         organizationId: org1.id,
-        solution: 'Wave 1 solution'
+        solution: 'Wave 1 solution',
       });
       wave2 = await createWave({
         pingId: ping2.id,
         organizationId: org2.id,
-        solution: 'Wave 2 solution'
+        solution: 'Wave 2 solution',
       });
     });
 
@@ -196,10 +203,7 @@ describe('Wave CRUD Operations', () => {
     });
 
     it('should return 404 for non-existent wave', async () => {
-      await client
-        .get('/api/waves/99999')
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(404);
+      await client.get('/api/waves/99999').set('Authorization', `Bearer ${user1Token}`).expect(404);
     });
 
     it('should NOT allow access to other org wave', async () => {
@@ -225,7 +229,7 @@ describe('Wave CRUD Operations', () => {
         pingId: ping1.id,
         organizationId: org1.id,
         authorId: user1.id,
-        solution: 'Original solution'
+        solution: 'Original solution',
       });
     });
 
@@ -247,7 +251,7 @@ describe('Wave CRUD Operations', () => {
       const otherUserWave = await createWave({
         pingId: ping2.id,
         organizationId: org2.id,
-        solution: 'Other user wave'
+        solution: 'Other user wave',
       });
 
       await client
@@ -262,7 +266,7 @@ describe('Wave CRUD Operations', () => {
       const waveForOtherPing = await createWave({
         pingId: ping2.id,
         organizationId: org2.id,
-        solution: 'Wave for other ping'
+        solution: 'Wave for other ping',
       });
 
       // user1 is in org1, ping2 is in org2, so organization middleware returns 404
@@ -292,7 +296,7 @@ describe('Wave CRUD Operations', () => {
         pingId: ping1.id,
         organizationId: org1.id,
         authorId: user1.id,
-        solution: 'Wave to delete'
+        solution: 'Wave to delete',
       });
     });
 
@@ -320,7 +324,7 @@ describe('Wave CRUD Operations', () => {
       const otherUserWave = await createWave({
         pingId: ping2.id,
         organizationId: org2.id,
-        solution: 'Other user wave to delete'
+        solution: 'Other user wave to delete',
       });
 
       await client
@@ -334,7 +338,7 @@ describe('Wave CRUD Operations', () => {
       const waveForOtherPing = await createWave({
         pingId: ping2.id,
         organizationId: org2.id,
-        solution: 'Wave for other ping to delete'
+        solution: 'Wave for other ping to delete',
       });
 
       // user1 is in org1, ping2 is in org2, so organization middleware returns 404

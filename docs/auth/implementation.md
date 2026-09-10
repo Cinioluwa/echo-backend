@@ -9,6 +9,7 @@ Google OAuth authentication has been successfully integrated into the Echo backe
 ## 🔧 What Was Implemented
 
 ### 1. **Database Changes**
+
 - Added `password` (nullable) - Optional for Google OAuth users
 - Added `googleId` (unique, nullable) - Stores Google's unique user identifier
 - Added `profilePicture` (nullable) - Stores Google profile picture URL
@@ -16,18 +17,21 @@ Google OAuth authentication has been successfully integrated into the Echo backe
 - Migration applied: `20251103100127_add_google_auth_fields`
 
 ### 2. **New Files Created**
+
 - `src/services/googleAuthService.ts` - Google token verification service
 - `src/controllers/googleAuthController.ts` - Google auth controller
 - `src/routes/authRoutes.ts` - Auth routes (including Google OAuth)
 - `GOOGLE_AUTH_TESTING_GUIDE.md` - Comprehensive testing documentation
 
 ### 3. **Modified Files**
+
 - `src/server.ts` - Added auth routes mounting and rate limiting
 - `src/config/env.ts` - Already had `GOOGLE_CLIENT_ID` configuration
 - `src/controllers/userController.ts` - Added check for Google-only accounts in login
 - `prisma/schema.prisma` - Updated User model with Google auth fields
 
 ### 4. **Dependencies**
+
 - `google-auth-library` - Already installed in your project
 
 ---
@@ -37,6 +41,7 @@ Google OAuth authentication has been successfully integrated into the Echo backe
 **POST** `/api/auth/google`
 
 **Request Body:**
+
 ```json
 {
   "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjY4ZGE..."
@@ -44,6 +49,7 @@ Google OAuth authentication has been successfully integrated into the Echo backe
 ```
 
 **Response (Success):**
+
 ```json
 {
   "message": "Google authentication successful",
@@ -76,6 +82,7 @@ Google OAuth authentication has been successfully integrated into the Echo backe
 ## 📋 Setup Required
 
 ### 1. Google Cloud Console
+
 1. Go to https://console.cloud.google.com/
 2. Create/select a project
 3. Enable Google+ API
@@ -83,12 +90,15 @@ Google OAuth authentication has been successfully integrated into the Echo backe
 5. Configure authorized redirect URIs
 
 ### 2. Environment Variable
+
 Add to `.env`:
+
 ```env
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
 
 ### 3. Database
+
 Migration already applied. Your database now supports Google auth fields.
 
 ---
@@ -98,6 +108,7 @@ Migration already applied. Your database now supports Google auth fields.
 See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 
 **Quick Test:**
+
 1. Get ID token from https://developers.google.com/oauthplayground/
 2. Send POST request to `/api/auth/google` with token
 3. Receive JWT token for subsequent API calls
@@ -107,6 +118,7 @@ See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 ## 🎯 User Flow
 
 ### New User (First Time Google Sign-In)
+
 1. User signs in with Google → Frontend gets ID token
 2. Frontend sends ID token to `/api/auth/google`
 3. Backend verifies token → Extracts user info
@@ -115,12 +127,14 @@ See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 6. Backend returns JWT + user data
 
 ### Existing User (Has Password Account)
+
 1. User signs in with Google → Frontend gets ID token
 2. Backend finds existing user by email
 3. Backend links Google account (adds `googleId`)
 4. Backend returns JWT + user data
 
 ### Existing User (Already Has Google Account)
+
 1. User signs in with Google → Frontend gets ID token
 2. Backend finds user by email
 3. Backend returns JWT + user data (standard login)
@@ -129,19 +143,20 @@ See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 
 ## 🛡️ Error Handling
 
-| Scenario | Status | Response |
-|----------|--------|----------|
-| Invalid token | 401 | `Invalid Google token` |
-| Consumer email | 400 | `Please use your company email...` |
-| No organization | 404 | `No organization found for domain...` |
-| Inactive org | 403 | `Your organization is not active...` |
-| Missing token | 400 | `Google token is required` |
+| Scenario        | Status | Response                              |
+| --------------- | ------ | ------------------------------------- |
+| Invalid token   | 401    | `Invalid Google token`                |
+| Consumer email  | 400    | `Please use your company email...`    |
+| No organization | 404    | `No organization found for domain...` |
+| Inactive org    | 403    | `Your organization is not active...`  |
+| Missing token   | 400    | `Google token is required`            |
 
 ---
 
 ## 🔄 Backward Compatibility
 
 ✅ **Existing features still work:**
+
 - Email/password registration
 - Email/password login
 - Email verification
@@ -149,6 +164,7 @@ See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 - All other endpoints unchanged
 
 ⚠️ **New behavior:**
+
 - Users who registered with Google cannot use password login
 - Password login now checks if account is Google-only and returns appropriate error
 
@@ -194,12 +210,11 @@ See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 ✅ Profile picture from Google  
 ✅ Rate limiting  
 ✅ Security best practices  
-✅ Comprehensive error handling  
+✅ Comprehensive error handling
 
 ---
 
 **Implementation Status**: ✅ **READY FOR TESTING**
-
 
 ---
 
@@ -208,11 +223,14 @@ See **GOOGLE_AUTH_TESTING_GUIDE.md** for detailed testing instructions.
 This backend is designed to work with **Google Identity Services (GIS)**.
 
 ### 1. Prerequisite: Client ID
+
 The frontend implementation **requires** the same `GOOGLE_CLIENT_ID` used in the backend.
+
 - **Backend**: Set in `.env`
 - **Frontend**: Set in frontend environment variables (e.g., `NEXT_PUBLIC_GOOGLE_CLIENT_ID`)
 
 ### 2. Integration Flow
+
 1.  **Frontend**: Uses Google SDK to get an `id_token`.
 2.  **Frontend**: POSTs `id_token` to `/api/auth/google`.
 3.  **Backend**: Validates token, creates/logs in user, returns JWT.
@@ -222,11 +240,13 @@ The frontend implementation **requires** the same `GOOGLE_CLIENT_ID` used in the
 For a production Next.js app, we recommend using **`@react-oauth/google`**.
 
 #### Installation
+
 ```bash
 npm install @react-oauth/google
 ```
 
 #### Provider Setup (`app/layout.tsx`)
+
 ```tsx
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -244,6 +264,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ```
 
 #### Login Component Example
+
 ```tsx
 'use client';
 import { GoogleLogin } from '@react-oauth/google';
@@ -262,8 +283,8 @@ export default function GoogleLoginButton() {
 
     const data = await res.json();
     if (res.ok) {
-        localStorage.setItem('token', data.token); // Store JWT
-        // Redirect to dashboard...
+      localStorage.setItem('token', data.token); // Store JWT
+      // Redirect to dashboard...
     }
   };
 
@@ -272,6 +293,7 @@ export default function GoogleLoginButton() {
 ```
 
 ### 4. ⚠️ Production Checklist for Frontend
+
 1.  **HTTPS**: Google OAuth **requires** HTTPS in production.
 2.  **Allowed Origins**: Add your production frontend domain (e.g., `https://app.yourcompany.com`) to **"Authorized JavaScript Origins"** in Google Cloud Console.
 3.  **Allowed Redirects**: Add your production domain to **"Authorized Redirect URIs"** in Google Cloud Console.

@@ -2,11 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types/AuthRequest.js';
 import prisma from '../config/db.js';
 
-const superAdminMiddleware = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+const superAdminMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
 

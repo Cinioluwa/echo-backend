@@ -3,6 +3,7 @@
 Backend server for the Echo application — a social feedback platform for university students with multitenancy support.
 
 ## What's inside
+
 - Auth with JWT (register, login, Google OAuth, profile management)
 - Multitenancy: Organization-scoped data isolation (pings, waves, comments, surges, announcements)
 - Pings (issues), Waves (solutions), Comments, Surges (likes), Official Responses
@@ -12,6 +13,7 @@ Backend server for the Echo application — a social feedback platform for unive
 - **API Documentation**: Interactive Swagger/OpenAPI docs at `/docs`
 
 ## Tech stack
+
 - Runtime: Node.js + TypeScript (ES modules)
 - Framework: Express 5
 - Database: PostgreSQL (Neon) with Prisma ORM
@@ -23,13 +25,13 @@ Backend server for the Echo application — a social feedback platform for unive
 
 ## Quick start (local)
 
-1) Install dependencies
+1. Install dependencies
 
 ```powershell
 npm install
 ```
 
-2) Connect to Neon (Postgres-as-a-service)
+2. Connect to Neon (Postgres-as-a-service)
 
 - Create a project and database in Neon
 - Copy the connection string
@@ -41,7 +43,7 @@ Example `DATABASE_URL` (replace placeholders):
 postgresql://<user>:<password>@<neon-host>/<database>?sslmode=require
 ```
 
-3) Create `.env`
+3. Create `.env`
 
 Create a `.env` file in the project root with at least the following variables:
 
@@ -56,7 +58,7 @@ NODE_ENV=development
 GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 ```
 
-4) Apply Prisma migrations and generate client
+4. Apply Prisma migrations and generate client
 
 ```powershell
 npx prisma migrate dev
@@ -73,7 +75,7 @@ node setup-multitenancy-tests.js
 
 Details and test credentials are listed in the "Multitenancy: seed test data" section below.
 
-5) Run the API (dev)
+5. Run the API (dev)
 
 ```powershell
 npm run dev
@@ -81,7 +83,7 @@ npm run dev
 
 The server listens on `http://localhost:${PORT}` (default `3000`). Health check: `GET /healthz` → `{ status: "ok" }`.
 
-6) Optional — Run tests
+6. Optional — Run tests
 
 ```powershell
 # Unit and integration tests
@@ -110,21 +112,25 @@ npm run test:e2e
 
 **1. Populate Demo Data**
 Don't build with an empty DB! Run this to seed Users, Pings, Waves, and Resolved Issues:
+
 ```bash
 node scripts/seed-demo.mjs
 ```
 
 **2. Test Credentials** (Created by seed script)
+
 - **Admin:** `admin@cu.edu.ng` / `password123`
 - **Student:** `student@cu.edu.ng` / `password123`
 
 **3. Key API Routes**
+
 - **Login:** `POST /api/auth/login` (Returns `{ token }`)
 - **Feed:** `GET /api/pings?page=1`
 - **Create Ping:** `POST /api/pings`
 - **Admin Export:** `GET /api/admin/export/pings` (Streams CSV)
 
 **4. Frontend Integration Notes**
+
 - **Category Handling**: Fetch categories once via `GET /api/categories` and cache them. Use IDs for filtering soundboard/stream. Hardcoding IDs breaks on seed changes—always fetch dynamically.
 - **Soundboard/Stream Flow**: For "All Categories", omit `category` param. For specific, include `category=<id>`. Handle pagination UI with `hasNextPage`.
 - **Claim Lock Behavior**: `GET /api/categories` remains available for unclaimed organizations, but category creation is blocked until leadership is verified.
@@ -144,6 +150,7 @@ Echo supports preseeded organizations where leadership is claimed and verified a
 - `POST /api/users/organizations/:id/claim`
 
 Rules enforced by backend:
+
 - Claim email domain must exactly match `Organization.domain`.
 - Open-domain organizations are not claimable through this endpoint.
 - Duplicate pending claims from the same user for the same organization are rejected.
@@ -156,6 +163,7 @@ If leadership is already verified, this endpoint returns `ORG_ALREADY_CLAIMED` a
 - `POST /api/users/organizations/:id/request-admin-access`
 
 Rules enforced by backend:
+
 - Organization must be active and already leadership-verified.
 - Email domain must match `Organization.domain` when domain is configured.
 - Duplicate pending admin-access requests from the same user are rejected.
@@ -170,12 +178,14 @@ Rules enforced by backend:
 - `POST /api/admin/organization-claims/:id/reject`
 
 Approval effects:
+
 - Claim becomes `APPROVED`.
 - Organization is marked claim-verified and category customization is unlocked.
 - Claimant is promoted to organization admin.
 - Any other pending claims for that organization are auto-rejected.
 
 Admin-access approval effects (`requestType=ADMIN_ACCESS`):
+
 - Request becomes `APPROVED`.
 - Requester is promoted to organization admin.
 - Existing verified leadership remains intact (no claim reset).
@@ -202,46 +212,48 @@ npm run seed:orgs:nigeria
 ```
 
 Seed behavior:
+
 - Upserts preconfigured Nigerian institutions into `Organization`.
 - Creates unclaimed institutions with `isClaimVerified=false` and `categoryCustomizationLocked=true`.
-- Ensures default categories (`General`, `Academics`, `Facilities`) exist for each seeded organizati├── docs/                        # Project documentation
-│   ├── api/                    # Swagger and API related docs
-│   ├── auth/                   # Google OAuth and authentication docs
-│   ├── testing/                # Manual, Postman, and standards docs
-│   ├── architecture/           # Websocket and core system docs
-│   └── project/                # Status, roadmap, and readiness docs
-├── src/
-│   ├── server.ts                # App entry (Express + middlewares + routes)
-│   ├── app.ts                   # Express app factory (for testing)
-│   ├── config/                  # env, db (Prisma), logger (Winston)
-│   ├── controllers/             # Route handlers (auth, pings, waves, admin, etc.)
-│   ├── middleware/              # auth, admin/rep guards, validation, errors, request logger, organization context
-│   ├── routes/                  # Express routers (users, pings, waves, comments, surges, admin, announcements, public)
-│   ├── schemas/                 # Zod schemas (validation + pagination)
-│   ├── services/                # Business logic (email, Google auth, tokens)
-│   ├── types/                   # Shared TS types (AuthRequest, etc.)
-│   └── utils/                   # Utility functions
-├── prisma/
-│   ├── schema.prisma            # Prisma schema (User, Ping, Wave, Comment, Surge, OfficialResponse, Announcement, Organization)
-│   ├── test-schema.prisma       # Test schema (SQLite)
-│   └── migrations/              # Migration history
-├── tests/
-│   ├── unit/                    # Unit tests
-│   ├── integration/             # Integration tests (with SQLite DB)
-│   ├── e2e/                     # E2E tests (Playwright, API-only)
-│   ├── fixtures/                # Test data factories
-│   ├── vitest.config.ts         # Vitest config
-│   └── playwright.config.ts     # Playwright config
-├── logs/                        # Winston log files (error.log, combined.log in prod)
-├── Dockerfile                   # Build a production image (connects to Neon)
-├── package.json                 # Scripts and deps
-├── tsconfig.json                # TS config (NodeNext)
-├── tsconfig.build.json          # TS config for production builds
-└── setup-multitenancy-tests.js  # Seed script for test datancy-tests.js  # Seed script for test data
-├── package.json                 # Scripts and deps
-├── tsconfig.json                # TS config (NodeNext)
-└── tsconfig.build.json          # TS config for production builds
-```
+- Ensures default categories (`General`, `Academics`, `Facilities`) exist for each seeded organizati├── docs/ # Project documentation
+  │ ├── api/ # Swagger and API related docs
+  │ ├── auth/ # Google OAuth and authentication docs
+  │ ├── testing/ # Manual, Postman, and standards docs
+  │ ├── architecture/ # Websocket and core system docs
+  │ └── project/ # Status, roadmap, and readiness docs
+  ├── src/
+  │ ├── server.ts # App entry (Express + middlewares + routes)
+  │ ├── app.ts # Express app factory (for testing)
+  │ ├── config/ # env, db (Prisma), logger (Winston)
+  │ ├── controllers/ # Route handlers (auth, pings, waves, admin, etc.)
+  │ ├── middleware/ # auth, admin/rep guards, validation, errors, request logger, organization context
+  │ ├── routes/ # Express routers (users, pings, waves, comments, surges, admin, announcements, public)
+  │ ├── schemas/ # Zod schemas (validation + pagination)
+  │ ├── services/ # Business logic (email, Google auth, tokens)
+  │ ├── types/ # Shared TS types (AuthRequest, etc.)
+  │ └── utils/ # Utility functions
+  ├── prisma/
+  │ ├── schema.prisma # Prisma schema (User, Ping, Wave, Comment, Surge, OfficialResponse, Announcement, Organization)
+  │ ├── test-schema.prisma # Test schema (SQLite)
+  │ └── migrations/ # Migration history
+  ├── tests/
+  │ ├── unit/ # Unit tests
+  │ ├── integration/ # Integration tests (with SQLite DB)
+  │ ├── e2e/ # E2E tests (Playwright, API-only)
+  │ ├── fixtures/ # Test data factories
+  │ ├── vitest.config.ts # Vitest config
+  │ └── playwright.config.ts # Playwright config
+  ├── logs/ # Winston log files (error.log, combined.log in prod)
+  ├── Dockerfile # Build a production image (connects to Neon)
+  ├── package.json # Scripts and deps
+  ├── tsconfig.json # TS config (NodeNext)
+  ├── tsconfig.build.json # TS config for production builds
+  └── setup-multitenancy-tests.js # Seed script for test datancy-tests.js # Seed script for test data
+  ├── package.json # Scripts and deps
+  ├── tsconfig.json # TS config (NodeNext)
+  └── tsconfig.build.json # TS config for production builds
+
+````
 
 ## Environment variables
 
@@ -340,9 +352,10 @@ curl -X POST http://localhost:3000/api/uploads \
   -F "files=@photo1.jpg" \
   -F "files=@photo2.jpg"
 # Returns: { "media": [{ "id": 1, "url": "..." }, { "id": 2, "url": "..." }] }
-```
+````
 
 **2. Create a ping with media:**
+
 ```bash
 curl -X POST http://localhost:3000/api/pings \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -351,6 +364,7 @@ curl -X POST http://localhost:3000/api/pings \
 ```
 
 **Or attach media to existing ping/wave:**
+
 ```bash
 curl -X POST http://localhost:3000/api/uploads/attach \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -361,6 +375,7 @@ curl -X POST http://localhost:3000/api/uploads/attach \
 ### Setup
 
 Add Cloudinary credentials to your `.env`:
+
 ```env
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
@@ -439,6 +454,7 @@ if (process.env.NODE_ENV !== 'production') {
 ### Importing OpenAPI Spec
 
 The raw OpenAPI specification is available at `/docs/json`. Import it into:
+
 - **Postman**: Import → Link → `http://localhost:3000/docs/json`
 - **Insomnia**: Import → From URL → `http://localhost:3000/docs/json`
 - **Code generation tools**: OpenAPI Generator, Swagger Codegen
@@ -457,6 +473,7 @@ The raw OpenAPI specification is available at `/docs/json`. Import it into:
 All JSON bodies are validated with Zod. Many list endpoints accept optional pagination.
 
 ### Auth — `/api/users` & `/api/auth`
+
 - `POST /api/users/register` — Register (email, password, firstName, lastName, level?)
 - `POST /api/users/login` — Login, returns JWT
 - `POST /api/auth/google` — **Google OAuth Sign-In/Sign-Up** (body: `{ token }`) **(preferred)**
@@ -482,6 +499,7 @@ Since Echo uses stateless JWT tokens, logout is handled entirely on the frontend
 3. **Security note**: For immediate revocation (e.g., compromised accounts), implement token blacklisting
 
 **Frontend implementation**:
+
 ```javascript
 // Logout function
 function logout() {
@@ -489,13 +507,14 @@ function logout() {
   localStorage.removeItem('authToken');
   // Or sessionStorage.removeItem('authToken');
   // Or delete cookie
-  
+
   // Redirect to login page
   window.location.href = '/login';
 }
 ```
 
 **Optional: Server-side logout** (if needed for security):
+
 - Add `POST /api/users/logout` endpoint with token blacklisting
 - Store invalidated tokens in Redis/database
 - Check blacklist in `authMiddleware`
@@ -505,20 +524,27 @@ function logout() {
 Echo is **organization-scoped**. Users can only sign in with email domains that map to an `ACTIVE` organization.
 
 **Flow (recommended for production):**
+
 1. User submits an onboarding request: `POST /api/users/organization-waitlist`
-  - Creates `Organization` (status `PENDING`), an `ADMIN` user (status `PENDING`), and an `OrganizationRequest` (status `PENDING`).
-  - Sends an email verification link to the requester.
+
+- Creates `Organization` (status `PENDING`), an `ADMIN` user (status `PENDING`), and an `OrganizationRequest` (status `PENDING`).
+- Sends an email verification link to the requester.
+
 2. User verifies email: `POST /api/users/verify-email`
-  - Always activates the user.
-  - Organization activation depends on `ORG_ONBOARDING_AUTO_ACTIVATE`.
+
+- Always activates the user.
+- Organization activation depends on `ORG_ONBOARDING_AUTO_ACTIVATE`.
+
 3. Platform approves the request (SUPER_ADMIN):
-  - `GET /api/admin/organization-requests?status=PENDING`
-  - `POST /api/admin/organization-requests/:id/approve` (sets org `ACTIVE`)
-  - `POST /api/admin/organization-requests/:id/reject`
+
+- `GET /api/admin/organization-requests?status=PENDING`
+- `POST /api/admin/organization-requests/:id/approve` (sets org `ACTIVE`)
+- `POST /api/admin/organization-requests/:id/reject`
 
 ### Organization join policy (member-level access control)
 
 Organizations now define member join behavior with `joinPolicy`:
+
 - `OPEN`: domain-linked users can join automatically after verification.
 - `REQUIRES_APPROVAL`: matched users are queued for admin approval.
 
@@ -527,6 +553,7 @@ Open-domain organizations (`domain = null`) are permanently locked to `REQUIRES_
 **Domain match does not bypass policy**. A domain match only identifies the organization; access still follows `joinPolicy`.
 
 **Admin endpoints (organization-scoped):**
+
 - `GET /api/admin/organization/settings` — Returns domain, join policy, effective policy, and lock state.
 - `PATCH /api/admin/organization/join-policy` — Update join policy (blocked for open-domain unlock attempts).
 - `GET /api/admin/organization/join-requests?status=PENDING|APPROVED|REJECTED` — List member join requests.
@@ -534,6 +561,7 @@ Open-domain organizations (`domain = null`) are permanently locked to `REQUIRES_
 - `POST /api/admin/organization/join-requests/:id/reject` — Reject pending join request.
 
 **Dev/Staging convenience:**
+
 - To auto-activate orgs on admin email verification (easy dev): set `ORG_ONBOARDING_AUTO_ACTIVATE=true`.
 - To require manual approval (prod-style gating): set `ORG_ONBOARDING_AUTO_ACTIVATE=false`.
 
@@ -550,6 +578,7 @@ node scripts/upsert-school-orgs.mjs
 - In Google Console (OAuth client), include `http://localhost:5173` in Authorized JavaScript origins if the frontend is using Vite.
 
 ### Pings — `/api/pings`
+
 - `GET /` — List pings with optional filters: `category`, `status`, plus pagination
 - `GET /search` — Search by `hashtag` or `q` (text), plus pagination
 - `GET /me` — List my pings (auth, with pagination)
@@ -561,6 +590,7 @@ node scripts/upsert-school-orgs.mjs
 - `PATCH /:id/submit` — Mark ping as submitted (representative only)
 
 ### Waves — nested and standalone
+
 - `GET /api/pings/:pingId/waves` — Waves for a ping (pagination)
 - `POST /api/pings/:pingId/waves` — Create wave for a ping (auth)
 - `GET /api/waves/:id` — Get wave by id (standalone)
@@ -568,25 +598,30 @@ node scripts/upsert-school-orgs.mjs
 - `DELETE /api/waves/:id` — Delete wave (auth, author only)
 
 ### Comments
+
 - `GET /api/pings/:pingId/comments` — Comments for a ping
 - `POST /api/pings/:pingId/comments` — Add a comment to a ping (auth)
 - `GET /api/waves/:waveId/comments` — Comments for a wave
 - `POST /api/waves/:waveId/comments` — Add a comment to a wave (auth)
 
 ### Surges (likes)
+
 - `POST /api/pings/:pingId/surge` — Toggle surge for a ping (auth)
 - `POST /api/waves/:waveId/surge` — Toggle surge for a wave (auth)
 
 ### Official Responses
+
 - `GET /api/pings/:pingId/official-response` — Get official response for a ping
 - `POST /api/pings/:pingId/official-response` — Create official response (representative only)
 
 ### Notifications — `/api/notifications`
+
 - `GET /api/notifications` — List notifications (auth) (query: `page`, `limit`, optional `unreadOnly=true`)
 - `GET /api/notifications/unread-count` — Unread count (auth)
 - `PATCH /api/notifications/:id/read` — Mark one notification as read (auth)
 
 **Notification events (MVP):**
+
 - `WAVE_APPROVED` — when an admin approves a wave (notifies the ping author)
 - `OFFICIAL_RESPONSE_POSTED` — when a representative posts an official response (notifies the ping author)
 - `ANNOUNCEMENT_POSTED` — when an admin posts an announcement (notifies org users excluding the author)
@@ -594,17 +629,20 @@ node scripts/upsert-school-orgs.mjs
 Email sending is best-effort and depends on SMTP/Resend configuration.
 
 ### Announcements
+
 - `GET /api/announcements` — Public announcements with optional filters: `college`, `hall`, `level`, `gender`
 - `POST /api/admin/announcements` — Create announcement (admin only)
 - `PATCH /api/admin/announcements/:id` — Update announcement (admin only)
 - `DELETE /api/admin/announcements/:id` — Delete announcement (admin only)
 
 ### Representatives — `/api/representatives`
+
 - `GET /pings/submitted` — Pings marked as submitted (rep-only; pagination)
 - `GET /waves/top` — Top waves for review (rep-only)
 - `POST /waves/forward` — Forward waves for admin review (rep-only)
 
 ### Admin — `/api/admin`
+
 - `GET /stats` — Platform stats (admin) (optional query: `weeks`, `offsetWeeks`)
 - `GET /pings` — List all pings with filters/pagination (admin)
 - `GET /pings/priority` — Priority-ranked pings in window (admin) (query: `weeks`, `offsetWeeks`, optional `limit`)
@@ -628,9 +666,10 @@ Email sending is best-effort and depends on SMTP/Resend configuration.
 - `DELETE /announcements/:id` — Delete announcement (admin)
 
 ### Public
+
 - `GET /api/public/soundboard` — Public pings (organization-scoped, sortable by trending/new, filterable by category)
   - Query params: `?page=1&limit=20&sort=trending|new&category=<id>`
-  - Notes: 
+  - Notes:
     - `sort`: Defaults to 'new' (by createdAt desc). 'trending' sorts by surgeCount desc, then createdAt desc.
     - `category`: Optional category ID (from `GET /api/categories`). If omitted, returns all categories ("All Categories").
     - Pagination: `page` starts at 1, `limit` max 100 (default 20). Returns `totalPages`, `currentPage`, `hasNextPage`, `hasPreviousPage`.
@@ -645,14 +684,17 @@ Email sending is best-effort and depends on SMTP/Resend configuration.
   - Edge cases: No resolved pings returns empty array. 'all' includes all resolved pings.
 
 ### Categories — `/api/categories`
+
 - `GET /api/categories` — Get all categories for user's organization (auth, optional search: `?q=text`)
   - Notes: Returns `{id, name}` array. Cache on app load/soundboard entry. No pagination.
   - Edge cases: No auth returns 401. Organization not found returns 404. Search `q` is case-insensitive partial match on name.
 
 ### Health check
+
 - `GET /healthz` — `{ status: "ok" }`
 
 ## Security and middleware
+
 - CORS enabled (configure origins for production)
 - Helmet HTTP headers
 - Rate limiting:
@@ -664,6 +706,7 @@ Email sending is best-effort and depends on SMTP/Resend configuration.
 - Multitenancy middleware: `organizationMiddleware` attaches `req.organizationId` from JWT
 
 ## Database schema (Prisma)
+
 Models: `User`, `Organization`, `Ping`, `Wave`, `Comment`, `Surge`, `OfficialResponse`, `Announcement` with enums `Role`, `Status`, `WaveCategory`, `ProgressStatus` and helpful indexes for query performance. See `prisma/schema.prisma`.
 
 Common operations:
@@ -680,12 +723,14 @@ npx prisma studio
 ```
 
 ## Testing
+
 - **Unit tests**: Logic in services, middleware, schemas (Vitest)
 - **Integration tests**: API endpoints with SQLite DB (Vitest + Supertest)
 - **E2E tests**: Full workflows via API (Playwright, API-only)
-- Run with seeded data for multitenancy tests. 
+- Run with seeded data for multitenancy tests.
 
 ## Logging
+
 - Human-readable colored logs in development
 - JSON structured logs in production
 - Files: `logs/error.log` (always), `logs/combined.log` (production)
@@ -717,6 +762,7 @@ npx prisma migrate deploy
 If you want to quickly try multitenancy flows and organization-scoped APIs, run the provided seed script after applying migrations.
 
 Prerequisites:
+
 - `.env` has a valid `DATABASE_URL`
 - You have run `npx prisma migrate dev` (or `deploy` in prod)
 
@@ -727,16 +773,19 @@ node setup-multitenancy-tests.js
 ```
 
 What it does:
+
 - Creates 3 organizations: Covenant University (cu.edu.ng), Test University A (testuniva.edu), Test University B (testunivb.edu)
 - Upserts categories per organization
 - Creates users in each org with roles ADMIN / REPRESENTATIVE / USER
 
 Test credentials (password for all: `password123`):
+
 - Covenant University: `admin@cu.edu.ng`, `rep@cu.edu.ng`, `student@cu.edu.ng`
 - Test University A: `adminA@testuniva.edu`, `studentA@testuniva.edu`
 - Test University B: `adminB@testunivb.edu`, `studentB@testunivb.edu`
 
 Notes:
+
 - The script uses upserts, so it's safe to re-run.
 - Organization membership is determined by the email domain in your flows. Use the above domains for testing isolation.
 - See [multitenancy.md](docs/testing/multitenancy.md) for a checklist and test ideas.
@@ -746,19 +795,20 @@ Notes:
 You only need this when running multiple app instances (e.g., AWS Fargate). For single-instance dev, the in-memory limiter is fine.
 
 Steps to enable later:
-1) Install packages
+
+1. Install packages
 
 ```powershell
 npm install ioredis rate-limit-redis
 ```
 
-2) Configure `REDIS_URL` (local or ElastiCache in prod). Example for local:
+2. Configure `REDIS_URL` (local or ElastiCache in prod). Example for local:
 
 ```env
 REDIS_URL=redis://localhost:6379
 ```
 
-3) In `src/server.ts`, there is a PRE-DEPLOY comment block with a ready-to-uncomment Redis-backed limiter. Uncomment that block and apply it (replace the in-memory limiter).
+3. In `src/server.ts`, there is a PRE-DEPLOY comment block with a ready-to-uncomment Redis-backed limiter. Uncomment that block and apply it (replace the in-memory limiter).
 
 Optional: Local Redis via docker-compose (if you use compose)
 
@@ -768,7 +818,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis-data:/data
 
@@ -779,6 +829,7 @@ volumes:
 In production, point `REDIS_URL` to your Amazon ElastiCache endpoint.
 
 ## Contributing
+
 1. Fork repository and create a feature branch
 2. Develop with `npm run dev`
 3. Lint/format before committing: `npm run lint && npm run format`
@@ -786,6 +837,7 @@ In production, point `REDIS_URL` to your Amazon ElastiCache endpoint.
 5. Open a Pull Request
 
 ## License
+
 Private and proprietary
 
 ---

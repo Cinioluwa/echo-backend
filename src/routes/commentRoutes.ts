@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { 
-  createCommentOnPing, 
+import {
+  createCommentOnPing,
   getCommentsForPing,
-  createCommentOnWave, 
+  createCommentOnWave,
   getCommentsForWave,
   deleteComment,
   updateComment,
@@ -12,7 +12,7 @@ import authMiddleware from '../middleware/authMiddleware.js';
 import moderationMiddleware from '../middleware/moderationMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { validate } from '../middleware/validationMiddleware.js';
-import { 
+import {
   createCommentOnPingSchema,
   getCommentsForPingSchema,
   createCommentOnWaveSchema,
@@ -31,7 +31,7 @@ import {
  *     summary: Create a comment on a ping
  *     description: |
  *       Add a comment to a specific ping (issue).
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Comment is created in user's organization.
  *     tags:
@@ -81,9 +81,9 @@ import {
  *     summary: Get all comments for a ping
  *     description: |
  *       Retrieve all comments on a specific ping.
- *       
+ *
  *       **Authentication required**: User must be logged in.
- *       
+ *
  *       Comments are returned sorted by creation date (oldest first for conversation flow).
  *     tags:
  *       - Comments
@@ -116,9 +116,21 @@ import {
 // Router for ping comments: /api/pings/:pingId/comments
 export const pingCommentRouter = Router({ mergeParams: true });
 
-pingCommentRouter.route('/')
-  .post(authMiddleware, moderationMiddleware, organizationMiddleware, validate(createCommentOnPingSchema), createCommentOnPing)
-  .get(authMiddleware, organizationMiddleware, validate(getCommentsForPingSchema), getCommentsForPing);
+pingCommentRouter
+  .route('/')
+  .post(
+    authMiddleware,
+    moderationMiddleware,
+    organizationMiddleware,
+    validate(createCommentOnPingSchema),
+    createCommentOnPing
+  )
+  .get(
+    authMiddleware,
+    organizationMiddleware,
+    validate(getCommentsForPingSchema),
+    getCommentsForPing
+  );
 
 /**
  * @openapi
@@ -181,7 +193,7 @@ pingCommentRouter.post(
   moderationMiddleware,
   organizationMiddleware,
   validate(createReplyOnPingCommentSchema),
-  createReplyOnPingComment,
+  createReplyOnPingComment
 );
 
 /**
@@ -191,7 +203,7 @@ pingCommentRouter.post(
  *     summary: Create a comment on a wave
  *     description: |
  *       Add a comment to a specific wave (solution).
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Comment is created in user's organization.
  *     tags:
@@ -241,9 +253,9 @@ pingCommentRouter.post(
  *     summary: Get all comments for a wave
  *     description: |
  *       Retrieve all comments on a specific wave.
- *       
+ *
  *       **Authentication required**: User must be logged in.
- *       
+ *
  *       Comments are returned sorted by creation date (oldest first).
  *     tags:
  *       - Comments
@@ -276,9 +288,21 @@ pingCommentRouter.post(
 // Router for wave comments: /api/waves/:waveId/comments
 export const waveCommentRouter = Router({ mergeParams: true });
 
-waveCommentRouter.route('/')
-  .post(authMiddleware, moderationMiddleware, organizationMiddleware, validate(createCommentOnWaveSchema), createCommentOnWave)  // Create a comment on a wave
-  .get(authMiddleware, organizationMiddleware, validate(getCommentsForWaveSchema), getCommentsForWave);                    // Get all comments for a wave
+waveCommentRouter
+  .route('/')
+  .post(
+    authMiddleware,
+    moderationMiddleware,
+    organizationMiddleware,
+    validate(createCommentOnWaveSchema),
+    createCommentOnWave
+  ) // Create a comment on a wave
+  .get(
+    authMiddleware,
+    organizationMiddleware,
+    validate(getCommentsForWaveSchema),
+    getCommentsForWave
+  ); // Get all comments for a wave
 
 // Default export for backward compatibility (wave comments)
 export default waveCommentRouter;
@@ -289,12 +313,12 @@ export default waveCommentRouter;
  *   delete:
  *     summary: Delete a comment
  *     description: |
- *       Permanently deletes a comment. 
- *       
+ *       Permanently deletes a comment.
+ *
  *       **Authorization rules:**
  *       - A user may delete their **own** comment at any time.
  *       - An `ADMIN` or `SUPER_ADMIN` may delete **any** comment in their organization.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Deletion is validated against the user's organization.
  *     tags:
@@ -329,7 +353,7 @@ commentRouter.delete(
   authMiddleware,
   organizationMiddleware,
   validate(commentParamSchema),
-  deleteComment,
+  deleteComment
 );
 
 /**
@@ -339,7 +363,7 @@ commentRouter.delete(
  *     summary: Edit a comment
  *     description: |
  *       Edit the content of a comment you authored.
- *       
+ *
  *       **Rules:**
  *       - You must be the original author.
  *       - The comment must have been created within the last **5 minutes**.
@@ -389,5 +413,5 @@ commentRouter.patch(
   authMiddleware,
   organizationMiddleware,
   validate(updateCommentSchema),
-  updateComment,
+  updateComment
 );

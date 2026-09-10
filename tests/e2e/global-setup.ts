@@ -11,18 +11,21 @@ async function waitForServer(port: number, timeout = 30000): Promise<void> {
     const startTime = Date.now();
 
     const checkServer = () => {
-      const req = http.request({
-        hostname: 'localhost',
-        port,
-        path: '/healthz',
-        method: 'GET'
-      }, (res) => {
-        if (res.statusCode === 200) {
-          resolve();
-        } else {
-          checkAgain();
+      const req = http.request(
+        {
+          hostname: 'localhost',
+          port,
+          path: '/healthz',
+          method: 'GET',
+        },
+        (res) => {
+          if (res.statusCode === 200) {
+            resolve();
+          } else {
+            checkAgain();
+          }
         }
-      });
+      );
 
       req.on('error', () => {
         checkAgain();
@@ -59,7 +62,10 @@ export default async function globalSetup() {
   execSync('npx prisma generate --schema=prisma/test/test-schema.prisma', { stdio: 'inherit' });
 
   // Push schema to SQLite
-  execSync('npx prisma db push --schema=prisma/test/test-schema.prisma --accept-data-loss --skip-generate', { stdio: 'inherit' });
+  execSync(
+    'npx prisma db push --schema=prisma/test/test-schema.prisma --accept-data-loss --skip-generate',
+    { stdio: 'inherit' }
+  );
 
   // Seed baseline orgs/users required by the E2E specs
   execSync('npx tsx tests/e2e/seed.ts', { stdio: 'inherit', env: { ...process.env } });
@@ -69,7 +75,7 @@ export default async function globalSetup() {
   serverProcess = spawn('npx', ['tsx', 'src/e2e-server.ts'], {
     stdio: 'inherit', // Change to inherit to see output
     env: { ...process.env, NODE_ENV: 'test' },
-    shell: true // Required for npx on Windows
+    shell: true, // Required for npx on Windows
   });
 
   if (typeof serverProcess?.pid === 'number') {

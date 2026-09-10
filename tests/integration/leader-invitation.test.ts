@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { cleanupTestData, createOrganization, createUser, createInvitation } from '../fixtures/index.js';
+import {
+  cleanupTestData,
+  createOrganization,
+  createUser,
+  createInvitation,
+} from '../fixtures/index.js';
 import { getPrisma } from './testContainer.js';
 
 vi.mock('../../src/services/emailService.js', async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     sendEmail: vi.fn().mockResolvedValue(undefined),
@@ -20,7 +25,7 @@ describe('Leader Invitation Flow', () => {
 
   beforeAll(async () => {
     request = await buildTestClient({ disableRateLimiting: true });
-    
+
     // Create an organization and an authenticated user to perform the invitation
     const org = await createOrganization({ name: 'Inviter Org', domain: 'inviter.edu' });
     authUser = await createUser({
@@ -61,7 +66,7 @@ describe('Leader Invitation Flow', () => {
 
     const prisma = getPrisma();
     const inv = await prisma.invitation.findFirst({
-      where: { email: inviteEmail, organizationId: unclaimedOrg.id }
+      where: { email: inviteEmail, organizationId: unclaimedOrg.id },
     });
     expect(inv).toBeDefined();
     expect(inv?.status).toBe('PENDING');
@@ -70,7 +75,7 @@ describe('Leader Invitation Flow', () => {
   it('allows claiming an organization with a valid invitation token', async () => {
     const prisma = getPrisma();
     const inviteEmail = 'leader@unclaimed.edu';
-    
+
     // Create an invitation manually using fixture
     const invitation = await createInvitation({
       email: inviteEmail,
@@ -78,32 +83,30 @@ describe('Leader Invitation Flow', () => {
       role: 'ADMIN',
     });
 
-    const claimRes = await request
-      .post(`/api/users/organizations/${unclaimedOrg.id}/claim`)
-      .send({
-        email: inviteEmail,
-        firstName: 'Leader',
-        lastName: 'Person',
-        password: 'Password123!',
-        invitationToken: invitation.token
-      });
+    const claimRes = await request.post(`/api/users/organizations/${unclaimedOrg.id}/claim`).send({
+      email: inviteEmail,
+      firstName: 'Leader',
+      lastName: 'Person',
+      password: 'Password123!',
+      invitationToken: invitation.token,
+    });
 
     expect(claimRes.status).toBe(201);
     expect(claimRes.body.code).toBe('ORG_CLAIM_SUBMITTED');
 
     // Verify invitation status updated
     const updatedInv = await prisma.invitation.findUnique({
-      where: { id: invitation.id }
+      where: { id: invitation.id },
     });
     expect(updatedInv?.status).toBe('ACCEPTED');
 
     // Verify claim has invitation token in metadata
     const claim = await prisma.organizationClaim.findFirst({
-      where: { organizationId: unclaimedOrg.id, requesterEmail: inviteEmail }
+      where: { organizationId: unclaimedOrg.id, requesterEmail: inviteEmail },
     });
     expect(claim?.metadata).toMatchObject({
       isInvitedClaim: true,
-      invitationToken: invitation.token
+      invitationToken: invitation.token,
     });
   });
 
@@ -114,30 +117,26 @@ describe('Leader Invitation Flow', () => {
       organizationId: unclaimedOrg.id,
     });
 
-    const claimRes = await request
-      .post(`/api/users/organizations/${unclaimedOrg.id}/claim`)
-      .send({
-        email: 'wrong.email@unclaimed.edu',
-        firstName: 'Impersonator',
-        lastName: 'User',
-        password: 'Password123!',
-        invitationToken: invitation.token
-      });
+    const claimRes = await request.post(`/api/users/organizations/${unclaimedOrg.id}/claim`).send({
+      email: 'wrong.email@unclaimed.edu',
+      firstName: 'Impersonator',
+      lastName: 'User',
+      password: 'Password123!',
+      invitationToken: invitation.token,
+    });
 
     expect(claimRes.status).toBe(403);
     expect(claimRes.body.error).toBe('Invitation email does not match claim email');
   });
 
   it('rejects claim with an invalid token', async () => {
-    const claimRes = await request
-      .post(`/api/users/organizations/${unclaimedOrg.id}/claim`)
-      .send({
-        email: 'somebody@unclaimed.edu',
-        firstName: 'Some',
-        lastName: 'Body',
-        password: 'Password123!',
-        invitationToken: 'invalid-token'
-      });
+    const claimRes = await request.post(`/api/users/organizations/${unclaimedOrg.id}/claim`).send({
+      email: 'somebody@unclaimed.edu',
+      firstName: 'Some',
+      lastName: 'Body',
+      password: 'Password123!',
+      invitationToken: 'invalid-token',
+    });
 
     expect(claimRes.status).toBe(400);
     expect(claimRes.body.error).toBe('Invalid or expired invitation token');

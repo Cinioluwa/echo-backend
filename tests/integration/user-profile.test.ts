@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { createOrganization, createUser, createPing, createWave, cleanupTestData } from '../fixtures/index.js';
+import {
+  createOrganization,
+  createUser,
+  createPing,
+  createWave,
+  cleanupTestData,
+} from '../fixtures/index.js';
 
 describe('User Profile and Display Name Operations', () => {
   let client: any;
@@ -18,14 +24,14 @@ describe('User Profile and Display Name Operations', () => {
       organizationId: org1.id,
       email: 'user1@org1.edu',
       firstName: 'Original',
-      lastName: 'Name'
+      lastName: 'Name',
     });
 
     user2 = await createUser({
       organizationId: org1.id,
       email: 'user2@org1.edu',
       firstName: 'Other',
-      lastName: 'Person'
+      lastName: 'Person',
     });
 
     const login1Res = await client

@@ -17,11 +17,7 @@ function getClaimRequestType(metadata: unknown): string {
   return type === CLAIM_REQUEST_ADMIN_ACCESS ? CLAIM_REQUEST_ADMIN_ACCESS : CLAIM_REQUEST_INITIAL;
 }
 
-export async function listOrganizationRequests(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function listOrganizationRequests(req: Request, res: Response, next: NextFunction) {
   try {
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
 
@@ -39,11 +35,7 @@ export async function listOrganizationRequests(
   }
 }
 
-export async function approveOrganizationRequest(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function approveOrganizationRequest(req: Request, res: Response, next: NextFunction) {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
@@ -134,11 +126,7 @@ export async function approveOrganizationRequest(
   }
 }
 
-export async function rejectOrganizationRequest(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function rejectOrganizationRequest(req: Request, res: Response, next: NextFunction) {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
@@ -164,17 +152,11 @@ export async function rejectOrganizationRequest(
   }
 }
 
-export async function listOrganizationClaims(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function listOrganizationClaims(req: Request, res: Response, next: NextFunction) {
   try {
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
     const statusFilter =
-      status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED'
-        ? status
-        : undefined;
+      status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED' ? status : undefined;
 
     const claims = await prisma.organizationClaim.findMany({
       where: statusFilter ? { status: statusFilter } : undefined,
@@ -209,9 +191,7 @@ export async function listOrganizationAdminAccessRequests(
   try {
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
     const statusFilter =
-      status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED'
-        ? status
-        : undefined;
+      status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED' ? status : undefined;
 
     const claims = await prisma.organizationClaim.findMany({
       where: statusFilter ? { status: statusFilter } : undefined,
@@ -414,11 +394,7 @@ export async function approveOrganizationClaim(
   }
 }
 
-export async function rejectOrganizationClaim(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) {
+export async function rejectOrganizationClaim(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {

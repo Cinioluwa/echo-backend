@@ -106,7 +106,7 @@ describe('Post Reporting', () => {
       .expect(200);
 
     const reportNotif = adminNotifs.body.data.find(
-      (n: any) => n.type === 'POST_REPORTED' && n.pingId === pingId,
+      (n: any) => n.type === 'POST_REPORTED' && n.pingId === pingId
     );
 
     expect(reportNotif).toBeDefined();
@@ -126,10 +126,7 @@ describe('Post Reporting', () => {
   });
 
   it('blocks non-admin users from listing reports', async () => {
-    await client
-      .get('/api/reports')
-      .set('Authorization', `Bearer ${reporterToken}`)
-      .expect(403);
+    await client.get('/api/reports').set('Authorization', `Bearer ${reporterToken}`).expect(403);
   });
 
   it('allows admins to list reports', async () => {
@@ -164,7 +161,7 @@ describe('Post Reporting', () => {
         n.type === 'POST_REPORTED' &&
         n.pingId === pingId &&
         typeof n.body === 'string' &&
-        n.body.includes('resolved'),
+        n.body.includes('resolved')
     );
 
     expect(reporterUpdate).toBeDefined();

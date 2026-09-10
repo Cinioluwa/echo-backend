@@ -33,8 +33,8 @@ describe('Auth register/login', () => {
     await prisma.organizationDomain.create({
       data: {
         domain: 'example.edu',
-        organizationId: org.id
-      }
+        organizationId: org.id,
+      },
     });
   });
 
@@ -42,15 +42,13 @@ describe('Auth register/login', () => {
     const prisma = getPrisma();
     const request = await buildTestClient({ disableRateLimiting: true });
 
-    const registerRes = await request
-      .post('/api/users/register')
-      .send({
-        email,
-        password,
-        firstName: 'Alice',
-        lastName: 'Tester',
-        level: 1,
-      });
+    const registerRes = await request.post('/api/users/register').send({
+      email,
+      password,
+      firstName: 'Alice',
+      lastName: 'Tester',
+      level: 1,
+    });
 
     expect(registerRes.status).toBe(201);
     expect(registerRes.body.user?.email).toBe(email.toLowerCase());
@@ -67,9 +65,7 @@ describe('Auth register/login', () => {
       },
     });
 
-    const loginRes = await request
-      .post('/api/users/login')
-      .send({ email, password });
+    const loginRes = await request.post('/api/users/login').send({ email, password });
 
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.token).toBeDefined();
@@ -91,21 +87,19 @@ describe('Auth register/login', () => {
     await prisma.organizationDomain.create({
       data: {
         domain: approvalOrg.domain!,
-        organizationId: approvalOrg.id
-      }
+        organizationId: approvalOrg.id,
+      },
     });
 
     const pendingEmail = `pending@${approvalOrg.domain}`;
 
-    const registerRes = await request
-      .post('/api/users/register')
-      .send({
-        email: pendingEmail,
-        password,
-        firstName: 'Pending',
-        lastName: 'Approval',
-        level: 2,
-      });
+    const registerRes = await request.post('/api/users/register').send({
+      email: pendingEmail,
+      password,
+      firstName: 'Pending',
+      lastName: 'Approval',
+      level: 2,
+    });
 
     expect(registerRes.status).toBe(202);
     expect(registerRes.body).toHaveProperty('code', 'ORG_JOIN_APPROVAL_REQUIRED');
@@ -126,15 +120,13 @@ describe('Auth register/login', () => {
     const request = await buildTestClient({ disableRateLimiting: true });
     const personalEmail = 'alice.personal@gmail.com';
 
-    const registerRes = await request
-      .post('/api/users/register')
-      .send({
-        email: personalEmail,
-        password,
-        firstName: 'Alice',
-        lastName: 'Personal',
-        organizationId,
-      });
+    const registerRes = await request.post('/api/users/register').send({
+      email: personalEmail,
+      password,
+      firstName: 'Alice',
+      lastName: 'Personal',
+      organizationId,
+    });
 
     expect(registerRes.status).toBe(201);
 
@@ -163,14 +155,12 @@ describe('Auth register/login', () => {
     const request = await buildTestClient({ disableRateLimiting: true });
     const resendEmail = `resend-${Date.now()}@example.edu`;
 
-    const registerRes = await request
-      .post('/api/users/register')
-      .send({
-        email: resendEmail,
-        password,
-        firstName: 'Resend',
-        lastName: 'Tester',
-      });
+    const registerRes = await request.post('/api/users/register').send({
+      email: resendEmail,
+      password,
+      firstName: 'Resend',
+      lastName: 'Tester',
+    });
 
     expect(registerRes.status).toBe(201);
 
@@ -234,14 +224,12 @@ describe('Auth register/login', () => {
     const request = await buildTestClient({ disableRateLimiting: true });
     const verifiedEmail = `verified-${Date.now()}@example.edu`;
 
-    const registerRes = await request
-      .post('/api/users/register')
-      .send({
-        email: verifiedEmail,
-        password,
-        firstName: 'Verified',
-        lastName: 'Tester',
-      });
+    const registerRes = await request.post('/api/users/register').send({
+      email: verifiedEmail,
+      password,
+      firstName: 'Verified',
+      lastName: 'Tester',
+    });
 
     expect(registerRes.status).toBe(201);
 
@@ -274,9 +262,7 @@ describe('Auth register/login', () => {
 
     expect(tokenBeforeResend).toBeTruthy();
 
-    const res = await request
-      .post('/api/users/resend-verification')
-      .send({ email: verifiedEmail });
+    const res = await request.post('/api/users/resend-verification').send({ email: verifiedEmail });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('message', resendGenericMessage);

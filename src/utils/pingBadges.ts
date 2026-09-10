@@ -13,7 +13,9 @@ export interface PingBadgeInfo {
  * Given an array of pings (which must include _count.waves and _count.surges),
  * computes and attaches badge properties to each ping.
  */
-export const appendPingBadges = async <T extends { id: number; organizationId: number; _count?: { waves: number } }>(
+export const appendPingBadges = async <
+  T extends { id: number; organizationId: number; _count?: { waves: number } },
+>(
   pings: T[],
   organizationId: number
 ): Promise<(T & PingBadgeInfo)[]> => {
@@ -58,12 +60,10 @@ export const appendPingBadges = async <T extends { id: number; organizationId: n
 
   // Prisma `having` support differs across providers (SQLite in tests). Filter in JS for portability.
   const trendingSet = new Set(
-    trendingRecent
-      .filter((item) => (item as any)._count?.id >= 3)
-      .map((item) => item.pingId)
+    trendingRecent.filter((item) => (item as any)._count?.id >= 3).map((item) => item.pingId)
   );
 
-  return pings.map(ping => {
+  return pings.map((ping) => {
     const rank = top3Map.get(ping.id);
     return {
       ...ping,

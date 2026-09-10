@@ -18,11 +18,11 @@ export const getCategories = async (req: AuthRequest, res: Response, next: NextF
         organizationId,
         ...(q
           ? {
-            name: {
-              contains: q,
-              mode: 'insensitive',
-            },
-          }
+              name: {
+                contains: q,
+                mode: 'insensitive',
+              },
+            }
           : {}),
       },
       orderBy: { id: 'asc' }, // Temporary, will sort in code
@@ -108,7 +108,12 @@ export const updateCategory = async (req: AuthRequest, res: Response, next: Next
     if (Number.isNaN(categoryId)) return res.status(400).json({ error: 'Invalid category ID' });
 
     if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Only organization leadership can manage categories.', code: 'CATEGORY_CUSTOMIZATION_FORBIDDEN' });
+      return res
+        .status(403)
+        .json({
+          error: 'Only organization leadership can manage categories.',
+          code: 'CATEGORY_CUSTOMIZATION_FORBIDDEN',
+        });
     }
 
     const { name, isActive } = req.body as { name?: string; isActive?: boolean };
@@ -129,7 +134,8 @@ export const updateCategory = async (req: AuthRequest, res: Response, next: Next
         where: { name, organizationId, NOT: { id: categoryId } },
         select: { id: true },
       });
-      if (conflict) return res.status(409).json({ error: 'A category with that name already exists.' });
+      if (conflict)
+        return res.status(409).json({ error: 'A category with that name already exists.' });
     }
 
     const updated = await prisma.category.update({
@@ -159,7 +165,12 @@ export const deleteCategory = async (req: AuthRequest, res: Response, next: Next
     if (Number.isNaN(categoryId)) return res.status(400).json({ error: 'Invalid category ID' });
 
     if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Only organization leadership can delete categories.', code: 'CATEGORY_CUSTOMIZATION_FORBIDDEN' });
+      return res
+        .status(403)
+        .json({
+          error: 'Only organization leadership can delete categories.',
+          code: 'CATEGORY_CUSTOMIZATION_FORBIDDEN',
+        });
     }
 
     const existing = await prisma.category.findFirst({

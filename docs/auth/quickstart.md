@@ -11,8 +11,9 @@
    - Enter your Google Client ID
    - Enter your Google Client Secret
 
-  If you're testing with a Vite frontend (common for React), make sure your Google OAuth Client has this origin allowed:
-  - `http://localhost:5173`
+If you're testing with a Vite frontend (common for React), make sure your Google OAuth Client has this origin allowed:
+
+- `http://localhost:5173`
 
 3. **Select Scopes** (left panel):
    - `https://www.googleapis.com/auth/userinfo.email`
@@ -39,11 +40,13 @@ URL: http://127.0.0.1:3000/api/auth/google
 ```
 
 ### Headers
+
 ```
 Content-Type: application/json
 ```
 
 ### Body (raw JSON)
+
 ```json
 {
   "token": "PASTE_YOUR_ID_TOKEN_HERE"
@@ -57,6 +60,7 @@ Content-Type: application/json
 ## Step 3: Expected Response
 
 ### Success (200)
+
 ```json
 {
   "message": "Google authentication successful",
@@ -74,11 +78,13 @@ Content-Type: application/json
 ```
 
 ### Save Token for Future Requests
+
 In Postman **Tests** tab:
+
 ```javascript
-pm.test("Save token", function() {
-    var jsonData = pm.response.json();
-    pm.environment.set("token", jsonData.token);
+pm.test('Save token', function () {
+  var jsonData = pm.response.json();
+  pm.environment.set('token', jsonData.token);
 });
 ```
 
@@ -98,12 +104,15 @@ Authorization: Bearer {{token}}
 ## Common Errors
 
 ### ❌ "Invalid Google token"
+
 - **Fix**: Token expired (valid ~1 hour). Get a new one.
 
 ### ❌ "Please use your company email address"
+
 - **Fix**: Don't use gmail.com, yahoo.com, etc. Use your company domain.
 
 ### ❌ "No organization found for domain"
+
 - **Fix**: Your organization must exist in the database first.
   ```sql
   INSERT INTO "Organization" (name, domain, status)
@@ -111,6 +120,7 @@ Authorization: Bearer {{token}}
   ```
 
 ### ❌ "GOOGLE_CLIENT_ID is required"
+
 - **Fix**: Add to `.env`:
   ```env
   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
@@ -121,6 +131,7 @@ Authorization: Bearer {{token}}
 ## That's It! 🎉
 
 You now have:
+
 - ✅ Google OAuth working
 - ✅ JWT token for API access
 - ✅ User auto-created/logged-in

@@ -47,11 +47,7 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
       return res.status(401).json({ error: 'Unauthorized: Account inactive' });
     }
 
-    if (
-      user.organization &&
-      user.organization.status !== 'ACTIVE' &&
-      user.role !== 'SUPER_ADMIN'
-    ) {
+    if (user.organization && user.organization.status !== 'ACTIVE' && user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Organization is not active' });
     }
 
@@ -63,7 +59,8 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
       user.role !== 'SUPER_ADMIN'
     ) {
       return res.status(403).json({
-        error: 'Your Echo demo has expired. Ready to go live? Reach out to become a Founding Partner.',
+        error:
+          'Your Echo demo has expired. Ready to go live? Reach out to become a Founding Partner.',
         code: 'DEMO_EXPIRED',
       });
     }
@@ -79,4 +76,4 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-export default authMiddleware;
+export default authMiddleware;

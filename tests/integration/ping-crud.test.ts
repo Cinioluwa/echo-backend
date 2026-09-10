@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { createOrganization, createUser, createCategory, createPing, cleanupTestData } from '../fixtures/index.js';
+import {
+  createOrganization,
+  createUser,
+  createCategory,
+  createPing,
+  cleanupTestData,
+} from '../fixtures/index.js';
 
 describe('Ping CRUD Operations', () => {
   let client: any;
@@ -23,13 +29,13 @@ describe('Ping CRUD Operations', () => {
       organizationId: org1.id,
       email: 'user1@org1.edu',
       firstName: 'User',
-      lastName: 'One'
+      lastName: 'One',
     });
     user2 = await createUser({
       organizationId: org2.id,
       email: 'user2@org2.edu',
       firstName: 'User',
-      lastName: 'Two'
+      lastName: 'Two',
     });
 
     // Create categories
@@ -134,14 +140,14 @@ describe('Ping CRUD Operations', () => {
         organizationId: org1.id,
         categoryId: category1.id,
         title: 'Ping 1',
-        content: 'Content 1'
+        content: 'Content 1',
       });
       ping2 = await createPing({
         authorId: user2.id,
         organizationId: org2.id,
         categoryId: category2.id,
         title: 'Ping 2',
-        content: 'Content 2'
+        content: 'Content 2',
       });
     });
 
@@ -179,10 +185,7 @@ describe('Ping CRUD Operations', () => {
     });
 
     it('should return 404 for non-existent ping', async () => {
-      await client
-        .get('/api/pings/99999')
-        .set('Authorization', `Bearer ${user1Token}`)
-        .expect(404);
+      await client.get('/api/pings/99999').set('Authorization', `Bearer ${user1Token}`).expect(404);
     });
 
     it('should NOT allow access to other org pings', async () => {
@@ -214,7 +217,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org1.id,
         categoryId: category1.id,
         title: 'Original Title',
-        content: 'Original Content'
+        content: 'Original Content',
       });
     });
 
@@ -242,7 +245,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org2.id,
         categoryId: category2.id,
         title: 'Other User Ping',
-        content: 'Content'
+        content: 'Content',
       });
 
       await client
@@ -275,7 +278,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org1.id,
         categoryId: category1.id,
         title: 'Ping to Resolve',
-        content: 'I need to resolve this'
+        content: 'I need to resolve this',
       });
 
       // Create a ping in another org
@@ -284,7 +287,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org2.id,
         categoryId: category2.id,
         title: 'Other Org Ping to Resolve',
-        content: 'Should not be resolvable by user1'
+        content: 'Should not be resolvable by user1',
       });
     });
 
@@ -315,7 +318,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org1.id,
         categoryId: category1.id,
         title: 'Another Ping to Resolve',
-        content: 'User 2 will try to resolve this'
+        content: 'User 2 will try to resolve this',
       });
 
       await client
@@ -337,7 +340,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org1.id,
         email: 'user1b@org1.edu',
         firstName: 'User',
-        lastName: 'OneB'
+        lastName: 'OneB',
       });
 
       const login1bRes = await client
@@ -351,7 +354,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org1.id,
         categoryId: category1.id,
         title: 'User 1B Ping',
-        content: 'Content'
+        content: 'Content',
       });
 
       await client
@@ -370,7 +373,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org1.id,
         categoryId: category1.id,
         title: 'Ping to Delete',
-        content: 'Will be deleted'
+        content: 'Will be deleted',
       });
     });
 
@@ -400,7 +403,7 @@ describe('Ping CRUD Operations', () => {
         organizationId: org2.id,
         categoryId: category2.id,
         title: 'Other User Ping',
-        content: 'Content'
+        content: 'Content',
       });
 
       await client

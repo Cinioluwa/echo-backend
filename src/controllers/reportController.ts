@@ -227,7 +227,10 @@ export const createReport = async (req: AuthRequest, res: Response, next: NextFu
             organizationId,
             type: 'POST_REPORTED',
             title: reportTitle,
-            body: reason && reason.trim().length > 0 ? reason.trim() : 'A post has been reported for review.',
+            body:
+              reason && reason.trim().length > 0
+                ? reason.trim()
+                : 'A post has been reported for review.',
             ...getReportTargetForNotification(target),
           })),
         });
@@ -254,7 +257,12 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
     if (limit > 100) limit = 100;
     const skip = (page - 1) * limit;
 
-    const status = req.query.status as 'PENDING' | 'REVIEWED' | 'RESOLVED' | 'DISMISSED' | undefined;
+    const status = req.query.status as
+      | 'PENDING'
+      | 'REVIEWED'
+      | 'RESOLVED'
+      | 'DISMISSED'
+      | undefined;
 
     const where = {
       organizationId,
@@ -282,9 +290,15 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
     // ── Attach reportCount to each item ──────────────────────────────────────
     // Collect the distinct content IDs present in this page so we can run a
     // single grouped query instead of N+1 individual counts.
-    const pingIds = [...new Set(data.map((r) => r.pingId).filter((id): id is number => id !== null))];
-    const waveIds = [...new Set(data.map((r) => r.waveId).filter((id): id is number => id !== null))];
-    const commentIds = [...new Set(data.map((r) => r.commentId).filter((id): id is number => id !== null))];
+    const pingIds = [
+      ...new Set(data.map((r) => r.pingId).filter((id): id is number => id !== null)),
+    ];
+    const waveIds = [
+      ...new Set(data.map((r) => r.waveId).filter((id): id is number => id !== null)),
+    ];
+    const commentIds = [
+      ...new Set(data.map((r) => r.commentId).filter((id): id is number => id !== null)),
+    ];
 
     const countRows = await prisma.report.groupBy({
       by: ['pingId', 'waveId', 'commentId', 'reason'],
@@ -299,7 +313,12 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
       _count: { id: true },
     });
 
-    const getCountMapKey = (row: { pingId: number | null; waveId: number | null; commentId: number | null; reason: string | null }) => {
+    const getCountMapKey = (row: {
+      pingId: number | null;
+      waveId: number | null;
+      commentId: number | null;
+      reason: string | null;
+    }) => {
       return `${row.pingId}-${row.waveId}-${row.commentId}-${row.reason}`;
     };
 
@@ -311,7 +330,7 @@ export const getReports = async (req: AuthRequest, res: Response, next: NextFunc
 
     const dataWithCount = data.map((report) => ({
       ...report,
-      reportType: report.reason || "other",
+      reportType: report.reason || 'other',
       reportCount: countMap.get(getCountMapKey(report)) ?? 1,
     }));
 

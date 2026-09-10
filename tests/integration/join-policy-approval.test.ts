@@ -107,7 +107,9 @@ describe('Organization Join Policy Admin Flows', () => {
       .expect(200);
 
     const updatedUser = await prisma.user.findUnique({ where: { id: pendingUser.id } });
-    const updatedRequest = await prisma.organizationJoinRequest.findUnique({ where: { id: joinRequest.id } });
+    const updatedRequest = await prisma.organizationJoinRequest.findUnique({
+      where: { id: joinRequest.id },
+    });
 
     expect(updatedUser?.status).toBe('ACTIVE');
     expect(updatedRequest?.status).toBe('APPROVED');

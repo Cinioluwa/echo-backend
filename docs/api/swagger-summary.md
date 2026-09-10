@@ -1,11 +1,13 @@
 # OpenAPI/Swagger Documentation Implementation Summary
 
 ## Overview
+
 Successfully implemented professional, standardized public API documentation using OpenAPI 3.0 (Swagger) for the Echo Backend API.
 
 ## What Was Added
 
 ### 1. Dependencies
+
 - `swagger-jsdoc`: Generates OpenAPI specification from JSDoc comments
 - `swagger-ui-express`: Serves interactive Swagger UI
 - `@types/swagger-jsdoc` and `@types/swagger-ui-express`: TypeScript type definitions
@@ -13,6 +15,7 @@ Successfully implemented professional, standardized public API documentation usi
 ### 2. Core Files Created
 
 #### `src/config/swagger.ts`
+
 - OpenAPI 3.0 configuration
 - API metadata (title, version, description)
 - Server configuration
@@ -26,6 +29,7 @@ Successfully implemented professional, standardized public API documentation usi
 - Tags for organizing endpoints
 
 #### `src/routes/swaggerRoutes.ts`
+
 - Swagger UI route at `/docs`
 - Raw OpenAPI JSON at `/docs/json`
 - Custom styling to hide Swagger UI topbar
@@ -88,6 +92,7 @@ Successfully implemented professional, standardized public API documentation usi
 ### 5. README Documentation
 
 Added comprehensive section on API Documentation including:
+
 - How to access Swagger UI
 - How to use the interactive features
 - How to update documentation (adding new endpoints)
@@ -97,6 +102,7 @@ Added comprehensive section on API Documentation including:
 ### 6. Testing
 
 Created `tests/integration/swagger.test.ts` with 8 tests:
+
 - ✓ Swagger UI serves HTML at /docs/
 - ✓ OpenAPI JSON available at /docs/json
 - ✓ Correct API metadata
@@ -110,11 +116,13 @@ All 113 integration tests pass (including 8 new Swagger tests).
 ## How to Use
 
 ### Accessing Documentation
+
 1. Start the server: `npm run dev`
 2. Visit: `http://localhost:3000/docs`
 3. See raw spec: `http://localhost:3000/docs/json`
 
 ### Testing Protected Endpoints
+
 1. Use Google OAuth or login endpoint to get a JWT token
 2. Click "Authorize" button (lock icon) in Swagger UI
 3. Enter: `Bearer <your-token>`
@@ -154,11 +162,13 @@ router.post('/your-endpoint', authMiddleware, yourHandler);
 ## Production Considerations
 
 ### Default Behavior
+
 Swagger docs are **publicly accessible** (no authentication required).
 
 ### Restricting Access
 
 Option 1 - Require authentication:
+
 ```typescript
 // In src/routes/swaggerRoutes.ts
 import authMiddleware from '../middleware/authMiddleware.js';
@@ -166,6 +176,7 @@ router.use('/docs', authMiddleware, swaggerUi.serve);
 ```
 
 Option 2 - Restrict to admins:
+
 ```typescript
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
@@ -173,6 +184,7 @@ router.use('/docs', authMiddleware, adminMiddleware, swaggerUi.serve);
 ```
 
 Option 3 - Disable in production:
+
 ```typescript
 // In src/app.ts
 if (process.env.NODE_ENV !== 'production') {
@@ -183,11 +195,13 @@ if (process.env.NODE_ENV !== 'production') {
 ## Integration with Existing Tools
 
 ### Postman Collection
+
 - Existing collection (`echo_postman_collection.json`) remains available
 - Swagger/OpenAPI is now the **primary API contract**
 - Can import OpenAPI spec into Postman: `http://localhost:3000/docs/json`
 
 ### Other Tools
+
 - Insomnia: Import from URL
 - OpenAPI Generator: Generate client SDKs
 - Swagger Codegen: Generate documentation in other formats
@@ -223,10 +237,11 @@ if (process.env.NODE_ENV !== 'production') {
 ## Future Enhancements
 
 Consider documenting additional endpoints:
-- User management endpoints (/api/users/*)
-- Admin endpoints (/api/admin/*)
-- Wave management (/api/waves/*)
-- Notification endpoints (/api/notifications/*)
-- Announcement endpoints (/api/announcements/*)
+
+- User management endpoints (/api/users/\*)
+- Admin endpoints (/api/admin/\*)
+- Wave management (/api/waves/\*)
+- Notification endpoints (/api/notifications/\*)
+- Announcement endpoints (/api/announcements/\*)
 
 Each can be added following the same JSDoc pattern.

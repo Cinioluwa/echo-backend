@@ -21,9 +21,7 @@ describe('Upload API', () => {
 
     it('should reject requests without files (authenticated)', async () => {
       // Without a valid token, we get 401 first
-      const res = await client
-        .post('/api/uploads')
-        .set('Authorization', 'Bearer invalid-token');
+      const res = await client.post('/api/uploads').set('Authorization', 'Bearer invalid-token');
 
       expect(res.status).toBe(401);
     });

@@ -23,9 +23,9 @@ const router = Router();
  *     summary: List user notifications
  *     description: |
  *       Retrieve the authenticated user's notifications with pagination.
- *       
+ *
  *       **Authentication required**: User must be logged in.
- *       
+ *
  *       Notifications include:
  *       - New comments on your pings/waves
  *       - Surges on your content
@@ -72,7 +72,14 @@ const router = Router();
  *         description: Internal server error
  */
 // Notifications are user-specific, cache per user for 30s
-router.get('/', authMiddleware, organizationMiddleware, validate(listNotificationsSchema), cache(30, { perUser: true }), listNotifications);
+router.get(
+  '/',
+  authMiddleware,
+  organizationMiddleware,
+  validate(listNotificationsSchema),
+  cache(30, { perUser: true }),
+  listNotifications
+);
 
 /**
  * @openapi
@@ -82,7 +89,7 @@ router.get('/', authMiddleware, organizationMiddleware, validate(listNotificatio
  *     description: |
  *       Get the count of unread notifications for the authenticated user.
  *       Useful for displaying badge counts in the UI.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *     tags:
  *       - Notifications
@@ -104,7 +111,13 @@ router.get('/', authMiddleware, organizationMiddleware, validate(listNotificatio
  *       500:
  *         description: Internal server error
  */
-router.get('/unread-count', authMiddleware, organizationMiddleware, cache(15, { perUser: true }), getUnreadNotificationCount);
+router.get(
+  '/unread-count',
+  authMiddleware,
+  organizationMiddleware,
+  cache(15, { perUser: true }),
+  getUnreadNotificationCount
+);
 
 /**
  * @openapi
@@ -113,7 +126,7 @@ router.get('/unread-count', authMiddleware, organizationMiddleware, cache(15, { 
  *     summary: Mark a notification as read
  *     description: |
  *       Mark a specific notification as read.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Authorization**: Can only mark your own notifications as read.
  *     tags:
@@ -154,7 +167,7 @@ router.get('/unread-count', authMiddleware, organizationMiddleware, cache(15, { 
  *     summary: Mark all notifications as read
  *     description: |
  *       Mark all unread notifications for the authenticated user as read.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *     tags:
  *       - Notifications
@@ -181,6 +194,12 @@ router.get('/unread-count', authMiddleware, organizationMiddleware, cache(15, { 
  */
 router.patch('/read-all', authMiddleware, organizationMiddleware, markAllNotificationsRead);
 
-router.patch('/:id/read', authMiddleware, organizationMiddleware, validate(notificationIdParamSchema), markNotificationRead);
+router.patch(
+  '/:id/read',
+  authMiddleware,
+  organizationMiddleware,
+  validate(notificationIdParamSchema),
+  markNotificationRead
+);
 
 export default router;

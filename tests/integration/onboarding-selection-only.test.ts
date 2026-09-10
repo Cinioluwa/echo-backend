@@ -71,9 +71,7 @@ describe('Selection-only onboarding', () => {
       )
     ).toBe(true);
     expect(
-      res.body.organizations.some(
-        (org: { name: string }) => org.name === 'Dormant Campus'
-      )
+      res.body.organizations.some((org: { name: string }) => org.name === 'Dormant Campus')
     ).toBe(false);
   });
 

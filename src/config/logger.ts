@@ -70,12 +70,13 @@ export const sanitizeForLog = (data: any): any => {
 
   const mask = (value: any): any => {
     if (value === null || value === undefined) return value;
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+      return value;
     if (Array.isArray(value)) return value.map(mask);
     if (typeof value === 'object') {
       const out: any = {};
       for (const key of Object.keys(value)) {
-        if (sensitive.some(s => key.toLowerCase().includes(s))) {
+        if (sensitive.some((s) => key.toLowerCase().includes(s))) {
           out[key] = '[REDACTED]';
         } else {
           out[key] = mask(value[key]);

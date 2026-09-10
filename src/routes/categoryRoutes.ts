@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { getCategories, createCategory, updateCategory, deleteCategory } from '../controllers/categoryController.js';
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from '../controllers/categoryController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 import { cache } from '../middleware/cacheMiddleware.js';
@@ -14,10 +19,10 @@ const router = Router();
  *     description: |
  *       Retrieve all categories available in the authenticated user's organization.
  *       Categories are used to classify pings (issues) and waves (solutions).
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Only returns categories for user's organization.
- *       
+ *
  *       **Frontend integration tip**: Fetch categories once on app load and cache them.
  *       Use category IDs for filtering in soundboard/stream views.
  *     tags:
@@ -66,7 +71,7 @@ const router = Router();
  *     description: |
  *       Create a new category for the organization.
  *       Categories help organize pings and waves by topic.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Authorization rules**:
  *       - Requires ADMIN or SUPER_ADMIN role.

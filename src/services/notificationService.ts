@@ -31,10 +31,10 @@ export type CreateNotificationInput = {
   commentId?: number;
 };
 
-export function computeNotificationUrl(notification: { 
-  pingId?: number | null; 
-  waveId?: number | null; 
-  announcementId?: number | null; 
+export function computeNotificationUrl(notification: {
+  pingId?: number | null;
+  waveId?: number | null;
+  announcementId?: number | null;
 }): string {
   if (notification.pingId) {
     return `/feed/${notification.pingId}`;
@@ -57,7 +57,10 @@ const DEFAULT_PREFERENCES = {
   pingSurgedMilestone: true,
 } as const;
 
-const isAllowedByPreferences = async (db: PrismaLike, input: CreateNotificationInput): Promise<boolean> => {
+const isAllowedByPreferences = async (
+  db: PrismaLike,
+  input: CreateNotificationInput
+): Promise<boolean> => {
   if (!db.notificationPreference) return true;
 
   const prefs = await db.notificationPreference.upsert({
@@ -87,7 +90,10 @@ const isAllowedByPreferences = async (db: PrismaLike, input: CreateNotificationI
   }
 };
 
-export const createNotification = async (db: PrismaLike, input: CreateNotificationInput): Promise<any | null> => {
+export const createNotification = async (
+  db: PrismaLike,
+  input: CreateNotificationInput
+): Promise<any | null> => {
   const allowed = await isAllowedByPreferences(db, input);
   if (!allowed) return null;
 
@@ -107,13 +113,13 @@ export const createNotification = async (db: PrismaLike, input: CreateNotificati
 
   // Compute the deep-link URL
   let targetPingId = input.pingId;
-  
+
   // If we have a waveId but no pingId, try to find the pingId via the wave
   if (!targetPingId && input.waveId && db.wave) {
     try {
       const wave = await db.wave.findUnique({
         where: { id: input.waveId },
-        select: { pingId: true }
+        select: { pingId: true },
       });
       if (wave) targetPingId = wave.pingId;
     } catch (err) {
@@ -125,7 +131,7 @@ export const createNotification = async (db: PrismaLike, input: CreateNotificati
 
   const enrichedPayload = {
     ...notification,
-    url
+    url,
   };
 
   emitNotification(input.userId, enrichedPayload);
@@ -150,7 +156,9 @@ export const createAnnouncementNotificationsForOrg = async (
   }
 ) => {
   if (!db.user) {
-    throw new Error('createAnnouncementNotificationsForOrg requires a prisma client with user.findMany');
+    throw new Error(
+      'createAnnouncementNotificationsForOrg requires a prisma client with user.findMany'
+    );
   }
 
   const users = await db.user.findMany({

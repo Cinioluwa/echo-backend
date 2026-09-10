@@ -1,6 +1,10 @@
 // src/routes/analyticsRoutes.ts
 import { Router } from 'express';
-import { getAdminOverview, getCategoryAnalytics, getPingLevelAnalytics } from '../controllers/analyticsController.js';
+import {
+  getAdminOverview,
+  getCategoryAnalytics,
+  getPingLevelAnalytics,
+} from '../controllers/analyticsController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
 
@@ -12,7 +16,7 @@ const router = Router();
  *   get:
  *     summary: Get admin overview analytics
  *     description: |
- *       Returns top-level metrics for the organization, including dynamic percentage 
+ *       Returns top-level metrics for the organization, including dynamic percentage
  *       change (30-day window) and a 6-month year-over-year line chart data breakdown.
  *     tags:
  *       - Analytics
@@ -139,4 +143,3 @@ router.get('/admin/categories', authMiddleware, organizationMiddleware, getCateg
 router.get('/pings/:id/levels', authMiddleware, organizationMiddleware, getPingLevelAnalytics);
 
 export default router;
-

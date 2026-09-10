@@ -3,7 +3,11 @@ import prisma from '../config/db.js';
 import logger from '../config/logger.js';
 import { AuthRequest } from '../types/AuthRequest.js';
 import { invalidateCacheAfterMutation } from '../utils/cacheInvalidation.js';
-import { emitCommentOnPing, emitCommentOnWave, emitCommentReplyOnPing } from '../utils/socketEmitter.js';
+import {
+  emitCommentOnPing,
+  emitCommentOnWave,
+  emitCommentReplyOnPing,
+} from '../utils/socketEmitter.js';
 import { emitNotification } from '../utils/socketEmitter.js';
 import { createNotification } from '../services/notificationService.js';
 import { sendEmail, buildNewCommentEmail } from '../services/emailService.js';
@@ -21,7 +25,7 @@ const AUTHOR_SELECT = {
 // ─── Sanitize anonymous comments ───────────────────────────────────────────
 const sanitizeComment = (comment: any, currentUserId?: string | number) => {
   if (!comment) return comment;
-  
+
   const isOwner = currentUserId ? comment.authorId === currentUserId : false;
 
   if (comment.isAnonymous) {
@@ -96,7 +100,11 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
     emitCommentOnPing(parseInt(pingId), sanitizedComment);
 
     if (ping.authorId !== userId) {
-      const commenterName = isAnonymousPost ? 'Someone' : (newComment.author.firstName ? `${newComment.author.firstName} ${newComment.author.lastName || ''}`.trim() : 'Someone');
+      const commenterName = isAnonymousPost
+        ? 'Someone'
+        : newComment.author.firstName
+          ? `${newComment.author.firstName} ${newComment.author.lastName || ''}`.trim()
+          : 'Someone';
       await createNotification(prisma as any, {
         userId: ping.authorId,
         organizationId: organizationId!,
@@ -117,7 +125,11 @@ export const createCommentOnPing = async (req: AuthRequest, res: Response, next:
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {
-    logger.error('Error creating comment on ping', { error, pingId: req.params.pingId, userId: req.user?.userId });
+    logger.error('Error creating comment on ping', {
+      error,
+      pingId: req.params.pingId,
+      userId: req.user?.userId,
+    });
     return next(error);
   }
 };
@@ -201,7 +213,11 @@ export const getCommentsForPing = async (req: AuthRequest, res: Response, next: 
 // Create a reply to a top-level comment on a ping
 // POST /api/pings/:pingId/comments/:commentId/replies
 // ──────────────────────────────────────────────────────────────────────────
-export const createReplyOnPingComment = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const createReplyOnPingComment = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { pingId, commentId } = req.params;
     const { content, isAnonymous = false } = req.body;
@@ -280,8 +296,9 @@ export const createReplyOnPingComment = async (req: AuthRequest, res: Response, 
             where: { id: userId },
             select: { firstName: true, lastName: true, displayName: true },
           });
-          const replierName = replier?.displayName
-            ?? (replier ? `${replier.firstName ?? ''} ${replier.lastName ?? ''}`.trim() : 'Someone');
+          const replierName =
+            replier?.displayName ??
+            (replier ? `${replier.firstName ?? ''} ${replier.lastName ?? ''}`.trim() : 'Someone');
           const displayName = isAnonymous ? 'Someone' : replierName;
 
           const notification = await prisma.notification.create({
@@ -300,7 +317,10 @@ export const createReplyOnPingComment = async (req: AuthRequest, res: Response, 
         }
       } catch (notifError) {
         // Notifications are best-effort — don't fail the reply creation
-        logger.warn('Failed to create COMMENT_REPLY notification', { notifError, replyId: newReply.id });
+        logger.warn('Failed to create COMMENT_REPLY notification', {
+          notifError,
+          replyId: newReply.id,
+        });
       }
     }
 
@@ -332,7 +352,10 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
 
     const wave = await prisma.wave.findFirst({
       where: { id: parseInt(waveId), organizationId },
-      include: { author: { select: { email: true, firstName: true } }, ping: { select: { id: true, title: true } } },
+      include: {
+        author: { select: { email: true, firstName: true } },
+        ping: { select: { id: true, title: true } },
+      },
     });
     if (!wave) return res.status(404).json({ error: 'Wave not found' });
 
@@ -366,7 +389,11 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
     emitCommentOnWave(parseInt(waveId), sanitizedComment);
 
     if (wave.authorId !== userId) {
-      const commenterName = isAnonymousPost ? 'Someone' : (newComment.author.firstName ? `${newComment.author.firstName} ${newComment.author.lastName || ''}`.trim() : 'Someone');
+      const commenterName = isAnonymousPost
+        ? 'Someone'
+        : newComment.author.firstName
+          ? `${newComment.author.firstName} ${newComment.author.lastName || ''}`.trim()
+          : 'Someone';
       await createNotification(prisma as any, {
         userId: wave.authorId,
         organizationId: organizationId!,
@@ -379,7 +406,11 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
       });
 
       if (wave.author.email) {
-        const emailContent = buildNewCommentEmail(wave.ping.title, commenterName, `/feed/${wave.pingId}`);
+        const emailContent = buildNewCommentEmail(
+          wave.ping.title,
+          commenterName,
+          `/feed/${wave.pingId}`
+        );
         setImmediate(() => {
           sendEmail({ to: wave.author.email, ...emailContent }).catch(() => {});
         });
@@ -388,7 +419,11 @@ export const createCommentOnWave = async (req: AuthRequest, res: Response, next:
 
     return res.status(201).json(sanitizedComment);
   } catch (error) {
-    logger.error('Error creating comment on wave', { error, waveId: req.params.waveId, userId: req.user?.userId });
+    logger.error('Error creating comment on wave', {
+      error,
+      waveId: req.params.waveId,
+      userId: req.user?.userId,
+    });
     return next(error);
   }
 };
@@ -474,7 +509,7 @@ export const deleteComment = async (req: AuthRequest, res: Response, next: NextF
     if (isOwner && comment.isAnonymous && !isAdmin) {
       return res.status(403).json({
         error: 'Anonymous comments cannot be deleted by their author',
-        code:  'ANONYMOUS_DELETE_FORBIDDEN',
+        code: 'ANONYMOUS_DELETE_FORBIDDEN',
       });
     }
 
@@ -483,7 +518,11 @@ export const deleteComment = async (req: AuthRequest, res: Response, next: NextF
 
     return res.status(204).send();
   } catch (error) {
-    logger.error('Error deleting comment', { error, commentId: req.params.commentId, userId: req.user?.userId });
+    logger.error('Error deleting comment', {
+      error,
+      commentId: req.params.commentId,
+      userId: req.user?.userId,
+    });
     return next(error);
   }
 };
@@ -541,7 +580,11 @@ export const updateComment = async (req: AuthRequest, res: Response, next: NextF
 
     return res.status(200).json(sanitizeComment(updatedComment, userId));
   } catch (error) {
-    logger.error('Error updating comment', { error, commentId: req.params.commentId, userId: req.user?.userId });
+    logger.error('Error updating comment', {
+      error,
+      commentId: req.params.commentId,
+      userId: req.user?.userId,
+    });
     return next(error);
   }
 };

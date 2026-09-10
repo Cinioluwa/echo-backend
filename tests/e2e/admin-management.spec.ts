@@ -11,8 +11,8 @@ test.describe('Admin Management E2E', () => {
     const adminResponse = await request.post('/api/users/login', {
       data: {
         email: 'admin@testorg1.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
     expect(adminResponse.status()).toBe(200);
     const adminData = await adminResponse.json();
@@ -22,8 +22,8 @@ test.describe('Admin Management E2E', () => {
     const userResponse = await request.post('/api/users/login', {
       data: {
         email: 'user@testorg1.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
     expect(userResponse.status()).toBe(200);
     const userData = await userResponse.json();
@@ -31,8 +31,8 @@ test.describe('Admin Management E2E', () => {
 
     const meResponse = await request.get('/api/users/me', {
       headers: {
-        'Authorization': `Bearer ${regularUserToken}`
-      }
+        Authorization: `Bearer ${regularUserToken}`,
+      },
     });
     expect(meResponse.status()).toBe(200);
     testUser = await meResponse.json();
@@ -42,8 +42,8 @@ test.describe('Admin Management E2E', () => {
     // Step 1: Admin views platform statistics
     const statsResponse = await request.get('/api/admin/stats', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
-      }
+        Authorization: `Bearer ${adminToken}`,
+      },
     });
     expect(statsResponse.status()).toBe(200);
     const stats = await statsResponse.json();
@@ -54,8 +54,8 @@ test.describe('Admin Management E2E', () => {
     // Step 2: Admin views all users in organization
     const usersResponse = await request.get('/api/admin/users', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
-      }
+        Authorization: `Bearer ${adminToken}`,
+      },
     });
     expect(usersResponse.status()).toBe(200);
     const usersPayload = await usersResponse.json();
@@ -71,11 +71,11 @@ test.describe('Admin Management E2E', () => {
     // Step 3: Admin promotes user to representative
     const promoteResponse = await request.patch(`/api/admin/users/${testUser.id}/role`, {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
       },
       data: {
-        role: 'REPRESENTATIVE'
-      }
+        role: 'REPRESENTATIVE',
+      },
     });
     expect(promoteResponse.status()).toBe(200);
     const promotedUser = await promoteResponse.json();
@@ -84,8 +84,8 @@ test.describe('Admin Management E2E', () => {
     // Step 4: Admin views analytics by level
     const levelAnalyticsResponse = await request.get('/api/admin/analytics/by-level', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
-      }
+        Authorization: `Bearer ${adminToken}`,
+      },
     });
     expect(levelAnalyticsResponse.status()).toBe(200);
     const levelAnalytics = await levelAnalyticsResponse.json();
@@ -94,8 +94,8 @@ test.describe('Admin Management E2E', () => {
     // Step 5: Admin views analytics by category
     const categoryAnalyticsResponse = await request.get('/api/admin/analytics/by-category', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
-      }
+        Authorization: `Bearer ${adminToken}`,
+      },
     });
     expect(categoryAnalyticsResponse.status()).toBe(200);
     const categoryAnalytics = await categoryAnalyticsResponse.json();
@@ -104,13 +104,14 @@ test.describe('Admin Management E2E', () => {
     // Step 6: Admin creates organization-wide announcement
     const announcementResponse = await request.post('/api/admin/announcements', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
       },
       data: {
         title: 'Scheduled Maintenance Notice',
-        content: 'The platform will undergo scheduled maintenance this weekend from 2 AM to 4 AM EST. Some services may be temporarily unavailable.',
-        categoryIds: [] // Organization-wide announcement
-      }
+        content:
+          'The platform will undergo scheduled maintenance this weekend from 2 AM to 4 AM EST. Some services may be temporarily unavailable.',
+        categoryIds: [], // Organization-wide announcement
+      },
     });
     expect(announcementResponse.status()).toBe(201);
     testAnnouncement = await announcementResponse.json();
@@ -119,8 +120,8 @@ test.describe('Admin Management E2E', () => {
     // Step 7: Regular user can view the announcement
     const userAnnouncementsResponse = await request.get('/api/announcements', {
       headers: {
-        'Authorization': `Bearer ${regularUserToken}`
-      }
+        Authorization: `Bearer ${regularUserToken}`,
+      },
     });
     expect(userAnnouncementsResponse.status()).toBe(200);
     const userAnnouncementsPayload = await userAnnouncementsResponse.json();
@@ -134,12 +135,13 @@ test.describe('Admin Management E2E', () => {
     // Step 8: Admin updates the announcement
     const updateResponse = await request.patch(`/api/admin/announcements/${testAnnouncement.id}`, {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
       },
       data: {
         title: 'Updated: Scheduled Maintenance Notice',
-        content: 'UPDATE: Maintenance window extended to 3 hours. Platform will be unavailable from 2 AM to 5 AM EST.'
-      }
+        content:
+          'UPDATE: Maintenance window extended to 3 hours. Platform will be unavailable from 2 AM to 5 AM EST.',
+      },
     });
     expect(updateResponse.status()).toBe(200);
     const updatedAnnouncement = await updateResponse.json();
@@ -149,8 +151,8 @@ test.describe('Admin Management E2E', () => {
     // Step 9: Admin views all pings for moderation
     const allPingsResponse = await request.get('/api/admin/pings', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
-      }
+        Authorization: `Bearer ${adminToken}`,
+      },
     });
     expect(allPingsResponse.status()).toBe(200);
     const allPingsPayload = await allPingsResponse.json();
@@ -160,22 +162,24 @@ test.describe('Admin Management E2E', () => {
     // Step 10: Admin deletes the announcement (cleanup)
     const deleteResponse = await request.delete(`/api/admin/announcements/${testAnnouncement.id}`, {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
-      }
+        Authorization: `Bearer ${adminToken}`,
+      },
     });
     expect(deleteResponse.status()).toBe(204);
 
     // Verify announcement is deleted
     const verifyDeleteResponse = await request.get('/api/announcements', {
       headers: {
-        'Authorization': `Bearer ${regularUserToken}`
-      }
+        Authorization: `Bearer ${regularUserToken}`,
+      },
     });
     const announcementsAfterDeletePayload = await verifyDeleteResponse.json();
     const announcementsAfterDelete = Array.isArray(announcementsAfterDeletePayload)
       ? announcementsAfterDeletePayload
       : announcementsAfterDeletePayload.data;
-    const deletedAnnouncement = announcementsAfterDelete.find((a: any) => a.id === testAnnouncement.id);
+    const deletedAnnouncement = announcementsAfterDelete.find(
+      (a: any) => a.id === testAnnouncement.id
+    );
     expect(deletedAnnouncement).toBeFalsy();
   });
 
@@ -183,36 +187,36 @@ test.describe('Admin Management E2E', () => {
     // Step 1: Regular user cannot access admin endpoints
     const adminStatsResponse = await request.get('/api/admin/stats', {
       headers: {
-        'Authorization': `Bearer ${regularUserToken}`
-      }
+        Authorization: `Bearer ${regularUserToken}`,
+      },
     });
     expect(adminStatsResponse.status()).toBe(403);
 
     // Step 2: Regular user cannot access admin user management
     const adminUsersResponse = await request.get('/api/admin/users', {
       headers: {
-        'Authorization': `Bearer ${regularUserToken}`
-      }
+        Authorization: `Bearer ${regularUserToken}`,
+      },
     });
     expect(adminUsersResponse.status()).toBe(403);
 
     // Step 3: Regular user cannot access admin analytics
     const adminAnalyticsResponse = await request.get('/api/admin/analytics/by-level', {
       headers: {
-        'Authorization': `Bearer ${regularUserToken}`
-      }
+        Authorization: `Bearer ${regularUserToken}`,
+      },
     });
     expect(adminAnalyticsResponse.status()).toBe(403);
 
     // Step 4: Regular user cannot create admin announcements
     const adminAnnouncementResponse = await request.post('/api/admin/announcements', {
       headers: {
-        'Authorization': `Bearer ${regularUserToken}`
+        Authorization: `Bearer ${regularUserToken}`,
       },
       data: {
         title: 'Unauthorized Announcement',
-        content: 'This should not work'
-      }
+        content: 'This should not work',
+      },
     });
     expect(adminAnnouncementResponse.status()).toBe(403);
 

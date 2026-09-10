@@ -465,7 +465,14 @@ All data is scoped to your organization (determined by email domain). Users can 
             },
             type: {
               type: 'string',
-              enum: ['COMMENT', 'SURGE', 'OFFICIAL_RESPONSE', 'ANNOUNCEMENT', 'WAVE', 'PING_STATUS'],
+              enum: [
+                'COMMENT',
+                'SURGE',
+                'OFFICIAL_RESPONSE',
+                'ANNOUNCEMENT',
+                'WAVE',
+                'PING_STATUS',
+              ],
               description: 'Type of notification',
             },
             message: {
@@ -664,10 +671,7 @@ All data is scoped to your organization (determined by email domain). Users can 
     ],
   },
   // Paths to files containing OpenAPI definitions (JSDoc comments)
-  apis: [
-    './src/routes/*.ts',
-    './src/controllers/*.ts',
-  ],
+  apis: ['./src/routes/*.ts', './src/controllers/*.ts'],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

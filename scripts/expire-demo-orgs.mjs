@@ -7,7 +7,7 @@ async function expireDemoOrgs() {
   console.log('Running demo org expiry check...');
   try {
     const now = new Date();
-    
+
     // Find demo orgs that have expired but are still active
     const expiredOrgs = await prisma.organization.findMany({
       where: {

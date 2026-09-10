@@ -17,7 +17,11 @@ const DEFAULT_PREFERENCES = {
   notifyJoinRequests: true,
 } as const;
 
-export const getMyNotificationPreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const getMyNotificationPreferences = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const organizationId = req.organizationId!;
     const userId = req.user!.userId;
@@ -43,7 +47,11 @@ export const getMyNotificationPreferences = async (req: AuthRequest, res: Respon
   }
 };
 
-export const patchMyNotificationPreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const patchMyNotificationPreferences = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const organizationId = req.organizationId!;
     const userId = req.user!.userId;
@@ -73,4 +81,3 @@ export const patchMyNotificationPreferences = async (req: AuthRequest, res: Resp
     return next(error);
   }
 };
-

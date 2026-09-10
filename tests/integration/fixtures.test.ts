@@ -2,7 +2,14 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getPrisma } from '../integration/testContainer.js';
 import { buildTestClient } from '../integration/appClient.js';
 import './setupHooks.js';
-import { createOrganization, createUser, createCategory, createPing, createWave, cleanupTestData } from '../fixtures/index.js';
+import {
+  createOrganization,
+  createUser,
+  createCategory,
+  createPing,
+  createWave,
+  cleanupTestData,
+} from '../fixtures/index.js';
 
 describe('Test Fixtures', () => {
   const prisma = getPrisma();
@@ -70,12 +77,12 @@ describe('Test Fixtures', () => {
       organizationId: org.id,
       authorId: user.id,
       categoryId: category.id,
-      title: 'Related Ping'
+      title: 'Related Ping',
     });
     const wave = await createWave({
       organizationId: org.id,
       pingId: ping.id,
-      solution: 'Related Solution'
+      solution: 'Related Solution',
     });
 
     // Verify relationships

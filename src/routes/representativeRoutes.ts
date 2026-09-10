@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { getSubmittedPings, getTopWavesForReview, forwardWaves } from '../controllers/representativeController.js' ;
+import {
+  getSubmittedPings,
+  getTopWavesForReview,
+  forwardWaves,
+} from '../controllers/representativeController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import representativeMiddleware from '../middleware/representativeMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
@@ -17,7 +21,7 @@ const router = Router();
  *     description: |
  *       Retrieve pings that have been submitted for representative review.
  *       These are pings that students want to escalate to administration.
- *       
+ *
  *       **Representative/Admin only**: Requires REPRESENTATIVE or ADMIN role.
  *     tags:
  *       - Representative
@@ -72,7 +76,7 @@ router.get(
  *     description: |
  *       Get the top-rated waves that representatives should review.
  *       Waves with high surge counts are prioritized.
- *       
+ *
  *       **Representative/Admin only**: Requires REPRESENTATIVE or ADMIN role.
  *     tags:
  *       - Representative
@@ -111,7 +115,7 @@ router.get(
  *     description: |
  *       Flag selected waves for administrative review.
  *       This escalates promising solutions to decision-makers.
- *       
+ *
  *       **Representative/Admin only**: Requires REPRESENTATIVE or ADMIN role.
  *     tags:
  *       - Representative

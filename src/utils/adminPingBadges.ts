@@ -32,13 +32,13 @@ const BADGE_PRIORITY: AdminBadgeKey[] = [
 ];
 
 const BADGE_META: Record<AdminBadgeKey, Omit<AdminBadge, 'key'>> = {
-  SURGING_NOW:     { label: 'Surging now',     group: 'urgency'  },
-  RISING_QUICKLY:  { label: 'Rising quickly',  group: 'urgency'  },
-  LONG_OVERDUE:    { label: 'Long overdue',     group: 'urgency'  },
-  HIGH_DISCUSSION: { label: 'High discussion',  group: 'breadth'  },
-  WIDESPREAD:      { label: 'Widespread',       group: 'breadth'  },
-  NEEDS_ATTENTION: { label: 'Needs attention',  group: 'inaction' },
-  SOLUTION_READY:  { label: 'Solution ready',   group: 'inaction' },
+  SURGING_NOW: { label: 'Surging now', group: 'urgency' },
+  RISING_QUICKLY: { label: 'Rising quickly', group: 'urgency' },
+  LONG_OVERDUE: { label: 'Long overdue', group: 'urgency' },
+  HIGH_DISCUSSION: { label: 'High discussion', group: 'breadth' },
+  WIDESPREAD: { label: 'Widespread', group: 'breadth' },
+  NEEDS_ATTENTION: { label: 'Needs attention', group: 'inaction' },
+  SOLUTION_READY: { label: 'Solution ready', group: 'inaction' },
 };
 
 // ── Keyword extraction for Widespread ────────────────────────────────────────
@@ -48,20 +48,129 @@ const BADGE_META: Record<AdminBadgeKey, Omit<AdminBadge, 'key'>> = {
  * finding overlapping topics between pings.
  */
 const STOPWORDS = new Set([
-  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'any', 'can',
-  'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him',
-  'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who',
-  'did', 'its', 'let', 'put', 'too', 'use', 'with', 'this', 'that', 'from',
-  'they', 'know', 'will', 'want', 'been', 'good', 'much', 'some', 'time',
-  'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many',
-  'more', 'only', 'over', 'such', 'take', 'than', 'them', 'then', 'well',
-  'were', 'what', 'your', 'about', 'after', 'also', 'back', 'being',
-  'does', 'each', 'even', 'give', 'have', 'into', 'keep', 'last', 'left',
-  'life', 'made', 'mean', 'most', 'must', 'need', 'same', 'show', 'still',
-  'stop', 'their', 'there', 'these', 'think', 'those', 'through',
-  'under', 'until', 'upon', 'using', 'while', 'where', 'which', 'should',
-  'would', 'could', 'other', 'might', 'shall', 'every', 'issue', 'ping',
-  'please', 'really', 'school', 'always', 'never', 'nothing', 'something',
+  'the',
+  'and',
+  'for',
+  'are',
+  'but',
+  'not',
+  'you',
+  'all',
+  'any',
+  'can',
+  'had',
+  'her',
+  'was',
+  'one',
+  'our',
+  'out',
+  'day',
+  'get',
+  'has',
+  'him',
+  'his',
+  'how',
+  'man',
+  'new',
+  'now',
+  'old',
+  'see',
+  'two',
+  'way',
+  'who',
+  'did',
+  'its',
+  'let',
+  'put',
+  'too',
+  'use',
+  'with',
+  'this',
+  'that',
+  'from',
+  'they',
+  'know',
+  'will',
+  'want',
+  'been',
+  'good',
+  'much',
+  'some',
+  'time',
+  'very',
+  'when',
+  'come',
+  'here',
+  'just',
+  'like',
+  'long',
+  'make',
+  'many',
+  'more',
+  'only',
+  'over',
+  'such',
+  'take',
+  'than',
+  'them',
+  'then',
+  'well',
+  'were',
+  'what',
+  'your',
+  'about',
+  'after',
+  'also',
+  'back',
+  'being',
+  'does',
+  'each',
+  'even',
+  'give',
+  'have',
+  'into',
+  'keep',
+  'last',
+  'left',
+  'life',
+  'made',
+  'mean',
+  'most',
+  'must',
+  'need',
+  'same',
+  'show',
+  'still',
+  'stop',
+  'their',
+  'there',
+  'these',
+  'think',
+  'those',
+  'through',
+  'under',
+  'until',
+  'upon',
+  'using',
+  'while',
+  'where',
+  'which',
+  'should',
+  'would',
+  'could',
+  'other',
+  'might',
+  'shall',
+  'every',
+  'issue',
+  'ping',
+  'please',
+  'really',
+  'school',
+  'always',
+  'never',
+  'nothing',
+  'something',
 ]);
 
 /**
@@ -113,7 +222,7 @@ export const appendAdminPingBadges = async <
     title: string;
     hashtag?: string | null;
     _count?: { waves?: number; comments?: number };
-  }
+  },
 >(
   pings: T[],
   organizationId: number,
@@ -123,12 +232,11 @@ export const appendAdminPingBadges = async <
 
   const pingIds = pings.map((p) => p.id);
   const now = Date.now();
-  const oneDayAgo    = new Date(now - MS_PER_DAY);
-  const sevenDaysAgo = new Date(now - 7  * MS_PER_DAY);
+  const oneDayAgo = new Date(now - MS_PER_DAY);
+  const sevenDaysAgo = new Date(now - 7 * MS_PER_DAY);
 
   // ── Batch queries (run in parallel) ──────────────────────────────────────
   const [surges24h, surges7d, waveRows, orgPingRows] = await Promise.all([
-
     // 1. Surge count per ping in the last 24 h  →  "Surging now"
     prisma.surge.groupBy({
       by: ['pingId'],
@@ -194,7 +302,7 @@ export const appendAdminPingBadges = async <
   // waveActionTaken: set of pingIds where admin has acted on at least one wave
   // topWaveSurge: pingId → highest surgeCount across its non-rejected waves
   const waveActionTaken = new Set<number>();
-  const topWaveSurge    = new Map<number, number>();
+  const topWaveSurge = new Map<number, number>();
   for (const w of waveRows) {
     if (w.pingId === null) continue;
     if (ACTION_STATUSES.has(w.status)) waveActionTaken.add(w.pingId);
@@ -262,40 +370,35 @@ export const appendAdminPingBadges = async <
   return pings.map((ping) => {
     const eligible = new Set<AdminBadgeKey>();
 
-    const v24h       = velocity24h.get(ping.id) ?? 0;
-    const v7dTotal   = velocity7d.get(ping.id) ?? 0;
-    const v7dPerDay  = v7dTotal / 7;
-    const surges     = ping.surgeCount;
-    const comments   = ping._count?.comments ?? 0;
-    const isUnresolved   = ping.progressStatus !== ProgressStatus.RESOLVED && !ping.resolvedAt;
+    const v24h = velocity24h.get(ping.id) ?? 0;
+    const v7dTotal = velocity7d.get(ping.id) ?? 0;
+    const v7dPerDay = v7dTotal / 7;
+    const surges = ping.surgeCount;
+    const comments = ping._count?.comments ?? 0;
+    const isUnresolved = ping.progressStatus !== ProgressStatus.RESOLVED && !ping.resolvedAt;
     const isAcknowledged = !!ping.acknowledgedAt;
-    const hasWaveAction  = waveActionTaken.has(ping.id);
-    const topWave        = topWaveSurge.get(ping.id) ?? 0;
+    const hasWaveAction = waveActionTaken.has(ping.id);
+    const topWave = topWaveSurge.get(ping.id) ?? 0;
     const daysSinceCreated = (now - ping.createdAt.getTime()) / MS_PER_DAY;
 
     // — Urgency —
-    if (v24h > 20)
-      eligible.add('SURGING_NOW');
+    if (v24h > 20) eligible.add('SURGING_NOW');
 
     // Rising quickly: average daily velocity in the 7-day window is 8–20 surges/day
     // but NOT already surging now (avoid overlapping urgency signals)
-    if (v7dPerDay >= 8 && v7dPerDay <= 20 && v24h <= 20)
-      eligible.add('RISING_QUICKLY');
+    if (v7dPerDay >= 8 && v7dPerDay <= 20 && v24h <= 20) eligible.add('RISING_QUICKLY');
 
-    if (daysSinceCreated > 21 && surges > 50 && isUnresolved)
-      eligible.add('LONG_OVERDUE');
+    if (daysSinceCreated > 21 && surges > 50 && isUnresolved) eligible.add('LONG_OVERDUE');
 
     // — Breadth —
     // HIGH_DISCUSSION is "detail only" — only evaluated when caller requests it
     if (includeDetailBadges && comments > 20 && surges > 0 && comments / surges > 0.15)
       eligible.add('HIGH_DISCUSSION');
 
-    if (widespreadSet.has(ping.id))
-      eligible.add('WIDESPREAD');
+    if (widespreadSet.has(ping.id)) eligible.add('WIDESPREAD');
 
     // — Inaction —
-    if (!isAcknowledged && !hasWaveAction && surges > 30)
-      eligible.add('NEEDS_ATTENTION');
+    if (!isAcknowledged && !hasWaveAction && surges > 30) eligible.add('NEEDS_ATTENTION');
 
     // Solution ready: top wave has > 60 % of the ping's total surge share
     // and no admin wave action has been taken yet

@@ -15,10 +15,10 @@ const router = Router();
  *     summary: Get active announcements
  *     description: |
  *       Retrieve all active announcements for the user's organization.
- *       
+ *
  *       **Authentication required**: User must be logged in.
  *       **Organization scoped**: Only returns announcements for user's organization.
- *       
+ *
  *       Announcements are filtered by:
  *       - Active status (not expired)
  *       - User's level (if targeted)
@@ -58,6 +58,13 @@ const router = Router();
  *         description: Internal server error
  */
 // GET announcements - cached for 2 minutes
-router.get('/', authMiddleware, organizationMiddleware, validate(getAnnouncementsSchema), cache(120), getAnnouncements);
+router.get(
+  '/',
+  authMiddleware,
+  organizationMiddleware,
+  validate(getAnnouncementsSchema),
+  cache(120),
+  getAnnouncements
+);
 
 export default router;

@@ -12,7 +12,7 @@ const router = Router();
  *     description: |
  *       Performs a comprehensive health check including database connectivity.
  *       Use this endpoint to verify that all critical services are operational.
- *       
+ *
  *       **No authentication required**
  *     tags:
  *       - Health
@@ -61,22 +61,22 @@ router.get('/health', async (req: Request, res: Response) => {
   try {
     // Check database connection
     await prisma.$queryRaw`SELECT 1`;
-    
-    res.status(200).json({ 
+
+    res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
       services: {
-        database: 'healthy'
-      }
+        database: 'healthy',
+      },
     });
   } catch (error) {
     logger.error('Health check failed', { error });
-    res.status(503).json({ 
+    res.status(503).json({
       status: 'Error',
       timestamp: new Date().toISOString(),
       services: {
-        database: 'unhealthy'
-      }
+        database: 'unhealthy',
+      },
     });
   }
 });
@@ -89,7 +89,7 @@ router.get('/health', async (req: Request, res: Response) => {
  *     description: |
  *       Quick health check that only verifies the application is running.
  *       Does not check database or other external services.
- *       
+ *
  *       **No authentication required**
  *     tags:
  *       - Health

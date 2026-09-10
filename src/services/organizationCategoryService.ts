@@ -14,9 +14,7 @@ export async function ensureOrganizationDefaultCategories(
   });
 
   const existingNames = new Set(existing.map((category) => category.name.toLowerCase()));
-  const missing = DEFAULT_CATEGORY_NAMES.filter(
-    (name) => !existingNames.has(name.toLowerCase())
-  );
+  const missing = DEFAULT_CATEGORY_NAMES.filter((name) => !existingNames.has(name.toLowerCase()));
 
   if (missing.length === 0) {
     return;

@@ -23,7 +23,7 @@ export const inviteLeader = async (req: AuthRequest, res: Response, next: NextFu
 
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { id: true, name: true, isClaimVerified: true }
+      select: { id: true, name: true, isClaimVerified: true },
     });
 
     if (!organization) {
@@ -44,32 +44,32 @@ export const inviteLeader = async (req: AuthRequest, res: Response, next: NextFu
         organizationId,
         role: 'ADMIN', // The invited person will likely claim the admin/leader role
         expiresAt,
-        status: 'PENDING'
-      }
+        status: 'PENDING',
+      },
     });
 
     const emailContent = buildLeaderInvitationEmail(organization.name, token, organizationId);
-    
+
     try {
       await sendEmail({
         to: email,
-        ...emailContent
+        ...emailContent,
       });
     } catch (emailError) {
       logger.error('Failed to send leader invitation email', {
         email,
         organizationId,
-        error: (emailError as Error).message
-      });
-      
-      // Rollback database record if email delivery fails
-      await prisma.invitation.delete({
-        where: { id: invitation.id }
+        error: (emailError as Error).message,
       });
 
-      return res.status(500).json({ 
+      // Rollback database record if email delivery fails
+      await prisma.invitation.delete({
+        where: { id: invitation.id },
+      });
+
+      return res.status(500).json({
         error: 'Failed to send invitation email. Please try again later.',
-        code: 'EMAIL_DELIVERY_FAILURE' 
+        code: 'EMAIL_DELIVERY_FAILURE',
       });
     }
 
@@ -77,7 +77,7 @@ export const inviteLeader = async (req: AuthRequest, res: Response, next: NextFu
       organizationId,
       invitedEmail: email,
       inviterId,
-      invitationId: invitation.id
+      invitationId: invitation.id,
     });
 
     return res.status(201).json({
@@ -85,8 +85,8 @@ export const inviteLeader = async (req: AuthRequest, res: Response, next: NextFu
       invitation: {
         id: invitation.id,
         email: invitation.email,
-        expiresAt: invitation.expiresAt
-      }
+        expiresAt: invitation.expiresAt,
+      },
     });
   } catch (error) {
     logger.error('Error inviting leader', { error, organizationId: req.params.id });

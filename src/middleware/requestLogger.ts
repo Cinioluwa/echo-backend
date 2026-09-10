@@ -13,9 +13,8 @@ const SILENT_PATHS = ['/healthz'];
 export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   const isSilent = SILENT_PATHS.includes(req.url);
 
-  const forwardedRequestId = req.get('x-request-id')
-    || req.get('x-correlation-id')
-    || req.get('x-railway-request-id');
+  const forwardedRequestId =
+    req.get('x-request-id') || req.get('x-correlation-id') || req.get('x-railway-request-id');
   const requestId = forwardedRequestId || generateRequestId();
   const startTime = Date.now();
 

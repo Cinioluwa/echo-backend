@@ -237,7 +237,8 @@ describe('Organization Claim Flow', () => {
       .expect(200);
 
     const pendingRequest = listRes.body.claims.find(
-      (claim: any) => claim.organizationId === verifiedOrg.id && claim.requesterEmail === requesterEmail
+      (claim: any) =>
+        claim.organizationId === verifiedOrg.id && claim.requesterEmail === requesterEmail
     );
 
     expect(pendingRequest).toBeTruthy();

@@ -41,12 +41,12 @@ const router = Router();
  *     description: |
  *       Upload one or more media files (images, videos, PDFs).
  *       Returns media IDs that can be attached to pings or waves.
- *       
+ *
  *       **Supported formats:**
  *       - Images: JPEG, PNG, GIF, WebP (max 5MB each)
  *       - Videos: MP4, WebM, QuickTime (max 50MB each)
  *       - Documents: PDF (max 10MB)
- *       
+ *
  *       **Limits:** Maximum 5 files per request
  *     tags:
  *       - Uploads
@@ -97,7 +97,7 @@ router.post(
  *     description: |
  *       Upload a new profile picture for the current user.
  *       The image is automatically resized to 400x400 and cropped to face.
- *       
+ *
  *       **Supported formats:** JPEG, PNG, GIF, WebP (max 5MB)
  *     tags:
  *       - Uploads

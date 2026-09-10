@@ -2,7 +2,11 @@ import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/test-client';
 
 // Helper function to retry Prisma operations (handles race conditions)
-async function retryPrismaOperation<T>(operation: () => Promise<T>, retries = 10, delay = 500): Promise<T> {
+async function retryPrismaOperation<T>(
+  operation: () => Promise<T>,
+  retries = 10,
+  delay = 500
+): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       console.log(`Attempt ${i + 1}/${retries}...`);
@@ -13,7 +17,7 @@ async function retryPrismaOperation<T>(operation: () => Promise<T>, retries = 10
       console.log(`Attempt ${i + 1} failed:`, error.code, error.message);
       if (error.code === 'P2025' && i < retries - 1) {
         // Record not found - wait and retry
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
       throw error;
@@ -39,8 +43,8 @@ test.describe('User Registration & Onboarding E2E', () => {
         password: 'TestPassword123!',
         firstName: 'E2E',
         lastName: 'User',
-        level: 3
-      }
+        level: 3,
+      },
     });
 
     expect(registerResponse.status()).toBe(201);
@@ -50,7 +54,7 @@ test.describe('User Registration & Onboarding E2E', () => {
     await retryPrismaOperation(() =>
       prisma.user.update({
         where: { id: userData.id },
-        data: { status: 'ACTIVE', isVerified: true }
+        data: { status: 'ACTIVE', isVerified: true },
       })
     );
 
@@ -58,8 +62,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     const loginResponse = await request.post('/api/users/login', {
       data: {
         email: userData.email,
-        password: 'TestPassword123!'
-      }
+        password: 'TestPassword123!',
+      },
     });
 
     expect(loginResponse.status()).toBe(200);
@@ -67,7 +71,7 @@ test.describe('User Registration & Onboarding E2E', () => {
 
     // Verify user details via /me endpoint
     const profileResponse = await request.get('/api/users/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     expect(profileResponse.status()).toBe(200);
     const profile = await profileResponse.json();
@@ -77,8 +81,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     const adminLoginResponse = await request.post('/api/users/login', {
       data: {
         email: 'admin@testorg1.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
 
     expect(adminLoginResponse.status()).toBe(200);
@@ -86,11 +90,11 @@ test.describe('User Registration & Onboarding E2E', () => {
 
     const categoryResponse = await request.post('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${adminToken}`
+        Authorization: `Bearer ${adminToken}`,
       },
       data: {
-        name: `E2E Test Category ${Date.now()}`
-      }
+        name: `E2E Test Category ${Date.now()}`,
+      },
     });
 
     expect(categoryResponse.status()).toBe(201);
@@ -99,14 +103,15 @@ test.describe('User Registration & Onboarding E2E', () => {
     // Step 5: Create first ping
     const pingResponse = await request.post('/api/pings', {
       headers: {
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
       data: {
         title: 'My first ping from E2E test',
-        content: 'This is an end-to-end test of the complete user journey from registration to ping creation.',
+        content:
+          'This is an end-to-end test of the complete user journey from registration to ping creation.',
         hashtag: '#e2e-test',
-        categoryId: categoryData.id
-      }
+        categoryId: categoryData.id,
+      },
     });
 
     expect(pingResponse.status()).toBe(201);
@@ -118,8 +123,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     // Step 6: Verify ping appears in user's pings
     const userPingsResponse = await request.get('/api/pings', {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     expect(userPingsResponse.status()).toBe(200);
@@ -132,8 +137,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     // Step 7: Create a surge on the ping
     const surgeResponse = await request.post(`/api/pings/${pingData.id}/surge`, {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     expect(surgeResponse.status()).toBe(200);
@@ -146,11 +151,11 @@ test.describe('User Registration & Onboarding E2E', () => {
     // Step 8: Add a comment to the ping
     const commentResponse = await request.post(`/api/pings/${pingData.id}/comments`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
       data: {
-        content: 'This is my first comment on my first ping!'
-      }
+        content: 'This is my first comment on my first ping!',
+      },
     });
 
     expect(commentResponse.status()).toBe(201);
@@ -161,8 +166,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     // Step 9: Verify comment appears in ping comments
     const pingCommentsResponse = await request.get(`/api/pings/${pingData.id}/comments`, {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     expect(pingCommentsResponse.status()).toBe(200);
@@ -174,8 +179,8 @@ test.describe('User Registration & Onboarding E2E', () => {
     // Step 10: Check user profile/stats
     const profileResponse2 = await request.get('/api/users/me', {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     expect(profileResponse2.status()).toBe(200);

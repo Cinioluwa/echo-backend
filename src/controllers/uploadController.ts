@@ -408,9 +408,7 @@ export const attachMediaToEntity = async (req: AuthRequest, res: Response, next:
     }
 
     // Update media records to link to the entity
-    const updateData = entityType === 'ping'
-      ? { pingId: entityId }
-      : { waveId: entityId };
+    const updateData = entityType === 'ping' ? { pingId: entityId } : { waveId: entityId };
 
     const updatedMedia = await prisma.media.updateMany({
       where: {

@@ -4,10 +4,10 @@ import logger from '../config/logger.js';
 import { env } from '../config/env.js';
 
 type EmailPayload = {
-	to: string;
-	subject: string;
-	html: string;
-	text?: string;
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
 };
 
 let transporter: Transporter | null = null;
@@ -16,146 +16,137 @@ let resendClient: Resend | null = null;
 const isResendConfigured = () => Boolean(env.RESEND_API_KEY);
 
 const getResendClient = () => {
-	if (!isResendConfigured()) {
-		return null;
-	}
-	if (resendClient) {
-		return resendClient;
-	}
-	resendClient = new Resend(env.RESEND_API_KEY);
-	return resendClient;
+  if (!isResendConfigured()) {
+    return null;
+  }
+  if (resendClient) {
+    return resendClient;
+  }
+  resendClient = new Resend(env.RESEND_API_KEY);
+  return resendClient;
 };
 
 const isSmtpConfigured = () =>
-	Boolean(
-		env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS
-	);
+  Boolean(env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS);
 
 const getTransporter = () => {
-	if (!isSmtpConfigured()) {
-		logger.warn('SMTP is not configured. Email will not be sent.');
-		return null;
-	}
+  if (!isSmtpConfigured()) {
+    logger.warn('SMTP is not configured. Email will not be sent.');
+    return null;
+  }
 
-	if (transporter) {
-		return transporter;
-	}
+  if (transporter) {
+    return transporter;
+  }
 
-	transporter = nodemailer.createTransport({
-		host: env.SMTP_HOST,
-		port: env.SMTP_PORT,
-		secure: Number(env.SMTP_PORT) === 465,
-		// On 587 we expect STARTTLS.
-		requireTLS: Number(env.SMTP_PORT) === 587,
-		// Avoid requests hanging for ~1min+ if SMTP is unreachable/misconfigured.
-		connectionTimeout: 10_000,
-		greetingTimeout: 10_000,
-		socketTimeout: 15_000,
-		tls: {
-			servername: env.SMTP_HOST,
-		},
-		auth: {
-			user: env.SMTP_USER,
-			pass: env.SMTP_PASS,
-		},
-	});
+  transporter = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: Number(env.SMTP_PORT) === 465,
+    // On 587 we expect STARTTLS.
+    requireTLS: Number(env.SMTP_PORT) === 587,
+    // Avoid requests hanging for ~1min+ if SMTP is unreachable/misconfigured.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
+    tls: {
+      servername: env.SMTP_HOST,
+    },
+    auth: {
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS,
+    },
+  });
 
-	return transporter;
+  return transporter;
 };
 
 export const sendEmail = async ({ to, subject, html, text }: EmailPayload) => {
-	const resend = getResendClient();
-	if (resend) {
-		try {
-			const from = env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev';
-			const result = await resend.emails.send({
-				from,
-				to,
-				subject,
-				html,
-				text,
-			});
+  const resend = getResendClient();
+  if (resend) {
+    try {
+      const from = env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev';
+      const result = await resend.emails.send({
+        from,
+        to,
+        subject,
+        html,
+        text,
+      });
 
-			// The SDK may return a structured { data, error } response.
-			const anyResult = result as any;
-			if (anyResult?.error) {
-				logger.error('Failed to send email (resend)', {
-					to,
-					subject,
-					from,
-					message:
-						anyResult.error?.message ??
-						JSON.stringify(anyResult.error),
-				});
-				throw new Error(
-					anyResult.error?.message ?? 'Resend email send failed'
-				);
-			}
+      // The SDK may return a structured { data, error } response.
+      const anyResult = result as any;
+      if (anyResult?.error) {
+        logger.error('Failed to send email (resend)', {
+          to,
+          subject,
+          from,
+          message: anyResult.error?.message ?? JSON.stringify(anyResult.error),
+        });
+        throw new Error(anyResult.error?.message ?? 'Resend email send failed');
+      }
 
-			logger.info('Email dispatched (resend)', {
-				to,
-				subject,
-				from,
-				resendId: anyResult?.data?.id,
-			});
-			return;
-		} catch (error) {
-			const err = error as Error;
-			logger.error('Failed to send email (resend)', {
-				to,
-				subject,
-				from: env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev',
-				message: err.message,
-			});
-			throw err;
-		}
-	}
+      logger.info('Email dispatched (resend)', {
+        to,
+        subject,
+        from,
+        resendId: anyResult?.data?.id,
+      });
+      return;
+    } catch (error) {
+      const err = error as Error;
+      logger.error('Failed to send email (resend)', {
+        to,
+        subject,
+        from: env.EMAIL_FROM ?? env.SMTP_USER ?? 'onboarding@resend.dev',
+        message: err.message,
+      });
+      throw err;
+    }
+  }
 
-	const mailer = getTransporter();
+  const mailer = getTransporter();
 
-	if (!mailer) {
-		logger.info('Skipped email send because SMTP is not configured', {
-			to,
-			subject,
-		});
-		return;
-	}
+  if (!mailer) {
+    logger.info('Skipped email send because SMTP is not configured', {
+      to,
+      subject,
+    });
+    return;
+  }
 
-	try {
-		await mailer.sendMail({
-			from: env.EMAIL_FROM ?? env.SMTP_USER,
-			to,
-			subject,
-			html,
-			text,
-		});
-		logger.info('Email dispatched (smtp)', { to, subject });
-	} catch (error) {
-		const err = error as Error;
-		logger.error('Failed to send email (smtp)', {
-			to,
-			subject,
-			message: err.message,
-		});
-		throw err;
-	}
+  try {
+    await mailer.sendMail({
+      from: env.EMAIL_FROM ?? env.SMTP_USER,
+      to,
+      subject,
+      html,
+      text,
+    });
+    logger.info('Email dispatched (smtp)', { to, subject });
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Failed to send email (smtp)', {
+      to,
+      subject,
+      message: err.message,
+    });
+    throw err;
+  }
 };
 
 const sanitizeAppUrl = () => env.APP_URL.replace(/\/$/, '');
 
-export const buildVerificationEmail = (
-	token: string,
-	recipientFirstName?: string | null
-) => {
-	// Use API_URL if set, otherwise fallback to APP_URL
-	// This points directly to the backend API route for browser click verification
-	const apiUrl = (process.env.API_URL || env.APP_URL).replace(/\/$/, '');
-	const verifyUrl = `${apiUrl}/api/users/verify-email?token=${token}`;
-	const greeting = recipientFirstName ? `Hi ${recipientFirstName},` : 'Hi,';
+export const buildVerificationEmail = (token: string, recipientFirstName?: string | null) => {
+  // Use API_URL if set, otherwise fallback to APP_URL
+  // This points directly to the backend API route for browser click verification
+  const apiUrl = (process.env.API_URL || env.APP_URL).replace(/\/$/, '');
+  const verifyUrl = `${apiUrl}/api/users/verify-email?token=${token}`;
+  const greeting = recipientFirstName ? `Hi ${recipientFirstName},` : 'Hi,';
 
-	return {
-		subject: 'Verify your Echo account',
-		html: `
+  return {
+    subject: 'Verify your Echo account',
+    html: `
 			<p>${greeting}</p>
 			<p>Welcome to Echo! Please verify your email address to activate your account.</p>
 			<p><a href="${verifyUrl}">Click here to verify your email</a>.</p>
@@ -164,7 +155,7 @@ export const buildVerificationEmail = (
 			<p>This link expires in 24 hours.</p>
 			<p>— The Echo Team</p>
 		`,
-		text: `${greeting}
+    text: `${greeting}
 
 Welcome to Echo! Please verify your email address to activate your account.
 
@@ -173,15 +164,15 @@ Verification link: ${verifyUrl}
 This link expires in 24 hours.
 
 — The Echo Team`,
-	};
+  };
 };
 
 export const buildPasswordResetEmail = (token: string) => {
-	const resetUrl = `${sanitizeAppUrl()}/reset-password?token=${token}`;
+  const resetUrl = `${sanitizeAppUrl()}/reset-password?token=${token}`;
 
-	return {
-		subject: 'Reset your Echo password',
-		html: `
+  return {
+    subject: 'Reset your Echo password',
+    html: `
 			<p>We received a request to reset your Echo password.</p>
 			<p><a href="${resetUrl}">Click here to reset your password</a>.</p>
 			<p>If the button above does not work, copy and paste this link into your browser:</p>
@@ -190,70 +181,67 @@ export const buildPasswordResetEmail = (token: string) => {
 			<p>This link expires in 60 minutes.</p>
 			<p>— The Echo Team</p>
 		`,
-		text: `We received a request to reset your Echo password.
+    text: `We received a request to reset your Echo password.
 
 Password reset link: ${resetUrl}
 
 If you did not request this change, you can ignore this email. This link expires in 60 minutes.
 
 — The Echo Team`,
-	};
+  };
 };
 
-export const buildOrganizationRequestEmail = (
-	organizationName: string,
-	domain: string
-) => {
-	const dashboardUrl = `${sanitizeAppUrl()}/admin/organization-requests`;
+export const buildOrganizationRequestEmail = (organizationName: string, domain: string) => {
+  const dashboardUrl = `${sanitizeAppUrl()}/admin/organization-requests`;
 
-	return {
-		subject: `New organization request: ${organizationName}`,
-		html: `
+  return {
+    subject: `New organization request: ${organizationName}`,
+    html: `
 			<p>A new organization has requested access to Echo.</p>
 			<p><strong>Organization:</strong> ${organizationName}</p>
 			<p><strong>Domain:</strong> ${domain}</p>
 			<p>Sign in to the Echo admin dashboard to review and approve this request.</p>
 			<p><a href="${dashboardUrl}">Open admin dashboard</a></p>
 		`,
-		text: `A new organization has requested access to Echo.
+    text: `A new organization has requested access to Echo.
 
 Organization: ${organizationName}
 Domain: ${domain}
 
 Review in the admin dashboard: ${dashboardUrl}`,
-	};
+  };
 };
 
 export const buildOrganizationAdminAccessRequestEmail = (
-	organizationName: string,
-	requesterEmail: string
+  organizationName: string,
+  requesterEmail: string
 ) => {
-	const dashboardUrl = `${sanitizeAppUrl()}/admin/organization-claims`;
+  const dashboardUrl = `${sanitizeAppUrl()}/admin/organization-claims`;
 
-	return {
-		subject: `Admin access request: ${organizationName}`,
-		html: `
+  return {
+    subject: `Admin access request: ${organizationName}`,
+    html: `
 			<p>A leadership admin-access request was submitted for a verified organization.</p>
 			<p><strong>Organization:</strong> ${organizationName}</p>
 			<p><strong>Requester:</strong> ${requesterEmail}</p>
 			<p>Review and resolve the request in the Echo admin dashboard.</p>
 			<p><a href="${dashboardUrl}">Open admin dashboard</a></p>
 		`,
-		text: `A leadership admin-access request was submitted for a verified organization.
+    text: `A leadership admin-access request was submitted for a verified organization.
 
 Organization: ${organizationName}
 Requester: ${requesterEmail}
 
 Review in the admin dashboard: ${dashboardUrl}`,
-	};
+  };
 };
 
 export const buildWaitlistApprovalEmail = (organizationName: string) => {
-	const signupUrl = `${sanitizeAppUrl()}/signup`;
+  const signupUrl = `${sanitizeAppUrl()}/signup`;
 
-	return {
-		subject: 'Your organization is now on Echo',
-		html: `
+  return {
+    subject: 'Your organization is now on Echo',
+    html: `
 			<p>Hi,</p>
 			<p>Great news! Your organization <strong>${organizationName}</strong> has been approved and is now on Echo.</p>
 			<p>You can now create your account and start using the platform.</p>
@@ -262,7 +250,7 @@ export const buildWaitlistApprovalEmail = (organizationName: string) => {
 			<p>${signupUrl}</p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,
+    text: `Hi,
 
 Great news! Your organization ${organizationName} has been approved and is now on Echo.
 
@@ -271,15 +259,15 @@ You can now create your account and start using the platform.
 Sign up here: ${signupUrl}
 
 — The Echo Team`,
-	};
+  };
 };
 
 export const buildJoinRequestApprovedEmail = (organizationName: string) => {
-	const loginUrl = `${sanitizeAppUrl()}/login`;
+  const loginUrl = `${sanitizeAppUrl()}/login`;
 
-	return {
-		subject: `You've been approved to join ${organizationName} on Echo`,
-		html: `
+  return {
+    subject: `You've been approved to join ${organizationName} on Echo`,
+    html: `
 			<p>Hi,</p>
 			<p>Your request to join <strong>${organizationName}</strong> on Echo has been approved!</p>
 			<p>You can now log in and start using the platform.</p>
@@ -288,7 +276,7 @@ export const buildJoinRequestApprovedEmail = (organizationName: string) => {
 			<p>${loginUrl}</p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,
+    text: `Hi,
 
 Your request to join ${organizationName} on Echo has been approved!
 
@@ -297,43 +285,43 @@ You can now log in and start using the platform.
 Log in here: ${loginUrl}
 
 — The Echo Team`,
-	};
+  };
 };
 
 export const buildJoinRequestRejectedEmail = (organizationName: string, reason?: string) => {
-	const reasonLine = reason ? `<p><strong>Reason:</strong> ${reason}</p>` : '';
-	const reasonText = reason ? `\nReason: ${reason}\n` : '';
+  const reasonLine = reason ? `<p><strong>Reason:</strong> ${reason}</p>` : '';
+  const reasonText = reason ? `\nReason: ${reason}\n` : '';
 
-	return {
-		subject: `Your request to join ${organizationName} was not approved`,
-		html: `
+  return {
+    subject: `Your request to join ${organizationName} was not approved`,
+    html: `
 			<p>Hi,</p>
 			<p>Unfortunately, your request to join <strong>${organizationName}</strong> on Echo was not approved.</p>
 			${reasonLine}
 			<p>If you believe this was a mistake, please contact your organization admin for more information.</p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,
+    text: `Hi,
 		
 Unfortunately, your request to join ${organizationName} on Echo was not approved.
 ${reasonText}
 If you believe this was a mistake, please contact your organization admin for more information.
 
 — The Echo Team`,
-	};
+  };
 };
 
 export const buildLeaderInvitationEmail = (
-	organizationName: string,
-	token: string,
-	organizationId: number
+  organizationName: string,
+  token: string,
+  organizationId: number
 ) => {
-	const appUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
-	const invitationUrl = `${appUrl}/onboarding?invitationToken=${token}&orgId=${organizationId}`;
+  const appUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const invitationUrl = `${appUrl}/onboarding?invitationToken=${token}&orgId=${organizationId}`;
 
-	return {
-		subject: `Invitation to lead ${organizationName} on Echo`,
-		html: `
+  return {
+    subject: `Invitation to lead ${organizationName} on Echo`,
+    html: `
 			<p>Hi,</p>
 			<p>You have been invited to claim the leadership role for <strong>${organizationName}</strong> on Echo.</p>
 			<p>Echo is a platform for community engagement and issue resolution.</p>
@@ -343,7 +331,7 @@ export const buildLeaderInvitationEmail = (
 			<p>This invitation expires in 7 days.</p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,
+    text: `Hi,
 
 You have been invited to claim the leadership role for ${organizationName} on Echo.
 
@@ -354,60 +342,68 @@ Claim your organization here: ${invitationUrl}
 This invitation expires in 7 days.
 
 — The Echo Team`,
-	};
+  };
 };
 
-export const buildNewWaveOnPingEmail = (pingTitle: string, waveAuthorName: string, pingId: number) => {
-	const pingUrl = `${sanitizeAppUrl()}/feed/${pingId}`;
-	return {
-		subject: `New wave proposed for your ping: ${pingTitle}`,
-		html: `
+export const buildNewWaveOnPingEmail = (
+  pingTitle: string,
+  waveAuthorName: string,
+  pingId: number
+) => {
+  const pingUrl = `${sanitizeAppUrl()}/feed/${pingId}`;
+  return {
+    subject: `New wave proposed for your ping: ${pingTitle}`,
+    html: `
 			<p>Hi,</p>
 			<p><strong>${waveAuthorName}</strong> just proposed a new wave (solution) for your ping <em>"${pingTitle}"</em>.</p>
 			<p><a href="${pingUrl}">Click here to view the wave</a></p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,\n\n${waveAuthorName} just proposed a new wave (solution) for your ping "${pingTitle}".\n\nView it here: ${pingUrl}\n\n— The Echo Team`,
-	};
+    text: `Hi,\n\n${waveAuthorName} just proposed a new wave (solution) for your ping "${pingTitle}".\n\nView it here: ${pingUrl}\n\n— The Echo Team`,
+  };
 };
 
 export const buildNewCommentEmail = (postTitle: string, commenterName: string, urlPath: string) => {
-	const postUrl = `${sanitizeAppUrl()}${urlPath}`;
-	return {
-		subject: `New comment on: ${postTitle}`,
-		html: `
+  const postUrl = `${sanitizeAppUrl()}${urlPath}`;
+  return {
+    subject: `New comment on: ${postTitle}`,
+    html: `
 			<p>Hi,</p>
 			<p><strong>${commenterName}</strong> just left a comment on <em>"${postTitle}"</em>.</p>
 			<p><a href="${postUrl}">Click here to view the comment</a></p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,\n\n${commenterName} just left a comment on "${postTitle}".\n\nView it here: ${postUrl}\n\n— The Echo Team`,
-	};
+    text: `Hi,\n\n${commenterName} just left a comment on "${postTitle}".\n\nView it here: ${postUrl}\n\n— The Echo Team`,
+  };
 };
 
-export const buildPingSurgedMilestoneEmail = (pingTitle: string, surgeCount: number, pingId: number) => {
-	const pingUrl = `${sanitizeAppUrl()}/feed/${pingId}`;
-	return {
-		subject: `Your ping is blowing up! ${surgeCount} surges 🚀`,
-		html: `
+export const buildPingSurgedMilestoneEmail = (
+  pingTitle: string,
+  surgeCount: number,
+  pingId: number
+) => {
+  const pingUrl = `${sanitizeAppUrl()}/feed/${pingId}`;
+  return {
+    subject: `Your ping is blowing up! ${surgeCount} surges 🚀`,
+    html: `
 			<p>Hi,</p>
 			<p>Your ping <em>"${pingTitle}"</em> has just reached <strong>${surgeCount} surges</strong>!</p>
 			<p>Your community is highly engaged with this topic.</p>
 			<p><a href="${pingUrl}">Click here to view your ping</a></p>
 			<p>— The Echo Team</p>
 		`,
-		text: `Hi,\n\nYour ping "${pingTitle}" has just reached ${surgeCount} surges!\nYour community is highly engaged with this topic.\n\nView it here: ${pingUrl}\n\n— The Echo Team`,
-	};
+    text: `Hi,\n\nYour ping "${pingTitle}" has just reached ${surgeCount} surges!\nYour community is highly engaged with this topic.\n\nView it here: ${pingUrl}\n\n— The Echo Team`,
+  };
 };
 
 export const buildGuestOtpEmail = (code: string, pingTitle?: string) => {
-	const reasonText = pingTitle 
-		? `You requested this code to verify your email and surge the ping: "${pingTitle}".` 
-		: 'You requested this code to verify your email on Echo.';
+  const reasonText = pingTitle
+    ? `You requested this code to verify your email and surge the ping: "${pingTitle}".`
+    : 'You requested this code to verify your email on Echo.';
 
-	return {
-		subject: `Your Echo verification code: ${code}`,
-		html: `
+  return {
+    subject: `Your Echo verification code: ${code}`,
+    html: `
 			<p>Hi,</p>
 			<p>Here is your 6-digit verification code:</p>
 			<h2 style="letter-spacing: 4px; color: #1a1a1a;">${code}</h2>
@@ -415,35 +411,35 @@ export const buildGuestOtpEmail = (code: string, pingTitle?: string) => {
 			<p>This code expires in 10 minutes. Do not share this code with anyone.</p>
 			<p>— The Echo Team</p>
 		`,
-	};
+  };
 };
 
 export const buildWeeklyDigestEmail = (
-	stats: {
-		topPings: { id: number; title: string; surgeCount: number }[];
-		newPingsCount: number;
-		activeUsersCount: number;
-	},
-	unsubscribeToken: string
+  stats: {
+    topPings: { id: number; title: string; surgeCount: number }[];
+    newPingsCount: number;
+    activeUsersCount: number;
+  },
+  unsubscribeToken: string
 ) => {
-	const appUrl = sanitizeAppUrl();
-	const apiUrl = (process.env.API_URL || process.env.APP_URL || '').replace(/\/$/, '');
-	const unsubscribeUrl = `${apiUrl}/api/public/unsubscribe?token=${unsubscribeToken}`;
+  const appUrl = sanitizeAppUrl();
+  const apiUrl = (process.env.API_URL || process.env.APP_URL || '').replace(/\/$/, '');
+  const unsubscribeUrl = `${apiUrl}/api/public/unsubscribe?token=${unsubscribeToken}`;
 
-	const topPingsHtml = stats.topPings
-		.map(
-			(p) =>
-				`<li><a href="${appUrl}/feed/${p.id}"><strong>${p.title}</strong></a> - ${p.surgeCount} surges</li>`
-		)
-		.join('');
+  const topPingsHtml = stats.topPings
+    .map(
+      (p) =>
+        `<li><a href="${appUrl}/feed/${p.id}"><strong>${p.title}</strong></a> - ${p.surgeCount} surges</li>`
+    )
+    .join('');
 
-	const topPingsText = stats.topPings
-		.map((p) => `- ${p.title} (${p.surgeCount} surges): ${appUrl}/feed/${p.id}`)
-		.join('\n');
+  const topPingsText = stats.topPings
+    .map((p) => `- ${p.title} (${p.surgeCount} surges): ${appUrl}/feed/${p.id}`)
+    .join('\n');
 
-	return {
-		subject: 'Your Echo Weekly Digest',
-		html: `
+  return {
+    subject: 'Your Echo Weekly Digest',
+    html: `
 			<p>Hi,</p>
 			<p>Here's a summary of what happened in your organization this past week:</p>
 			<ul>
@@ -462,7 +458,7 @@ export const buildWeeklyDigestEmail = (
 				If you'd like to stop receiving these weekly updates, you can <a href="${unsubscribeUrl}">unsubscribe here</a>.
 			</p>
 		`,
-		text: `Hi,
+    text: `Hi,
 
 Here's a summary of what happened in your organization this past week:
 - ${stats.newPingsCount} new pings
@@ -476,23 +472,23 @@ Jump back into Echo to see what else you missed: ${appUrl}
 — The Echo Team
 
 If you'd like to stop receiving these weekly updates, you can unsubscribe here: ${unsubscribeUrl}`,
-	};
+  };
 };
 
 export const buildAnnouncementEmail = (
-	organizationName: string,
-	announcementTitle: string,
-	announcementContent: string,
-	authorName: string,
-	unsubscribeToken: string
+  organizationName: string,
+  announcementTitle: string,
+  announcementContent: string,
+  authorName: string,
+  unsubscribeToken: string
 ) => {
-	const appUrl = sanitizeAppUrl();
-	const apiUrl = (process.env.API_URL || process.env.APP_URL || '').replace(/\/$/, '');
-	const unsubscribeUrl = `${apiUrl}/api/public/unsubscribe?token=${unsubscribeToken}`;
+  const appUrl = sanitizeAppUrl();
+  const apiUrl = (process.env.API_URL || process.env.APP_URL || '').replace(/\/$/, '');
+  const unsubscribeUrl = `${apiUrl}/api/public/unsubscribe?token=${unsubscribeToken}`;
 
-	return {
-		subject: `Announcement from ${organizationName}: ${announcementTitle}`,
-		html: `
+  return {
+    subject: `Announcement from ${organizationName}: ${announcementTitle}`,
+    html: `
 			<p>Hi,</p>
 			<p><strong>${authorName}</strong> has posted a new announcement in <strong>${organizationName}</strong>:</p>
 			<div style="background-color: #f9f9f9; padding: 16px; border-left: 4px solid #007bff; margin: 16px 0;">
@@ -506,7 +502,7 @@ export const buildAnnouncementEmail = (
 				If you'd like to stop receiving these announcement emails, you can <a href="${unsubscribeUrl}">unsubscribe here</a>.
 			</p>
 		`,
-		text: `Hi,
+    text: `Hi,
 
 ${authorName} has posted a new announcement in ${organizationName}:
 
@@ -520,5 +516,5 @@ Open Echo: ${appUrl}
 — The Echo Team
 
 If you'd like to stop receiving these announcement emails, you can unsubscribe here: ${unsubscribeUrl}`,
-	};
+  };
 };

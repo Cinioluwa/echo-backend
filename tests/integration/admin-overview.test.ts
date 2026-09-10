@@ -33,7 +33,10 @@ describe('Admin Overview Endpoints', () => {
 
     org1 = await createOrganization({ name: 'Overview Org 1', domain: 'overview1.edu' });
     org2 = await createOrganization({ name: 'Overview Org 2', domain: 'overview2.edu' });
-    emptyOrg = await createOrganization({ name: 'Overview Empty Org', domain: 'overview-empty.edu' });
+    emptyOrg = await createOrganization({
+      name: 'Overview Empty Org',
+      domain: 'overview-empty.edu',
+    });
 
     admin1 = await createUser({
       email: 'admin-overview@overview1.edu',
@@ -264,16 +267,11 @@ describe('Admin Overview Endpoints', () => {
     ];
 
     for (const endpoint of endpoints) {
-      await client
-        .get(endpoint)
-        .set('Authorization', `Bearer ${regularToken}`)
-        .expect(403);
+      await client.get(endpoint).set('Authorization', `Bearer ${regularToken}`).expect(403);
     }
   });
 
   it('requires authentication for overview endpoint', async () => {
-    await client
-      .get('/api/admin/overview')
-      .expect(401);
+    await client.get('/api/admin/overview').expect(401);
   });
 });

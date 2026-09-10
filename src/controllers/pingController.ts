@@ -9,7 +9,7 @@ import { appendAdminPingBadges } from '../utils/adminPingBadges.js';
 
 const sanitizePingAuthor = (ping: any, currentUserId?: string | number) => {
   if (!ping) return ping;
-  
+
   const isOwner = currentUserId ? ping.authorId === currentUserId : false;
 
   if (ping.isAnonymous) {
@@ -31,7 +31,7 @@ const sanitizePingAuthor = (ping: any, currentUserId?: string | number) => {
 const sanitizeComments = (comments: any[] = [], currentUserId?: string | number) =>
   comments.map((comment) => {
     const isOwner = currentUserId ? comment.authorId === currentUserId : false;
-    
+
     if (comment.isAnonymous) {
       const { authorId, author, ...rest } = comment;
       return {
@@ -189,7 +189,14 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
           select: { waves: true, comments: true, surges: true },
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
       },
     });
@@ -225,7 +232,14 @@ export const createPing = async (req: AuthRequest, res: Response, next: NextFunc
           select: { waves: true, comments: true, surges: true },
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
       },
     });
@@ -310,7 +324,14 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
             select: publicWavePreviewSelect,
           },
           media: {
-            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+            select: {
+              id: true,
+              url: true,
+              filename: true,
+              mimeType: true,
+              width: true,
+              height: true,
+            },
           },
           surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
@@ -322,7 +343,7 @@ export const getAllPings = async (req: AuthRequest, res: Response, next: NextFun
     const totalPages = Math.ceil(totalPings / limit);
 
     // Sanitize anonymous pings and add hasSurged (always boolean)
-    const sanitizedPings = pings.map(ping => withHasSurged(ping, userId));
+    const sanitizedPings = pings.map((ping) => withHasSurged(ping, userId));
 
     const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
 
@@ -388,7 +409,14 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
             select: publicWavePreviewSelect,
           },
           media: {
-            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+            select: {
+              id: true,
+              url: true,
+              filename: true,
+              mimeType: true,
+              width: true,
+              height: true,
+            },
           },
           surges: { where: { userId }, select: { id: true } },
         },
@@ -398,7 +426,7 @@ export const getMyPings = async (req: AuthRequest, res: Response, next: NextFunc
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(ping => withHasSurged(ping, userId));
+    const sanitizedPings = pings.map((ping) => withHasSurged(ping, userId));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, req.user!.organizationId!);
 
     return res.status(200).json({
@@ -464,7 +492,7 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
               firstName: true,
               lastName: true,
               level: true,
-              profilePicture: true
+              profilePicture: true,
             },
           },
           category: { select: publicCategorySelect },
@@ -477,7 +505,14 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
             select: publicWavePreviewSelect,
           },
           media: {
-            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+            select: {
+              id: true,
+              url: true,
+              filename: true,
+              mimeType: true,
+              width: true,
+              height: true,
+            },
           },
           surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
@@ -487,7 +522,7 @@ export const searchPings = async (req: AuthRequest, res: Response, next: NextFun
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const sanitizedPings = pings.map(ping => withHasSurged(ping, userId));
+    const sanitizedPings = pings.map((ping) => withHasSurged(ping, userId));
     const itemsWithBadges = await appendPingBadges(sanitizedPings, organizationId!);
 
     return res.status(200).json({
@@ -561,7 +596,14 @@ export const getPingById = async (req: AuthRequest, res: Response, next: NextFun
           },
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
         surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
@@ -715,7 +757,14 @@ export const updatePing = async (req: AuthRequest, res: Response, next: NextFunc
           select: publicWavePreviewSelect,
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
         surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
@@ -738,7 +787,7 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
     const organizationId = (req as any).organizationId;
     const userId = (req as any).user?.userId;
 
-    const validStatuses = ["POSTED", "UNDER_REVIEW", "APPROVED", "REJECTED"];
+    const validStatuses = ['POSTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status value' });
     }
@@ -747,8 +796,8 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
     const ping = await prisma.ping.findFirst({
       where: {
         id: parseInt(id),
-        organizationId
-      }
+        organizationId,
+      },
     });
 
     if (!ping) {
@@ -780,7 +829,14 @@ export const updatePingStatus = async (req: Request, res: Response, next: NextFu
           select: publicWavePreviewSelect,
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
         surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
@@ -806,8 +862,8 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
     const ping = await prisma.ping.findFirst({
       where: {
         id: parseInt(id),
-        organizationId
-      }
+        organizationId,
+      },
     });
 
     if (!ping) {
@@ -837,7 +893,14 @@ export const submitPing = async (req: Request, res: Response, next: NextFunction
           select: publicWavePreviewSelect,
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
         surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
@@ -911,7 +974,14 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
           select: publicWavePreviewSelect,
         },
         media: {
-          select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+          select: {
+            id: true,
+            url: true,
+            filename: true,
+            mimeType: true,
+            width: true,
+            height: true,
+          },
         },
         surges: userId ? { where: { userId }, select: { id: true } } : false,
       },
@@ -922,10 +992,14 @@ export const resolvePing = async (req: AuthRequest, res: Response, next: NextFun
 
     return res.status(200).json({
       message: 'Ping marked as resolved',
-      ping: withHasSurged(updatedPing, userId)
+      ping: withHasSurged(updatedPing, userId),
     });
   } catch (error) {
-    logger.error('Error resolving ping', { error, pingId: req.params.id, userId: req.user?.userId });
+    logger.error('Error resolving ping', {
+      error,
+      pingId: req.params.id,
+      userId: req.user?.userId,
+    });
     return next(error);
   }
 };
@@ -979,7 +1053,14 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
             select: publicWavePreviewSelect,
           },
           media: {
-            select: { id: true, url: true, filename: true, mimeType: true, width: true, height: true },
+            select: {
+              id: true,
+              url: true,
+              filename: true,
+              mimeType: true,
+              width: true,
+              height: true,
+            },
           },
           surges: userId ? { where: { userId }, select: { id: true } } : false,
         },
@@ -989,7 +1070,10 @@ export const getAllPingsAsAdmin = async (req: AuthRequest, res: Response, next: 
 
     const totalPages = Math.ceil(totalPings / limit);
 
-    const publicBadged = await appendPingBadges(pings.map(ping => withHasSurged(ping, userId)), organizationId!);
+    const publicBadged = await appendPingBadges(
+      pings.map((ping) => withHasSurged(ping, userId)),
+      organizationId!
+    );
     // Admin list view: attach triage badges (card-level only, no HIGH_DISCUSSION)
     const itemsWithBadges = await appendAdminPingBadges(publicBadged, organizationId!);
 

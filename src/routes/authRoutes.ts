@@ -22,7 +22,7 @@ const googleAuthSchema = z.object({
  *       - Verifies the Google token
  *       - Finds or creates a user account
  *       - Issues a JWT token for API access
- *       
+ *
  *       **New users** are automatically created with email pre-verified.
  *       **Existing users** can link their Google account on first Google sign-in.
  *     tags:
@@ -110,10 +110,6 @@ const googleAuthSchema = z.object({
  *             example:
  *               error: Internal server error during Google authentication
  */
-router.post(
-  '/google',
-  validate(googleAuthSchema),
-  googleAuth
-);
+router.post('/google', validate(googleAuthSchema), googleAuth);
 
 export default router;

@@ -17,8 +17,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     const org1AdminResponse = await request.post('/api/users/login', {
       data: {
         email: 'admin@testorg1.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
     expect(org1AdminResponse.status()).toBe(200);
     const org1AdminData = await org1AdminResponse.json();
@@ -27,8 +27,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     const org1UserResponse = await request.post('/api/users/login', {
       data: {
         email: 'user@testorg1.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
     expect(org1UserResponse.status()).toBe(200);
     const org1UserData = await org1UserResponse.json();
@@ -36,8 +36,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
 
     const org1MeResponse = await request.get('/api/users/me', {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     expect(org1MeResponse.status()).toBe(200);
     org1User = await org1MeResponse.json();
@@ -45,8 +45,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     const org2UserResponse = await request.post('/api/users/login', {
       data: {
         email: 'user@testorg2.edu',
-        password: 'password123'
-      }
+        password: 'password123',
+      },
     });
     expect(org2UserResponse.status()).toBe(200);
     const org2UserData = await org2UserResponse.json();
@@ -54,8 +54,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
 
     const org2MeResponse = await request.get('/api/users/me', {
       headers: {
-        'Authorization': `Bearer ${org2UserToken}`
-      }
+        Authorization: `Bearer ${org2UserToken}`,
+      },
     });
     expect(org2MeResponse.status()).toBe(200);
     org2User = await org2MeResponse.json();
@@ -65,11 +65,11 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 1: Org1 admin creates a category (category writes are leadership-only)
     const categoryResponse = await request.post('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${org1AdminToken}`
+        Authorization: `Bearer ${org1AdminToken}`,
       },
       data: {
-        name: 'Org1 Confidential Category'
-      }
+        name: 'Org1 Confidential Category',
+      },
     });
     expect(categoryResponse.status()).toBe(201);
     org1Category = await categoryResponse.json();
@@ -77,13 +77,13 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 2: Org1 user creates a ping in that category
     const pingResponse = await request.post('/api/pings', {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
+        Authorization: `Bearer ${org1UserToken}`,
       },
       data: {
         title: 'Org1 Confidential Ping',
         content: 'This ping contains sensitive information for Organization 1 only.',
-        categoryId: org1Category.id
-      }
+        categoryId: org1Category.id,
+      },
     });
     expect(pingResponse.status()).toBe(201);
     org1Ping = await pingResponse.json();
@@ -91,8 +91,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 3: Org1 user can see their own ping
     const org1PingsResponse = await request.get('/api/pings', {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     expect(org1PingsResponse.status()).toBe(200);
     const org1PingsPayload = await org1PingsResponse.json();
@@ -103,8 +103,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 4: Org2 user cannot see Org1's ping
     const org2PingsResponse = await request.get('/api/pings', {
       headers: {
-        'Authorization': `Bearer ${org2UserToken}`
-      }
+        Authorization: `Bearer ${org2UserToken}`,
+      },
     });
     expect(org2PingsResponse.status()).toBe(200);
     const org2PingsPayload = await org2PingsResponse.json();
@@ -115,16 +115,16 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 5: Org2 user cannot access Org1's ping directly
     const directAccessResponse = await request.get(`/api/pings/${org1Ping.id}`, {
       headers: {
-        'Authorization': `Bearer ${org2UserToken}`
-      }
+        Authorization: `Bearer ${org2UserToken}`,
+      },
     });
     expect(directAccessResponse.status()).toBe(404);
 
     // Step 6: Org1 user can see their own category
     const org1CategoriesResponse = await request.get('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     expect(org1CategoriesResponse.status()).toBe(200);
     const org1CategoriesPayload = await org1CategoriesResponse.json();
@@ -135,8 +135,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 7: Org2 user cannot see Org1's category
     const org2CategoriesResponse = await request.get('/api/categories', {
       headers: {
-        'Authorization': `Bearer ${org2UserToken}`
-      }
+        Authorization: `Bearer ${org2UserToken}`,
+      },
     });
     expect(org2CategoriesResponse.status()).toBe(200);
     const org2CategoriesPayload = await org2CategoriesResponse.json();
@@ -149,13 +149,13 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 1: Org1 admin creates an announcement
     const announcementResponse = await request.post('/api/admin/announcements', {
       headers: {
-        'Authorization': `Bearer ${org1AdminToken}`
+        Authorization: `Bearer ${org1AdminToken}`,
       },
       data: {
         title: 'Org1 Internal Announcement',
         content: 'This is an internal announcement for Organization 1 members only.',
-        categoryIds: [org1Category.id]
-      }
+        categoryIds: [org1Category.id],
+      },
     });
     expect(announcementResponse.status()).toBe(201);
     org1Announcement = await announcementResponse.json();
@@ -163,8 +163,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 2: Org1 user can see the announcement
     const org1AnnouncementsResponse = await request.get('/api/announcements', {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     expect(org1AnnouncementsResponse.status()).toBe(200);
     const org1Announcements = await org1AnnouncementsResponse.json();
@@ -174,12 +174,14 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 3: Org2 user cannot see Org1's announcement
     const org2AnnouncementsResponse = await request.get('/api/announcements', {
       headers: {
-        'Authorization': `Bearer ${org2UserToken}`
-      }
+        Authorization: `Bearer ${org2UserToken}`,
+      },
     });
     expect(org2AnnouncementsResponse.status()).toBe(200);
     const org2Announcements = await org2AnnouncementsResponse.json();
-    const org2SeeingOrg1Announcement = org2Announcements.find((a: any) => a.id === org1Announcement.id);
+    const org2SeeingOrg1Announcement = org2Announcements.find(
+      (a: any) => a.id === org1Announcement.id
+    );
     expect(org2SeeingOrg1Announcement).toBeFalsy();
   });
 
@@ -187,8 +189,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 1: Org1 admin can see Org1 users
     const org1UsersResponse = await request.get('/api/admin/users', {
       headers: {
-        'Authorization': `Bearer ${org1AdminToken}`
-      }
+        Authorization: `Bearer ${org1AdminToken}`,
+      },
     });
     expect(org1UsersResponse.status()).toBe(200);
     const org1UsersPayload = await org1UsersResponse.json();
@@ -203,19 +205,19 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 3: Org1 admin cannot modify Org2 user
     const crossOrgModifyResponse = await request.patch(`/api/admin/users/${org2User.id}/role`, {
       headers: {
-        'Authorization': `Bearer ${org1AdminToken}`
+        Authorization: `Bearer ${org1AdminToken}`,
       },
       data: {
-        role: 'ADMIN'
-      }
+        role: 'ADMIN',
+      },
     });
     expect(crossOrgModifyResponse.status()).toBe(404);
 
     // Step 4: Org1 admin can see Org1 pings
     const org1PingsResponse = await request.get('/api/admin/pings', {
       headers: {
-        'Authorization': `Bearer ${org1AdminToken}`
-      }
+        Authorization: `Bearer ${org1AdminToken}`,
+      },
     });
     expect(org1PingsResponse.status()).toBe(200);
     const org1AdminPingsPayload = await org1PingsResponse.json();
@@ -226,16 +228,16 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 5: Org1 admin can delete Org1 ping
     const deletePingResponse = await request.delete(`/api/admin/pings/${org1Ping.id}`, {
       headers: {
-        'Authorization': `Bearer ${org1AdminToken}`
-      }
+        Authorization: `Bearer ${org1AdminToken}`,
+      },
     });
     expect(deletePingResponse.status()).toBe(204);
 
     // Step 6: Verify ping is deleted
     const verifyDeleteResponse = await request.get(`/api/pings/${org1Ping.id}`, {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     expect(verifyDeleteResponse.status()).toBe(404);
   });
@@ -244,13 +246,13 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 1: Create a new ping for this test
     const newPingResponse = await request.post('/api/pings', {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
+        Authorization: `Bearer ${org1UserToken}`,
       },
       data: {
         title: 'Cross-Org Isolation Test Ping',
         content: 'Testing that comments and surges are properly isolated.',
-        categoryId: org1Category.id
-      }
+        categoryId: org1Category.id,
+      },
     });
     expect(newPingResponse.status()).toBe(201);
     const newPing = await newPingResponse.json();
@@ -258,11 +260,11 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 2: Org1 user adds a comment
     const commentResponse = await request.post(`/api/pings/${newPing.id}/comments`, {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
+        Authorization: `Bearer ${org1UserToken}`,
       },
       data: {
-        content: 'This is a comment from Org1 user.'
-      }
+        content: 'This is a comment from Org1 user.',
+      },
     });
     expect(commentResponse.status()).toBe(201);
     const comment = await commentResponse.json();
@@ -270,36 +272,38 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 3: Org1 user can see their comment
     const org1CommentsResponse = await request.get(`/api/pings/${newPing.id}/comments`, {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     expect(org1CommentsResponse.status()).toBe(200);
     const org1CommentsPayload = await org1CommentsResponse.json();
-    const org1Comments = Array.isArray(org1CommentsPayload) ? org1CommentsPayload : org1CommentsPayload.data;
+    const org1Comments = Array.isArray(org1CommentsPayload)
+      ? org1CommentsPayload
+      : org1CommentsPayload.data;
     expect(org1Comments).toHaveLength(1);
     expect(org1Comments[0].content).toBe('This is a comment from Org1 user.');
 
     // Step 4: Org2 user cannot see the comment (cannot even access the ping)
     const org2CommentAccessResponse = await request.get(`/api/pings/${newPing.id}/comments`, {
       headers: {
-        'Authorization': `Bearer ${org2UserToken}`
-      }
+        Authorization: `Bearer ${org2UserToken}`,
+      },
     });
     expect(org2CommentAccessResponse.status()).toBe(404);
 
     // Step 5: Org1 user adds a surge
     const surgeResponse = await request.post(`/api/pings/${newPing.id}/surge`, {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     expect(surgeResponse.status()).toBe(200);
 
     // Step 6: Org1 user can see the surge count
     const pingWithSurgeResponse = await request.get(`/api/pings/${newPing.id}`, {
       headers: {
-        'Authorization': `Bearer ${org1UserToken}`
-      }
+        Authorization: `Bearer ${org1UserToken}`,
+      },
     });
     const pingWithSurge = await pingWithSurgeResponse.json();
     expect(pingWithSurge.surgeCount).toBe(1);
@@ -307,8 +311,8 @@ test.describe('Cross-Organization Data Isolation E2E', () => {
     // Step 7: Org2 user cannot surge the ping (cannot access it)
     const org2SurgeResponse = await request.post(`/api/pings/${newPing.id}/surge`, {
       headers: {
-        'Authorization': `Bearer ${org2UserToken}`
-      }
+        Authorization: `Bearer ${org2UserToken}`,
+      },
     });
     expect(org2SurgeResponse.status()).toBe(404);
   });

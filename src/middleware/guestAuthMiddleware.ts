@@ -21,23 +21,23 @@ const guestAuthMiddleware = async (req: Request, res: Response, next: NextFuncti
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as GuestJwtPayload;
-    
+
     if (decoded.role !== 'GUEST') {
-        return res.status(403).json({ error: 'Forbidden: Invalid token type' });
+      return res.status(403).json({ error: 'Forbidden: Invalid token type' });
     }
 
-    // For Guest actions, we map guestUserId to userId so that existing 
-    // organizationMiddleware or logic can function if needed, but it's better to 
+    // For Guest actions, we map guestUserId to userId so that existing
+    // organizationMiddleware or logic can function if needed, but it's better to
     // be explicit. We'll attach guest to req.
     (req as any).guest = {
       guestUserId: decoded.guestUserId,
       organizationId: decoded.organizationId,
       role: decoded.role,
     };
-    
+
     // We also set req.organizationId so that organization middleware works correctly
     (req as AuthRequest).organizationId = decoded.organizationId;
-    
+
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });

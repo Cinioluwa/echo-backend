@@ -1,9 +1,5 @@
 import { Router } from 'express';
-import {
-  createReport,
-  getReports,
-  updateReportStatus,
-} from '../controllers/reportController.js';
+import { createReport, getReports, updateReportStatus } from '../controllers/reportController.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import organizationMiddleware from '../middleware/organizationMiddleware.js';
@@ -53,7 +49,13 @@ const router = Router();
  *       409:
  *         description: Pending report already exists
  */
-router.post('/', authMiddleware, organizationMiddleware, validate(createReportSchema), createReport);
+router.post(
+  '/',
+  authMiddleware,
+  organizationMiddleware,
+  validate(createReportSchema),
+  createReport
+);
 
 /**
  * @openapi
@@ -211,7 +213,14 @@ router.post('/', authMiddleware, organizationMiddleware, validate(createReportSc
  *       403:
  *         description: Forbidden (Admin only)
  */
-router.get('/', authMiddleware, adminMiddleware, organizationMiddleware, validate(listReportsSchema), getReports);
+router.get(
+  '/',
+  authMiddleware,
+  adminMiddleware,
+  organizationMiddleware,
+  validate(listReportsSchema),
+  getReports
+);
 
 /**
  * @openapi
@@ -258,7 +267,7 @@ router.patch(
   adminMiddleware,
   organizationMiddleware,
   validate(updateReportStatusSchema),
-  updateReportStatus,
+  updateReportStatus
 );
 
 export default router;

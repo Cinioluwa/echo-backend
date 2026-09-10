@@ -113,7 +113,11 @@ router.get('/organizations', validate(listSuperAdminOrgsSchema), listAllOrganiza
  *       404:
  *         description: Organization not found
  */
-router.patch('/organizations/:id/status', validate(updateOrgStatusSchema), updateOrganizationStatus);
+router.patch(
+  '/organizations/:id/status',
+  validate(updateOrgStatusSchema),
+  updateOrganizationStatus
+);
 
 /**
  * @openapi
@@ -269,7 +273,11 @@ router.patch('/users/:id/status', validate(updateUserStatusSchema), updateUserSt
  *       404:
  *         description: User not found
  */
-router.patch('/users/:id/role', validate(updateUserRoleAsSuperAdminSchema), updateUserRoleAsSuperAdmin);
+router.patch(
+  '/users/:id/role',
+  validate(updateUserRoleAsSuperAdminSchema),
+  updateUserRoleAsSuperAdmin
+);
 
 /**
  * @openapi
@@ -298,7 +306,11 @@ router.patch('/users/:id/role', validate(updateUserRoleAsSuperAdminSchema), upda
  *       200:
  *         description: Cleanup result with number of affected requests
  */
-router.post('/maintenance/cleanup-stale-requests', validate(cleanupStaleRequestsSchema), cleanupStaleRequests);
+router.post(
+  '/maintenance/cleanup-stale-requests',
+  validate(cleanupStaleRequestsSchema),
+  cleanupStaleRequests
+);
 
 /**
  * @openapi
@@ -325,7 +337,11 @@ router.post('/maintenance/cleanup-stale-requests', validate(cleanupStaleRequests
  *       200:
  *         description: Purge result with counts per token type
  */
-router.post('/maintenance/purge-expired-tokens', validate(purgeExpiredTokensSchema), purgeExpiredTokens);
+router.post(
+  '/maintenance/purge-expired-tokens',
+  validate(purgeExpiredTokensSchema),
+  purgeExpiredTokens
+);
 
 /**
  * @openapi

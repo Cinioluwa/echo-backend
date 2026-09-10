@@ -106,7 +106,9 @@ export async function connectRedis(): Promise<RedisClientType | null> {
     connectPromise = null;
     client = null;
     const message = err instanceof Error ? err.message : String(err);
-    logger.error('Failed to connect to Redis — falling back to in-memory store', { error: message });
+    logger.error('Failed to connect to Redis — falling back to in-memory store', {
+      error: message,
+    });
     return null;
   }
 }

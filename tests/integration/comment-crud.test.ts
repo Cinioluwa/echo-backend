@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildTestClient } from './appClient.js';
 import './setupHooks.js';
-import { createOrganization, createUser, createCategory, createPing, createWave, createComment, cleanupTestData } from '../fixtures/index.js';
+import {
+  createOrganization,
+  createUser,
+  createCategory,
+  createPing,
+  createWave,
+  createComment,
+  cleanupTestData,
+} from '../fixtures/index.js';
 
 describe('Comment CRUD Operations', () => {
   let client: any;
@@ -25,13 +33,13 @@ describe('Comment CRUD Operations', () => {
       organizationId: org1.id,
       email: 'user1@org1.edu',
       firstName: 'User',
-      lastName: 'One'
+      lastName: 'One',
     });
     user2 = await createUser({
       organizationId: org2.id,
       email: 'user2@org2.edu',
       firstName: 'User',
-      lastName: 'Two'
+      lastName: 'Two',
     });
 
     // Create categories
@@ -44,7 +52,7 @@ describe('Comment CRUD Operations', () => {
       organizationId: org1.id,
       categoryId: category1.id,
       title: 'Ping1',
-      content: 'Content1'
+      content: 'Content1',
     });
 
     ping2 = await createPing({
@@ -52,20 +60,20 @@ describe('Comment CRUD Operations', () => {
       organizationId: org2.id,
       categoryId: category2.id,
       title: 'Ping2',
-      content: 'Content2'
+      content: 'Content2',
     });
 
     // Create waves
     wave1 = await createWave({
       pingId: ping1.id,
       organizationId: org1.id,
-      solution: 'Solution for ping1'
+      solution: 'Solution for ping1',
     });
 
     wave2 = await createWave({
       pingId: ping2.id,
       organizationId: org2.id,
-      solution: 'Solution for ping2'
+      solution: 'Solution for ping2',
     });
 
     // Login users to get tokens
@@ -220,14 +228,14 @@ describe('Comment CRUD Operations', () => {
         pingId: ping1.id,
         organizationId: org1.id,
         authorId: user1.id,
-        content: 'Comment on ping1'
+        content: 'Comment on ping1',
       });
 
       waveComment = await createComment({
         waveId: wave1.id,
         organizationId: org1.id,
         authorId: user1.id,
-        content: 'Comment on wave1'
+        content: 'Comment on wave1',
       });
     });
 
@@ -293,7 +301,7 @@ describe('Comment CRUD Operations', () => {
         organizationId: org1.id,
         authorId: user1.id,
         content: 'Anonymous comment',
-        isAnonymous: true
+        isAnonymous: true,
       });
 
       const res = await client
@@ -313,7 +321,7 @@ describe('Comment CRUD Operations', () => {
         pingId: ping1.id,
         organizationId: org1.id,
         authorId: user1.id,
-        content: 'Own comment to delete'
+        content: 'Own comment to delete',
       });
 
       await client
@@ -328,10 +336,10 @@ describe('Comment CRUD Operations', () => {
       expect(deleted).toBeNull();
     });
 
-    it('should NOT allow other user to delete someone else\'s comment', async () => {
+    it("should NOT allow other user to delete someone else's comment", async () => {
       const userOther = await createUser({
         organizationId: org1.id,
-        email: 'other@org1.edu'
+        email: 'other@org1.edu',
       });
       const loginRes = await client
         .post('/api/users/login')
@@ -343,7 +351,7 @@ describe('Comment CRUD Operations', () => {
         pingId: ping1.id,
         organizationId: org1.id,
         authorId: user1.id,
-        content: 'Comment by user1'
+        content: 'Comment by user1',
       });
 
       await client
@@ -356,7 +364,7 @@ describe('Comment CRUD Operations', () => {
       const adminUser = await createUser({
         organizationId: org1.id,
         email: 'admin@org1.edu',
-        role: 'ADMIN'
+        role: 'ADMIN',
       });
       const loginRes = await client
         .post('/api/users/login')
@@ -368,7 +376,7 @@ describe('Comment CRUD Operations', () => {
         pingId: ping1.id,
         organizationId: org1.id,
         authorId: user1.id,
-        content: 'User comment for admin to delete'
+        content: 'User comment for admin to delete',
       });
 
       await client

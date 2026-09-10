@@ -159,7 +159,9 @@ async function createTestUsers(cuOrg, org1, org2) {
   });
 
   console.log('✅ Created test users:');
-  console.log(`   CU: ${cuAdmin.email} (ADMIN), ${cuRep.email} (REPRESENTATIVE), ${cuStudent.email} (USER)`);
+  console.log(
+    `   CU: ${cuAdmin.email} (ADMIN), ${cuRep.email} (REPRESENTATIVE), ${cuStudent.email} (USER)`
+  );
   console.log(`   Org A: ${userA1.email} (USER), ${adminA.email} (ADMIN)`);
   console.log(`   Org B: ${userB1.email} (USER), ${adminB.email} (ADMIN)`);
 
@@ -255,11 +257,10 @@ async function main() {
     console.log('   - Admin: adminB@testunivb.edu');
     console.log('   - Student: studentB@testunivb.edu');
     console.log('');
-  console.log('💡 Register or log in with email addresses that use these domains:');
-  console.log('     • cu.edu.ng (Covenant University)');
-  console.log('     • testuniva.edu (Test University A)');
-  console.log('     • testunivb.edu (Test University B)');
-
+    console.log('💡 Register or log in with email addresses that use these domains:');
+    console.log('     • cu.edu.ng (Covenant University)');
+    console.log('     • testuniva.edu (Test University A)');
+    console.log('     • testunivb.edu (Test University B)');
   } catch (error) {
     console.error('❌ Setup failed:', error);
     process.exit(1);

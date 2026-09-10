@@ -23,13 +23,13 @@ describe('Organization Isolation', () => {
       organizationId: org1.id,
       email: 'user1@org1.edu',
       firstName: 'User',
-      lastName: 'One'
+      lastName: 'One',
     });
     org2User = await createUser({
       organizationId: org2.id,
       email: 'user2@org2.edu',
       firstName: 'User',
-      lastName: 'Two'
+      lastName: 'Two',
     });
 
     // Create pings in each org
@@ -37,13 +37,13 @@ describe('Organization Isolation', () => {
       organizationId: org1.id,
       authorId: org1User.id,
       title: 'Org1 Ping',
-      content: 'This is a ping from org1'
+      content: 'This is a ping from org1',
     });
     org2Ping = await createPing({
       organizationId: org2.id,
       authorId: org2User.id,
       title: 'Org2 Ping',
-      content: 'This is a ping from org2'
+      content: 'This is a ping from org2',
     });
 
     // Create authenticated clients
@@ -70,9 +70,7 @@ describe('Organization Isolation', () => {
 
   describe('Ping Access', () => {
     it('should allow org1 user to access org1 pings', async () => {
-      const res = await org1Client
-        .get('/api/pings')
-        .set('Authorization', `Bearer ${org1Token}`);
+      const res = await org1Client.get('/api/pings').set('Authorization', `Bearer ${org1Token}`);
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.data.length).toBeGreaterThan(0);
@@ -83,9 +81,7 @@ describe('Organization Isolation', () => {
     });
 
     it('should allow org2 user to access org2 pings', async () => {
-      const res = await org2Client
-        .get('/api/pings')
-        .set('Authorization', `Bearer ${org2Token}`);
+      const res = await org2Client.get('/api/pings').set('Authorization', `Bearer ${org2Token}`);
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.data.length).toBeGreaterThan(0);
@@ -96,9 +92,7 @@ describe('Organization Isolation', () => {
     });
 
     it('should NOT allow org1 user to access org2 pings', async () => {
-      const res = await org1Client
-        .get('/api/pings')
-        .set('Authorization', `Bearer ${org1Token}`);
+      const res = await org1Client.get('/api/pings').set('Authorization', `Bearer ${org1Token}`);
       expect(res.status).toBe(200);
 
       // Should NOT contain org2 ping
@@ -107,9 +101,7 @@ describe('Organization Isolation', () => {
     });
 
     it('should NOT allow org2 user to access org1 pings', async () => {
-      const res = await org2Client
-        .get('/api/pings')
-        .set('Authorization', `Bearer ${org2Token}`);
+      const res = await org2Client.get('/api/pings').set('Authorization', `Bearer ${org2Token}`);
       expect(res.status).toBe(200);
 
       // Should NOT contain org1 ping
@@ -134,18 +126,14 @@ describe('Organization Isolation', () => {
 
   describe('User Access', () => {
     it('should allow org1 user to access org1 user data', async () => {
-      const res = await org1Client
-        .get('/api/users/me')
-        .set('Authorization', `Bearer ${org1Token}`);
+      const res = await org1Client.get('/api/users/me').set('Authorization', `Bearer ${org1Token}`);
       expect(res.status).toBe(200);
       expect(res.body.email).toBe('user1@org1.edu');
       expect(res.body.organizationId).toBe(org1User.organizationId);
     });
 
     it('should allow org2 user to access org2 user data', async () => {
-      const res = await org2Client
-        .get('/api/users/me')
-        .set('Authorization', `Bearer ${org2Token}`);
+      const res = await org2Client.get('/api/users/me').set('Authorization', `Bearer ${org2Token}`);
       expect(res.status).toBe(200);
       expect(res.body.email).toBe('user2@org2.edu');
       expect(res.body.organizationId).toBe(org2User.organizationId);
